@@ -1,161 +1,131 @@
 import { useState } from 'react';
-import { Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, Keyboard, Pressable, Text, TouchableOpacity, View } from 'react-native';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { Link } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { signInWithOAuth } from '@/lib/oauth';
+import { useForm } from '@/hooks/use-form';
 
 export default function SignInScreen() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [oauthLoading, setOauthLoading] = useState(false);
 
-  async function handleSignIn() {
-    setLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) Alert.alert('Error', error.message);
-    setLoading(false);
-  }
+  const form = useForm({
+    defaultValues: {
+      email: '',
+      password: '',
+    },
+    onSubmit: async ({ value, formApi }) => {
+      const { error } = await supabase.auth.signInWithPassword({
+        email: value.email,
+        password: value.password,
+      });
+      if (error) {
+        formApi.setErrorMap({
+          onSubmit: {
+            fields: {},
+            form: error.message,
+          },
+        });
+      }
+    },
+  });
 
   async function handleOAuth(provider: 'google' | 'apple') {
     try {
-      setLoading(true);
+      setOauthLoading(true);
       await signInWithOAuth(provider);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'OAuth sign-in failed';
       Alert.alert('Error', message);
     } finally {
-      setLoading(false);
+      setOauthLoading(false);
     }
   }
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Welcome Back</Text>
-
-      <TextInput
-        style={styles.input}
-        placeholder="Email"
-        value={email}
-        onChangeText={setEmail}
-        autoCapitalize="none"
-        keyboardType="email-address"
-      />
-
-      <TextInput
-        style={styles.input}
-        placeholder="Password"
-        value={password}
-        onChangeText={setPassword}
-        secureTextEntry
-      />
-
-      <TouchableOpacity style={styles.button} onPress={handleSignIn} disabled={loading}>
-        <Text style={styles.buttonText}>{loading ? 'Signing in...' : 'Sign In'}</Text>
-      </TouchableOpacity>
-
-      <View style={styles.divider}>
-        <View style={styles.dividerLine} />
-        <Text style={styles.dividerText}>or</Text>
-        <View style={styles.dividerLine} />
+    <Pressable className="flex-1 justify-center bg-background px-6" onPress={Keyboard.dismiss}>
+      <View className="mb-8 items-center">
+        <Text className="text-3xl font-bold text-white">Cha-Ching</Text>
+        <Text className="mt-2 text-base text-text-secondary">Social Prop Bets with Friends</Text>
       </View>
 
-      <TouchableOpacity
-        style={styles.oauthButton}
-        onPress={() => handleOAuth('google')}
-        disabled={loading}
-      >
-        <FontAwesome name="google" size={18} color="#333" />
-        <Text style={styles.oauthButtonText}>Continue with Google</Text>
-      </TouchableOpacity>
+      <form.AppForm>
+        <form.Subscribe selector={(state) => state.errorMap.onSubmit}>
+          {(formError) =>
+            formError ? (
+              <View className="mb-4 items-center rounded-xl bg-error/10 px-3 py-3">
+                <Text className="text-sm text-error">
+                  {typeof formError === 'string' ? formError : 'An error occurred'}
+                </Text>
+              </View>
+            ) : null
+          }
+        </form.Subscribe>
 
-      <TouchableOpacity
-        style={styles.oauthButton}
-        onPress={() => handleOAuth('apple')}
-        disabled={loading}
-      >
-        <FontAwesome name="apple" size={18} color="#333" />
-        <Text style={styles.oauthButtonText}>Continue with Apple</Text>
-      </TouchableOpacity>
+        <form.AppField name="email">
+          {(field) => (
+            <field.TextField
+              label="Email"
+              placeholder="you@example.com"
+              keyboardType="email-address"
+              textContentType="emailAddress"
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+          )}
+        </form.AppField>
 
-      <Link href="/(auth)/sign-up" asChild>
-        <TouchableOpacity style={styles.link}>
-          <Text style={styles.linkText}>{"Don't have an account? Sign Up"}</Text>
+        <form.AppField name="password">
+          {(field) => (
+            <field.TextField
+              label="Password"
+              placeholder="********"
+              secureTextEntry
+              textContentType="password"
+              autoComplete="password"
+            />
+          )}
+        </form.AppField>
+
+        <form.SubmitButton className="mt-2">Log In</form.SubmitButton>
+      </form.AppForm>
+
+      <View className="my-6 flex-row items-center">
+        <View className="h-px flex-1 bg-border" />
+        <Text className="mx-4 text-sm text-text-muted">or continue with</Text>
+        <View className="h-px flex-1 bg-border" />
+      </View>
+
+      <View className="flex-row gap-3">
+        <TouchableOpacity
+          className="min-h-[44px] flex-1 flex-row items-center justify-center gap-2 rounded-xl border border-border bg-surface-light px-4 py-3"
+          onPress={() => handleOAuth('apple')}
+          disabled={oauthLoading}
+          activeOpacity={0.7}
+        >
+          <FontAwesome name="apple" size={18} color="#fff" />
+          <Text className="text-base font-medium text-white">Apple</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          className="min-h-[44px] flex-1 flex-row items-center justify-center gap-2 rounded-xl border border-border bg-surface-light px-4 py-3"
+          onPress={() => handleOAuth('google')}
+          disabled={oauthLoading}
+          activeOpacity={0.7}
+        >
+          <FontAwesome name="google" size={18} color="#fff" />
+          <Text className="text-base font-medium text-white">Google</Text>
+        </TouchableOpacity>
+      </View>
+
+      <Link href="/(auth)/sign-up" replace asChild>
+        <TouchableOpacity className="mt-6 min-h-[44px] items-center justify-center">
+          <Text className="text-sm text-text-secondary">
+            {"Don't have an account? "}
+            <Text className="font-semibold text-primary">Sign Up</Text>
+          </Text>
         </TouchableOpacity>
       </Link>
-    </View>
+    </Pressable>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    padding: 24,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    marginBottom: 32,
-    textAlign: 'center',
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 8,
-    padding: 14,
-    marginBottom: 16,
-    fontSize: 16,
-  },
-  button: {
-    backgroundColor: '#2563eb',
-    borderRadius: 8,
-    padding: 16,
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  buttonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  divider: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginVertical: 16,
-  },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: '#ccc',
-  },
-  dividerText: {
-    marginHorizontal: 12,
-    color: '#888',
-    fontSize: 14,
-  },
-  oauthButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 8,
-    padding: 14,
-    marginBottom: 12,
-    gap: 10,
-  },
-  oauthButtonText: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#333',
-  },
-  link: {
-    alignItems: 'center',
-    marginTop: 8,
-  },
-  linkText: {
-    color: '#2563eb',
-    fontSize: 14,
-  },
-});

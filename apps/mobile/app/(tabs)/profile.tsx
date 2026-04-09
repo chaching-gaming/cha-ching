@@ -1,19 +1,12 @@
 import { useState } from 'react';
-import {
-  ActivityIndicator,
-  Alert,
-  Image,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { ActivityIndicator, Alert, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { SignOut } from 'phosphor-react-native';
 import * as ImagePicker from 'expo-image-picker';
-import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useProfile, useUpdateProfile } from '@/hooks/use-profile';
 import { useAuth } from '@/providers/auth';
 import { uploadAvatar } from '@/lib/storage';
+import { supabase } from '@/lib/supabase';
+import { Avatar, Button } from '@/components/ui';
 
 export default function ProfileScreen() {
   const { session } = useAuth();
@@ -62,163 +55,71 @@ export default function ProfileScreen() {
     }
   }
 
+  async function handleSignOut() {
+    const { error } = await supabase.auth.signOut();
+    if (error) Alert.alert('Error', error.message);
+  }
+
   if (isLoading) {
     return (
-      <View style={styles.centered}>
-        <ActivityIndicator size="large" />
+      <View className="flex-1 items-center justify-center bg-background">
+        <ActivityIndicator size="large" color="#22C55E" />
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
-      <TouchableOpacity
-        style={styles.avatarContainer}
+    <ScrollView className="flex-1 bg-background" contentContainerClassName="items-center px-6 pt-12 pb-12">
+      <Avatar
+        uri={profile?.avatar_url}
+        fallback={profile?.display_name ?? profile?.email}
+        size="lg"
         onPress={handlePickAvatar}
-        disabled={uploading}
-      >
-        {profile?.avatar_url ? (
-          <Image source={{ uri: profile.avatar_url }} style={styles.avatar} />
-        ) : (
-          <View style={styles.avatarPlaceholder}>
-            <FontAwesome name="user" size={40} color="#999" />
-          </View>
-        )}
-        {uploading ? (
-          <View style={styles.avatarOverlay}>
-            <ActivityIndicator color="#fff" />
-          </View>
-        ) : (
-          <View style={styles.avatarBadge}>
-            <FontAwesome name="camera" size={12} color="#fff" />
-          </View>
-        )}
-      </TouchableOpacity>
+        showEditBadge={!uploading}
+      />
 
-      <Text style={styles.email}>{profile?.email ?? session?.user.email}</Text>
+      {uploading && <ActivityIndicator size="small" color="#22C55E" className="mt-2" />}
+
+      <Text className="mt-3 text-sm text-text-muted">{profile?.email ?? session?.user.email}</Text>
 
       {isEditing ? (
-        <View style={styles.editRow}>
+        <View className="mt-4 w-full items-center gap-3">
           <TextInput
-            style={styles.editInput}
+            className="w-full rounded-xl border border-border bg-surface-light px-4 py-3 text-center text-base text-white"
             value={displayName}
             onChangeText={setDisplayName}
             placeholder="Display Name"
+            placeholderTextColor="#64748B"
             autoFocus
           />
+          <Button onPress={handleSave} loading={updateProfile.isPending} className="w-full">
+            Save
+          </Button>
           <TouchableOpacity
-            style={styles.saveButton}
-            onPress={handleSave}
-            disabled={updateProfile.isPending}
+            onPress={() => setIsEditing(false)}
+            className="min-h-[44px] items-center justify-center"
           >
-            <Text style={styles.saveButtonText}>
-              {updateProfile.isPending ? 'Saving...' : 'Save'}
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => setIsEditing(false)}>
-            <Text style={styles.cancelText}>Cancel</Text>
+            <Text className="text-sm text-text-muted">Cancel</Text>
           </TouchableOpacity>
         </View>
       ) : (
-        <TouchableOpacity style={styles.nameRow} onPress={startEditing}>
-          <Text style={styles.displayName}>{profile?.display_name ?? 'Set your name'}</Text>
-          <FontAwesome name="pencil" size={16} color="#888" />
+        <TouchableOpacity onPress={startEditing} className="mt-2 flex-row items-center gap-2">
+          <Text className="text-xl font-semibold text-white">
+            {profile?.display_name ?? 'Set your name'}
+          </Text>
         </TouchableOpacity>
       )}
-    </View>
+
+      <View className="mt-12 w-full">
+        <TouchableOpacity
+          className="min-h-[44px] flex-row items-center justify-center gap-2 rounded-xl border border-error px-6 py-3.5"
+          onPress={handleSignOut}
+          activeOpacity={0.7}
+        >
+          <SignOut size={20} color="#EF4444" />
+          <Text className="text-base font-semibold text-error">Sign Out</Text>
+        </TouchableOpacity>
+      </View>
+    </ScrollView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    alignItems: 'center',
-    paddingTop: 48,
-    paddingHorizontal: 24,
-  },
-  centered: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  avatarContainer: {
-    position: 'relative',
-    marginBottom: 16,
-  },
-  avatar: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-  },
-  avatarPlaceholder: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: '#e5e7eb',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  avatarOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    borderRadius: 50,
-    backgroundColor: 'rgba(0,0,0,0.4)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  avatarBadge: {
-    position: 'absolute',
-    bottom: 0,
-    right: 0,
-    backgroundColor: '#2563eb',
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: '#fff',
-  },
-  email: {
-    fontSize: 14,
-    color: '#888',
-    marginBottom: 12,
-  },
-  nameRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  displayName: {
-    fontSize: 22,
-    fontWeight: '600',
-  },
-  editRow: {
-    width: '100%',
-    alignItems: 'center',
-    gap: 12,
-  },
-  editInput: {
-    width: '100%',
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 8,
-    padding: 14,
-    fontSize: 16,
-    textAlign: 'center',
-  },
-  saveButton: {
-    backgroundColor: '#2563eb',
-    borderRadius: 8,
-    paddingVertical: 12,
-    paddingHorizontal: 32,
-  },
-  saveButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  cancelText: {
-    color: '#888',
-    fontSize: 14,
-  },
-});

@@ -1,4 +1,4 @@
-import { makeRedirectUri } from 'expo-auth-session';
+import * as Linking from 'expo-linking';
 import * as WebBrowser from 'expo-web-browser';
 import { supabase } from './supabase';
 
@@ -7,7 +7,7 @@ WebBrowser.maybeCompleteAuthSession();
 type OAuthProvider = 'google' | 'apple';
 
 export async function signInWithOAuth(provider: OAuthProvider) {
-  const redirectTo = makeRedirectUri();
+  const redirectTo = Linking.createURL('/');
 
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider,

@@ -1,12 +1,14 @@
+import '../global.css';
+
 import FontAwesome from '@expo/vector-icons/FontAwesome';
-import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
+import { DarkTheme, ThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
 import { Slot, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
 import 'react-native-reanimated';
 
-import { useColorScheme } from '@/components/useColorScheme';
+import { colors } from '@/constants/colors';
 import { Providers } from '@/providers';
 import { useAuth } from '@/providers/auth';
 
@@ -17,6 +19,18 @@ export const unstable_settings = {
 };
 
 SplashScreen.preventAutoHideAsync();
+
+const appTheme = {
+  ...DarkTheme,
+  colors: {
+    ...DarkTheme.colors,
+    background: colors.background,
+    card: colors.surface,
+    text: colors.textPrimary,
+    border: colors.border,
+    primary: colors.primary,
+  },
+};
 
 function AuthGate() {
   const { session, isLoading } = useAuth();
@@ -31,7 +45,7 @@ function AuthGate() {
     if (!session && !inAuthGroup) {
       router.replace('/(auth)/sign-in');
     } else if (session && inAuthGroup) {
-      router.replace('/(tabs)');
+      router.replace('/(tabs)/rooms');
     }
   }, [session, isLoading, segments, router]);
 
@@ -44,7 +58,6 @@ export default function RootLayout() {
     SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
     ...FontAwesome.font,
   });
-  const colorScheme = useColorScheme();
 
   useEffect(() => {
     if (error) throw error;
@@ -62,7 +75,7 @@ export default function RootLayout() {
 
   return (
     <Providers>
-      <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+      <ThemeProvider value={appTheme}>
         <AuthGate />
       </ThemeProvider>
     </Providers>
