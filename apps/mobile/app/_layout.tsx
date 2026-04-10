@@ -3,7 +3,7 @@ import '../global.css';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { DarkTheme, ThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
-import { Slot, useRouter, useSegments } from 'expo-router';
+import { Stack, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
 import 'react-native-reanimated';
@@ -15,7 +15,7 @@ import { useAuth } from '@/providers/auth';
 export { ErrorBoundary } from 'expo-router';
 
 export const unstable_settings = {
-  initialRouteName: '(tabs)',
+  anchor: '(tabs)',
 };
 
 SplashScreen.preventAutoHideAsync();
@@ -32,7 +32,7 @@ const appTheme = {
   },
 };
 
-function AuthGate() {
+function AuthGate({ children }: { children: React.ReactNode }) {
   const { session, isLoading } = useAuth();
   const segments = useSegments();
   const router = useRouter();
@@ -49,19 +49,15 @@ function AuthGate() {
     }
   }, [session, isLoading, segments, router]);
 
-  return <Slot />;
+  return <>{children}</>;
 }
 
 export default function RootLayout() {
-  const [loaded, error] = useFonts({
+  const [loaded] = useFonts({
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
     ...FontAwesome.font,
   });
-
-  useEffect(() => {
-    if (error) throw error;
-  }, [error]);
 
   useEffect(() => {
     if (loaded) {
@@ -76,7 +72,13 @@ export default function RootLayout() {
   return (
     <Providers>
       <ThemeProvider value={appTheme}>
-        <AuthGate />
+        <AuthGate>
+          <Stack screenOptions={{ headerShown: false }}>
+            <Stack.Screen name="index" />
+            <Stack.Screen name="(tabs)" />
+            <Stack.Screen name="(auth)" />
+          </Stack>
+        </AuthGate>
       </ThemeProvider>
     </Providers>
   );

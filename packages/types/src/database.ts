@@ -429,6 +429,38 @@ export interface Database {
           created_at: string | null;
         };
       };
+      create_room: {
+        Args: {
+          p_name: string;
+          p_description?: string | null;
+          p_chip_limit?: number | null;
+        };
+        Returns: {
+          id: string;
+          name: string;
+          description: string | null;
+          invite_code: string;
+          created_by: string | null;
+          chip_limit: number | null;
+          status: string | null;
+          created_at: string | null;
+        };
+      };
+      join_room_via_invite: {
+        Args: {
+          p_invite_code: string;
+        };
+        Returns: {
+          id: string;
+          name: string;
+          description: string | null;
+          invite_code: string;
+          created_by: string | null;
+          chip_limit: number | null;
+          status: string | null;
+          created_at: string | null;
+        };
+      };
     };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;

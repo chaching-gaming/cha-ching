@@ -4,3 +4,4 @@ export { Badge } from './badge';
 export { Input } from './input';
 export { ListItem } from './list-item';
 export { Avatar } from './avatar';
+export { ScreenHeader } from './screen-header';
