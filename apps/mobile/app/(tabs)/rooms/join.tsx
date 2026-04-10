@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { CameraView, useCameraPermissions } from 'expo-camera';
-import { Keyboard as KeyboardIcon, Users } from 'phosphor-react-native';
+import { Users } from 'phosphor-react-native';
 
 import { colors } from '@/constants/colors';
 import { Button } from '@/components/ui/button';
@@ -121,7 +121,7 @@ function InvalidCodeCard() {
       <WarningCircle size={36} color={colors.warning} weight="fill" />
       <Text className="mt-2 text-base font-semibold text-white">No room found</Text>
       <Text className="mt-1 text-center text-sm text-text-muted">
-        This code doesn't match any active room.{'\n'}Double-check with whoever invited you.
+        This code doesn&apos;t match any active room.{'\n'}Double-check with whoever invited you.
       </Text>
     </View>
   );
@@ -388,7 +388,7 @@ export default function JoinRoomScreen() {
             ) : (
               <>
                 <Text className="mb-4 text-center text-sm text-text-secondary">
-                  Point your camera at a room's QR code to join instantly
+                  Point your camera at a room&apos;s QR code to join instantly
                 </Text>
 
                 {/* Camera with corner brackets */}

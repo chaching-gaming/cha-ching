@@ -147,7 +147,11 @@ export default function RoomDetailScreen() {
         )}
         contentContainerClassName="px-4 pb-24"
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={colors.primary}
+          />
         }
         ListHeaderComponent={
           <View>
@@ -192,9 +196,7 @@ export default function RoomDetailScreen() {
           ) : (
             <View className="items-center py-12">
               <Text className="text-base text-text-secondary">No activity yet</Text>
-              <Text className="mt-1 text-sm text-text-muted">
-                Create a bet to get started
-              </Text>
+              <Text className="mt-1 text-sm text-text-muted">Create a bet to get started</Text>
             </View>
           )
         }

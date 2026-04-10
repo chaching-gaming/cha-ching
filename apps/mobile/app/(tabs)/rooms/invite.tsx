@@ -22,9 +22,7 @@ export default function InviteScreen() {
 
   const inviteCode = room?.invite_code ?? '';
   const formattedCode =
-    inviteCode.length === 6
-      ? `${inviteCode.slice(0, 3)}-${inviteCode.slice(3)}`
-      : inviteCode;
+    inviteCode.length === 6 ? `${inviteCode.slice(0, 3)}-${inviteCode.slice(3)}` : inviteCode;
 
   const shareMessage = `Join my room "${room?.name}" on Cha-Ching! Use invite code: ${inviteCode}`;
 
@@ -114,9 +112,7 @@ export default function InviteScreen() {
 
         {/* Share button */}
         <View className="w-full">
-          <Button onPress={handleShare}>
-            Share Invite
-          </Button>
+          <Button onPress={handleShare}>Share Invite</Button>
         </View>
       </View>
     </View>

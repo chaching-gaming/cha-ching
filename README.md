@@ -49,12 +49,12 @@ pnpm --filter mobile dev
 
 ## Scripts
 
-| Command | Description |
-|---|---|
-| `pnpm --filter mobile dev` | Start Expo dev server |
-| `pnpm lint` | Lint all packages |
-| `pnpm typecheck` | Type-check all packages |
-| `pnpm format` | Format all files with Prettier |
-| `pnpm db:gen-types` | Regenerate TypeScript types from local DB |
-| `supabase start` | Start local Supabase stack |
-| `supabase db reset` | Reset local DB and apply migrations |
+| Command                    | Description                               |
+| -------------------------- | ----------------------------------------- |
+| `pnpm --filter mobile dev` | Start Expo dev server                     |
+| `pnpm lint`                | Lint all packages                         |
+| `pnpm typecheck`           | Type-check all packages                   |
+| `pnpm format`              | Format all files with Prettier            |
+| `pnpm db:gen-types`        | Regenerate TypeScript types from local DB |
+| `supabase start`           | Start local Supabase stack                |
+| `supabase db reset`        | Reset local DB and apply migrations       |

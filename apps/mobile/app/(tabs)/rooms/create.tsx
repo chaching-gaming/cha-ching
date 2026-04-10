@@ -1,5 +1,13 @@
 import { useState } from 'react';
-import { Keyboard, Pressable, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import {
+  Keyboard,
+  Pressable,
+  ScrollView,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import { useRouter } from 'expo-router';
 import { Info } from 'phosphor-react-native';
 
@@ -37,9 +45,7 @@ export default function CreateRoomScreen() {
 
   const today = todayDateString();
   const trimmedName = name.trim();
-  const roomName = trimmedName
-    ? `${trimmedName} - ${formatDatePreview(today)}`
-    : '';
+  const roomName = trimmedName ? `${trimmedName} - ${formatDatePreview(today)}` : '';
 
   async function handleCreate() {
     if (!trimmedName) {
@@ -97,15 +103,16 @@ export default function CreateRoomScreen() {
           <TextInput
             className="rounded-xl border border-border bg-surface px-4 py-3 text-base text-white"
             value={name}
-            onChangeText={(text) => { setName(text); setError(null); }}
+            onChangeText={(text) => {
+              setName(text);
+              setError(null);
+            }}
             placeholder="e.g. Sunday Golf"
             placeholderTextColor={colors.textMuted}
             autoCorrect={false}
           />
           {roomName ? (
-            <Text className="mt-1 text-xs text-text-muted">
-              Preview: {roomName}
-            </Text>
+            <Text className="mt-1 text-xs text-text-muted">Preview: {roomName}</Text>
           ) : null}
         </View>
 

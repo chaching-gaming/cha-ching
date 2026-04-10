@@ -1,5 +1,13 @@
 import { useState } from 'react';
-import { ActivityIndicator, Alert, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Alert,
+  ScrollView,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import { useRouter } from 'expo-router';
 import { CalendarBlank, ClockCounterClockwise, SignOut } from 'phosphor-react-native';
 import * as ImagePicker from 'expo-image-picker';
@@ -97,7 +105,9 @@ export default function ProfileScreen() {
 
         {uploading && <ActivityIndicator size="small" color="#22C55E" className="mt-2" />}
 
-        <Text className="mt-3 text-sm text-text-muted">{profile?.email ?? session?.user.email}</Text>
+        <Text className="mt-3 text-sm text-text-muted">
+          {profile?.email ?? session?.user.email}
+        </Text>
 
         {isEditing ? (
           <View className="mt-4 w-full items-center gap-3">

@@ -56,7 +56,13 @@ function getBetAction(bet: BetWithProfiles, currentUserId?: string) {
             : 'Someone';
       const isCurrentUserWinner = bet.winner === currentUserId;
       return {
-        icon: <Trophy size={16} color={isCurrentUserWinner ? colors.primary : colors.error} weight="fill" />,
+        icon: (
+          <Trophy
+            size={16}
+            color={isCurrentUserWinner ? colors.primary : colors.error}
+            weight="fill"
+          />
+        ),
         title: `${winnerName} won the bet`,
         badge: {
           variant: (isCurrentUserWinner ? 'success' : 'error') as 'success' | 'error',
@@ -112,9 +118,7 @@ export function ActivityFeedItem({ item, currentUserId }: ActivityFeedItemProps)
           <Text className="mt-0.5 text-sm text-text-secondary" numberOfLines={1}>
             {bet.question} &middot; {bet.stake} chips
           </Text>
-          <Text className="mt-0.5 text-xs text-text-muted">
-            {getRelativeTime(item.timestamp)}
-          </Text>
+          <Text className="mt-0.5 text-xs text-text-muted">{getRelativeTime(item.timestamp)}</Text>
         </View>
       </View>
     );
@@ -152,9 +156,7 @@ export function ActivityFeedItem({ item, currentUserId }: ActivityFeedItemProps)
             </Text>
           </View>
         )}
-        <Text className="mt-0.5 text-xs text-text-muted">
-          {getRelativeTime(item.timestamp)}
-        </Text>
+        <Text className="mt-0.5 text-xs text-text-muted">{getRelativeTime(item.timestamp)}</Text>
       </View>
     </View>
   );
