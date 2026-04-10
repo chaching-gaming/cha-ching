@@ -25,3 +25,11 @@ as $$
 $$;
 
 grant execute on function public.get_my_room_balance(uuid) to authenticated;
+
+-- ============================================================
+-- 3. Allow authenticated users to view active rooms by invite code
+-- ============================================================
+
+create policy "Anyone can view active rooms by invite code"
+on public.rooms for select
+using (is_active = true);

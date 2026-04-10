@@ -1,4 +1,5 @@
-import { ActivityIndicator, FlatList, Text, TouchableOpacity, View } from 'react-native';
+import { useCallback } from 'react';
+import { ActivityIndicator, FlatList, RefreshControl, Text, TouchableOpacity, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Plus, QrCode } from 'phosphor-react-native';
 
@@ -87,7 +88,9 @@ function EmptyState() {
 
 export default function RoomsListScreen() {
   const router = useRouter();
-  const { data: rooms, isLoading } = useRooms('active');
+  const { data: rooms, isLoading, refetch, isRefetching } = useRooms('active');
+
+  const onRefresh = useCallback(() => { refetch(); }, [refetch]);
 
   return (
     <View className="flex-1 bg-background">
@@ -119,6 +122,9 @@ export default function RoomsListScreen() {
             <RoomCard item={item} onPress={() => router.push(`/(tabs)/rooms/${item.room.id}`)} />
           )}
           contentContainerClassName="pb-8"
+          refreshControl={
+            <RefreshControl refreshing={isRefetching} onRefresh={onRefresh} tintColor={colors.primary} />
+          }
         />
       )}
     </View>

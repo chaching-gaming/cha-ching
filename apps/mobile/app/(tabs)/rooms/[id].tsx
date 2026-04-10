@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
   FlatList,
   Modal,
+  RefreshControl,
   SafeAreaView,
   Text,
   TouchableOpacity,
@@ -19,6 +20,7 @@ import { ScreenHeader } from '@/components/ui/screen-header';
 import { ActivityFeedItem } from '@/components/activity/activity-feed-item';
 import { MemberRow } from '@/components/activity/member-row';
 import { RoomHeaderBar } from '@/components/activity/room-header-bar';
+import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/providers/auth';
 import { useRoomDetail, useRoomMembers, useEndSession, useReassignAdmin } from '@/hooks/use-rooms';
 import {
@@ -36,6 +38,7 @@ export default function RoomDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { session: authSession } = useAuth();
+  const queryClient = useQueryClient();
 
   // Data hooks
   const { data: room, isLoading: roomLoading } = useRoomDetail(id);
@@ -50,6 +53,13 @@ export default function RoomDetailScreen() {
 
   // State
   const [showMembers, setShowMembers] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await queryClient.invalidateQueries({ queryKey: ['rooms', id] });
+    setRefreshing(false);
+  }, [id, queryClient]);
 
   // Derived
   const currentMember = members?.find((m) => m.user_id === authSession?.user.id);
@@ -136,6 +146,9 @@ export default function RoomDetailScreen() {
           <ActivityFeedItem item={item} currentUserId={authSession?.user.id} />
         )}
         contentContainerClassName="px-4 pb-24"
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
+        }
         ListHeaderComponent={
           <View>
             {/* Member avatars + balance */}
