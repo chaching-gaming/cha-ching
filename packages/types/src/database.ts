@@ -33,31 +33,34 @@ export interface Database {
         Row: {
           id: string;
           name: string;
-          description: string | null;
           invite_code: string;
           created_by: string | null;
-          chip_limit: number | null;
-          status: string | null;
+          per_user_chip_limit: number | null;
+          session_date: string;
+          is_active: boolean;
+          ended_at: string | null;
           created_at: string | null;
         };
         Insert: {
           id?: string;
           name: string;
-          description?: string | null;
           invite_code: string;
           created_by?: string | null;
-          chip_limit?: number | null;
-          status?: string | null;
+          per_user_chip_limit?: number | null;
+          session_date: string;
+          is_active?: boolean;
+          ended_at?: string | null;
           created_at?: string | null;
         };
         Update: {
           id?: string;
           name?: string;
-          description?: string | null;
           invite_code?: string;
           created_by?: string | null;
-          chip_limit?: number | null;
-          status?: string | null;
+          per_user_chip_limit?: number | null;
+          session_date?: string;
+          is_active?: boolean;
+          ended_at?: string | null;
           created_at?: string | null;
         };
         Relationships: [
@@ -114,7 +117,6 @@ export interface Database {
           id: string;
           room_id: string | null;
           name: string;
-          sport: string | null;
           status: 'UPCOMING' | 'LIVE' | 'COMPLETED' | null;
           created_by: string | null;
           event_date: string | null;
@@ -124,7 +126,6 @@ export interface Database {
           id?: string;
           room_id?: string | null;
           name: string;
-          sport?: string | null;
           status?: 'UPCOMING' | 'LIVE' | 'COMPLETED' | null;
           created_by?: string | null;
           event_date?: string | null;
@@ -134,7 +135,6 @@ export interface Database {
           id?: string;
           room_id?: string | null;
           name?: string;
-          sport?: string | null;
           status?: 'UPCOMING' | 'LIVE' | 'COMPLETED' | null;
           created_by?: string | null;
           event_date?: string | null;
@@ -432,17 +432,18 @@ export interface Database {
       create_room: {
         Args: {
           p_name: string;
-          p_description?: string | null;
+          p_session_date: string;
           p_chip_limit?: number | null;
         };
         Returns: {
           id: string;
           name: string;
-          description: string | null;
           invite_code: string;
           created_by: string | null;
-          chip_limit: number | null;
-          status: string | null;
+          per_user_chip_limit: number | null;
+          session_date: string;
+          is_active: boolean;
+          ended_at: string | null;
           created_at: string | null;
         };
       };
@@ -453,13 +454,43 @@ export interface Database {
         Returns: {
           id: string;
           name: string;
-          description: string | null;
           invite_code: string;
           created_by: string | null;
-          chip_limit: number | null;
-          status: string | null;
+          per_user_chip_limit: number | null;
+          session_date: string;
+          is_active: boolean;
+          ended_at: string | null;
           created_at: string | null;
         };
+      };
+      end_session: {
+        Args: {
+          p_room_id: string;
+        };
+        Returns: {
+          id: string;
+          name: string;
+          invite_code: string;
+          created_by: string | null;
+          per_user_chip_limit: number | null;
+          session_date: string;
+          is_active: boolean;
+          ended_at: string | null;
+          created_at: string | null;
+        };
+      };
+      reassign_admin: {
+        Args: {
+          p_room_id: string;
+          p_new_admin_user_id: string;
+        };
+        Returns: undefined;
+      };
+      get_my_room_balance: {
+        Args: {
+          p_room_id: string;
+        };
+        Returns: number;
       };
     };
     Enums: Record<string, never>;

@@ -51,6 +51,8 @@ export function useUpdateProfile() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: PROFILE_KEY });
+      // Profile data is embedded in room members, room list previews, and activity feed
+      queryClient.invalidateQueries({ queryKey: ['rooms'] });
     },
   });
 }

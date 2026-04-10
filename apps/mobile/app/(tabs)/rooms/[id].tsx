@@ -1,49 +1,100 @@
-import { ActivityIndicator, FlatList, Share, Text, TouchableOpacity, View } from 'react-native';
-import { useLocalSearchParams } from 'expo-router';
-import * as Clipboard from 'expo-clipboard';
-import { Copy, ShareNetwork } from 'phosphor-react-native';
+import { useState } from 'react';
+import {
+  ActivityIndicator,
+  Alert,
+  FlatList,
+  Modal,
+  SafeAreaView,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { CalendarBlank, UserPlus, X } from 'phosphor-react-native';
 
 import { colors } from '@/constants/colors';
-import { Avatar } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { Card } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { ScreenHeader } from '@/components/ui/screen-header';
-import { useRoomDetail, useRoomMembers, type RoomMemberWithProfile } from '@/hooks/use-rooms';
+import { ActivityFeedItem } from '@/components/activity/activity-feed-item';
+import { MemberRow } from '@/components/activity/member-row';
+import { RoomHeaderBar } from '@/components/activity/room-header-bar';
+import { useAuth } from '@/providers/auth';
+import { useRoomDetail, useRoomMembers, useEndSession, useReassignAdmin } from '@/hooks/use-rooms';
+import {
+  useRoomActivityFeed,
+  useMyRoomBalance,
+  useRealtimeActivityFeed,
+} from '@/hooks/use-activity-feed';
 
-function MemberRow({ member }: { member: RoomMemberWithProfile }) {
-  const roleVariant = member.role?.toLowerCase() as 'admin' | 'player' | 'attestor';
-
-  return (
-    <View className="flex-row items-center border-b border-border px-4 py-3">
-      <Avatar
-        uri={member.profiles?.avatar_url}
-        fallback={member.profiles?.display_name ?? '?'}
-        size="sm"
-      />
-      <Text className="ml-3 flex-1 text-base text-white">
-        {member.profiles?.display_name ?? 'Unknown'}
-      </Text>
-      {member.role ? <Badge variant={roleVariant} label={member.role} /> : null}
-    </View>
-  );
+function formatSessionDate(dateStr: string) {
+  const date = new Date(dateStr + 'T00:00:00');
+  return date.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
 }
 
 export default function RoomDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { data: room, isLoading: roomLoading } = useRoomDetail(id);
-  const { data: members, isLoading: membersLoading } = useRoomMembers(id);
-  console.log({ id, room, members, roomLoading });
+  const router = useRouter();
+  const { session: authSession } = useAuth();
 
-  async function handleCopyCode() {
-    if (!room?.invite_code) return;
-    await Clipboard.setStringAsync(room.invite_code);
+  // Data hooks
+  const { data: room, isLoading: roomLoading } = useRoomDetail(id);
+  const { data: members } = useRoomMembers(id);
+  const { data: balance } = useMyRoomBalance(id);
+  const { data: activityItems, isLoading: feedLoading } = useRoomActivityFeed(id);
+  useRealtimeActivityFeed(id);
+
+  // Mutations
+  const endSession = useEndSession();
+  const reassignAdmin = useReassignAdmin();
+
+  // State
+  const [showMembers, setShowMembers] = useState(false);
+
+  // Derived
+  const currentMember = members?.find((m) => m.user_id === authSession?.user.id);
+  const isAdmin = currentMember?.role === 'ADMIN';
+  const isActive = room?.is_active ?? false;
+
+  function handleEndSession() {
+    Alert.alert('End Session', 'Are you sure? This will prevent new joins and bets.', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'End Session',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await endSession.mutateAsync({ p_room_id: id });
+          } catch (err) {
+            const message = err instanceof Error ? err.message : 'Failed to end session';
+            Alert.alert('Error', message);
+          }
+        },
+      },
+    ]);
   }
 
-  async function handleShareCode() {
-    if (!room) return;
-    await Share.share({
-      message: `Join my room "${room.name}" on Cha-Ching! Use invite code: ${room.invite_code}`,
-    });
+  function handleReassignAdmin(userId: string) {
+    const target = members?.find((m) => m.user_id === userId);
+    const targetName = target?.profiles?.display_name ?? 'this member';
+
+    Alert.alert('Reassign Admin', `Make ${targetName} the admin? You will become a Player.`, [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Confirm',
+        onPress: async () => {
+          try {
+            await reassignAdmin.mutateAsync({
+              p_room_id: id,
+              p_new_admin_user_id: userId,
+            });
+          } catch (err) {
+            const message = err instanceof Error ? err.message : 'Failed to reassign admin';
+            Alert.alert('Error', message);
+          }
+        },
+      },
+    ]);
   }
 
   if (roomLoading) {
@@ -64,57 +115,120 @@ export default function RoomDetailScreen() {
 
   return (
     <View className="flex-1 bg-background">
-      <ScreenHeader title={room.name} showBack />
+      <ScreenHeader
+        title={room.name}
+        showBack
+        right={
+          isActive ? (
+            <TouchableOpacity onPress={() => router.push(`/(tabs)/rooms/invite?id=${id}`)}>
+              <UserPlus size={24} color={colors.primary} />
+            </TouchableOpacity>
+          ) : undefined
+        }
+      />
 
       <FlatList
-        data={members ?? []}
-        keyExtractor={(item) => item.id}
-        renderItem={({ item }) => <MemberRow member={item} />}
-        contentContainerClassName="pb-8"
+        data={activityItems ?? []}
+        keyExtractor={(item) =>
+          item.type === 'bet' ? `bet-${item.bet.id}` : `cr-${item.chipRequest.id}`
+        }
+        renderItem={({ item }) => (
+          <ActivityFeedItem item={item} currentUserId={authSession?.user.id} />
+        )}
+        contentContainerClassName="px-4 pb-24"
         ListHeaderComponent={
-          <View className="px-4 pt-4">
-            {room.description ? (
-              <Text className="mb-4 text-base text-text-secondary">{room.description}</Text>
-            ) : null}
+          <View>
+            {/* Member avatars + balance */}
+            <RoomHeaderBar
+              members={members ?? []}
+              balance={balance ?? 0}
+              onViewMembers={() => setShowMembers(true)}
+            />
 
-            <Card className="mb-4">
-              <Text className="mb-2 text-sm text-text-secondary">Invite Code</Text>
-              <View className="flex-row items-center justify-between">
-                <Text className="text-2xl font-bold tracking-widest text-primary">
-                  {room.invite_code}
+            {/* Status row */}
+            <View className="mb-3 flex-row items-center justify-between">
+              <View className="flex-row items-center gap-2">
+                <CalendarBlank size={16} color={colors.textSecondary} />
+                <Text className="text-sm text-text-secondary">
+                  {formatSessionDate(room.session_date)}
                 </Text>
-                <View className="flex-row gap-3">
-                  <TouchableOpacity
-                    onPress={handleCopyCode}
-                    className="h-10 w-10 items-center justify-center rounded-lg bg-surface-light"
-                    activeOpacity={0.7}
-                  >
-                    <Copy size={20} color={colors.textSecondary} />
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    onPress={handleShareCode}
-                    className="h-10 w-10 items-center justify-center rounded-lg bg-surface-light"
-                    activeOpacity={0.7}
-                  >
-                    <ShareNetwork size={20} color={colors.textSecondary} />
-                  </TouchableOpacity>
-                </View>
+                <Badge
+                  variant={isActive ? 'success' : 'default'}
+                  label={isActive ? 'Live' : 'Ended'}
+                />
               </View>
-            </Card>
 
-            <Text className="mb-2 text-sm font-medium text-text-muted">
-              Members ({members?.length ?? 0})
-            </Text>
+              {isAdmin && isActive && (
+                <TouchableOpacity onPress={handleEndSession}>
+                  <Text className="text-sm text-error">End Session</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+
+            {/* Divider + section label */}
+            <View className="mb-2 border-b border-border pb-2">
+              <Text className="text-sm font-medium text-text-muted">Activity</Text>
+            </View>
           </View>
         }
         ListEmptyComponent={
-          membersLoading ? (
-            <View className="py-8 items-center">
+          feedLoading ? (
+            <View className="items-center py-12">
               <ActivityIndicator color={colors.primary} />
             </View>
-          ) : null
+          ) : (
+            <View className="items-center py-12">
+              <Text className="text-base text-text-secondary">No activity yet</Text>
+              <Text className="mt-1 text-sm text-text-muted">
+                Create a bet to get started
+              </Text>
+            </View>
+          )
         }
+        ItemSeparatorComponent={() => <View className="border-b border-border" />}
       />
+
+      {/* Floating Create Bet CTA */}
+      {isActive && (
+        <View className="absolute bottom-6 left-4 right-4">
+          <Button
+            onPress={() => {
+              /* TODO: navigate to create bet screen */
+            }}
+          >
+            Create Bet
+          </Button>
+        </View>
+      )}
+
+      {/* Members Modal */}
+      <Modal visible={showMembers} animationType="slide" transparent>
+        <View className="flex-1 bg-background/95">
+          <SafeAreaView className="flex-1">
+            <View className="flex-row items-center justify-between px-4 py-3">
+              <Text className="text-lg font-semibold text-white">
+                Members ({members?.length ?? 0})
+              </Text>
+              <TouchableOpacity onPress={() => setShowMembers(false)}>
+                <X size={24} color={colors.textSecondary} />
+              </TouchableOpacity>
+            </View>
+
+            <FlatList
+              data={members ?? []}
+              keyExtractor={(item) => item.id}
+              renderItem={({ item }) => (
+                <MemberRow
+                  member={item}
+                  isAdmin={isAdmin}
+                  isActive={isActive}
+                  onReassign={handleReassignAdmin}
+                />
+              )}
+            />
+          </SafeAreaView>
+        </View>
+      </Modal>
     </View>
   );
 }

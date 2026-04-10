@@ -1,38 +1,67 @@
 import { ActivityIndicator, FlatList, Text, TouchableOpacity, View } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Plus, QrCode, Users } from 'phosphor-react-native';
+import { Plus, QrCode } from 'phosphor-react-native';
 
 import { colors } from '@/constants/colors';
-import { Badge } from '@/components/ui/badge';
+import { Avatar } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { useRooms, type RoomWithMembership } from '@/hooks/use-rooms';
 
+function formatBalance(balance: number): string {
+  const abs = Math.abs(balance);
+  const formatted = abs >= 1000 ? abs.toLocaleString() : String(abs);
+  return balance >= 0 ? `+${formatted}` : `-${formatted}`;
+}
+
+function formatDate(dateStr: string): string {
+  const date = new Date(dateStr + 'T00:00:00');
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
 function RoomCard({ item, onPress }: { item: RoomWithMembership; onPress: () => void }) {
-  const roleVariant = item.role?.toLowerCase() as 'admin' | 'player' | 'attestor';
+  const isActive = item.room.is_active;
+  const balance = item.balance;
+  const balanceColor = balance >= 0 ? 'text-primary' : 'text-error';
+  const overflow = item.room.member_count - item.memberPreviews.length;
 
   return (
-    <TouchableOpacity onPress={onPress} activeOpacity={0.7}>
-      <Card className="mb-3">
-        <View className="flex-row items-center justify-between">
-          <View className="flex-1 mr-3">
-            <Text className="text-lg font-semibold text-white">{item.room.name}</Text>
-            {item.room.description ? (
-              <Text className="mt-1 text-sm text-text-secondary" numberOfLines={1}>
-                {item.room.description}
-              </Text>
-            ) : null}
-            <View className="mt-2 flex-row items-center gap-1">
-              <Users size={14} color={colors.textMuted} />
-              <Text className="text-xs text-text-muted">
-                {item.room.member_count} {item.room.member_count === 1 ? 'member' : 'members'}
-              </Text>
-            </View>
-          </View>
-          {item.role ? <Badge variant={roleVariant} label={item.role} /> : null}
+    <TouchableOpacity
+      onPress={onPress}
+      activeOpacity={0.7}
+      className="border-b border-border px-5 py-4"
+    >
+      {/* Row 1: status dot + name + balance */}
+      <View className="flex-row items-center justify-between">
+        <View className="flex-1 flex-row items-center gap-2 mr-3">
+          <View className={`h-2 w-2 rounded-full ${isActive ? 'bg-primary' : 'bg-text-muted'}`} />
+          <Text className="text-base font-semibold text-white" numberOfLines={1}>
+            {item.room.name}
+          </Text>
         </View>
-      </Card>
+        <Text className={`text-base font-bold ${balanceColor}`}>{formatBalance(balance)}</Text>
+      </View>
+
+      {/* Row 2: avatar stack + date */}
+      <View className="mt-2.5 flex-row items-center justify-between">
+        <View className="flex-row items-center">
+          {item.memberPreviews.map((member, index) => (
+            <View
+              key={index}
+              className={`rounded-full border-2 border-background ${index > 0 ? '-ml-2' : ''}`}
+              style={{ zIndex: 10 - index }}
+            >
+              <Avatar uri={member.avatar_url} fallback={member.display_name ?? '?'} size="sm" />
+            </View>
+          ))}
+          {overflow > 0 && (
+            <View className="-ml-2 h-8 w-8 items-center justify-center rounded-full border-2 border-background bg-surface-light">
+              <Text className="text-[10px] font-medium text-text-secondary">+{overflow}</Text>
+            </View>
+          )}
+        </View>
+        <Text className="text-sm text-text-muted">{formatDate(item.room.session_date)}</Text>
+      </View>
     </TouchableOpacity>
   );
 }
@@ -58,12 +87,12 @@ function EmptyState() {
 
 export default function RoomsListScreen() {
   const router = useRouter();
-  const { data: rooms, isLoading } = useRooms();
+  const { data: rooms, isLoading } = useRooms('active');
 
   return (
     <View className="flex-1 bg-background">
       <ScreenHeader
-        title="Rooms"
+        title="Your Rooms"
         right={
           <View className="flex-row items-center gap-4">
             <TouchableOpacity onPress={() => router.push('/(tabs)/rooms/join')}>
@@ -89,7 +118,7 @@ export default function RoomsListScreen() {
           renderItem={({ item }) => (
             <RoomCard item={item} onPress={() => router.push(`/(tabs)/rooms/${item.room.id}`)} />
           )}
-          contentContainerClassName="px-4 pt-4 pb-8"
+          contentContainerClassName="pb-8"
         />
       )}
     </View>

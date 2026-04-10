@@ -8,24 +8,34 @@ type RoomMember = Database['public']['Tables']['room_members']['Row'];
 type Profile = Database['public']['Tables']['profiles']['Row'];
 
 const ROOMS_KEY = ['rooms'] as const;
+const roomsKey = (filter: 'active' | 'history') => ['rooms', filter] as const;
 const roomDetailKey = (id: string) => ['rooms', id] as const;
 const roomMembersKey = (id: string) => ['rooms', id, 'members'] as const;
+
+export type MemberPreview = {
+  display_name: string | null;
+  avatar_url: string | null;
+};
 
 export type RoomWithMembership = {
   role: RoomMember['role'];
   room: Room & { member_count: number };
+  memberPreviews: MemberPreview[];
+  balance: number;
 };
 
-export function useRooms() {
+export function useRooms(filter: 'active' | 'history' = 'active') {
   const { session } = useAuth();
 
   return useQuery({
-    queryKey: ROOMS_KEY,
+    queryKey: roomsKey(filter),
     queryFn: async (): Promise<RoomWithMembership[]> => {
+      const userId = session!.user.id;
+
       const { data: memberships, error: memErr } = await supabase
         .from('room_members')
         .select('role, room_id')
-        .eq('user_id', session!.user.id)
+        .eq('user_id', userId)
         .order('joined_at', { ascending: false });
 
       if (memErr) throw memErr;
@@ -33,15 +43,29 @@ export function useRooms() {
 
       const roomIds = memberships.map((m) => m.room_id).filter(Boolean) as string[];
 
-      const { data: rooms, error: roomErr } = await supabase
-        .from('rooms')
-        .select('*, room_members(count)')
-        .in('id', roomIds);
+      // Fetch rooms, member previews, and balances in parallel
+      const [roomsResult, membersResult, balancesResult] = await Promise.all([
+        supabase
+          .from('rooms')
+          .select('*, room_members(count)')
+          .in('id', roomIds)
+          .eq('is_active', filter === 'active'),
+        supabase
+          .from('room_members')
+          .select('room_id, profiles(display_name, avatar_url)')
+          .in('room_id', roomIds)
+          .order('joined_at', { ascending: true }),
+        supabase
+          .from('ledger_entries')
+          .select('room_id, amount')
+          .in('room_id', roomIds)
+          .eq('user_id', userId),
+      ]);
 
-      if (roomErr) throw roomErr;
+      if (roomsResult.error) throw roomsResult.error;
 
       const roomMap = new Map(
-        (rooms ?? []).map((r) => {
+        (roomsResult.data ?? []).map((r) => {
           const count =
             Array.isArray(r.room_members) && r.room_members.length > 0
               ? (r.room_members[0] as { count: number }).count
@@ -50,11 +74,32 @@ export function useRooms() {
         }),
       );
 
+      // Group member previews by room (first 3 per room)
+      const previewMap = new Map<string, MemberPreview[]>();
+      for (const row of membersResult.data ?? []) {
+        if (!row.room_id) continue;
+        const list = previewMap.get(row.room_id) ?? [];
+        if (list.length < 3) {
+          const p = row.profiles as unknown as MemberPreview | null;
+          if (p) list.push(p);
+        }
+        previewMap.set(row.room_id, list);
+      }
+
+      // Sum balances by room
+      const balanceMap = new Map<string, number>();
+      for (const row of balancesResult.data ?? []) {
+        if (!row.room_id) continue;
+        balanceMap.set(row.room_id, (balanceMap.get(row.room_id) ?? 0) + Number(row.amount));
+      }
+
       return memberships
         .filter((m) => m.room_id && roomMap.has(m.room_id))
         .map((m) => ({
           role: m.role,
           room: roomMap.get(m.room_id!)!,
+          memberPreviews: previewMap.get(m.room_id!) ?? [],
+          balance: balanceMap.get(m.room_id!) ?? 0,
         }));
     },
     enabled: !!session?.user.id,
@@ -105,7 +150,7 @@ export function useCreateRoom() {
   return useMutation({
     mutationFn: async (params: {
       p_name: string;
-      p_description?: string | null;
+      p_session_date: string;
       p_chip_limit?: number | null;
     }) => {
       const { data, error } = await supabase.rpc('create_room', params);
@@ -129,6 +174,37 @@ export function useJoinRoom() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ROOMS_KEY });
+    },
+  });
+}
+
+export function useEndSession() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (params: { p_room_id: string }) => {
+      const { data, error } = await supabase.rpc('end_session', params);
+      if (error) throw error;
+      return data as unknown as Room;
+    },
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ROOMS_KEY });
+      queryClient.invalidateQueries({ queryKey: roomDetailKey(variables.p_room_id) });
+    },
+  });
+}
+
+export function useReassignAdmin() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (params: { p_room_id: string; p_new_admin_user_id: string }) => {
+      const { data, error } = await supabase.rpc('reassign_admin', params);
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: roomMembersKey(variables.p_room_id) });
     },
   });
 }

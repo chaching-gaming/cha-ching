@@ -1,18 +1,29 @@
 import { useState } from 'react';
 import { ActivityIndicator, Alert, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { SignOut } from 'phosphor-react-native';
+import { useRouter } from 'expo-router';
+import { CalendarBlank, ClockCounterClockwise, SignOut } from 'phosphor-react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { useProfile, useUpdateProfile } from '@/hooks/use-profile';
 import { useAuth } from '@/providers/auth';
+import { useRooms } from '@/hooks/use-rooms';
 import { uploadAvatar } from '@/lib/storage';
 import { supabase } from '@/lib/supabase';
 import { Avatar, Button } from '@/components/ui';
+import { Card } from '@/components/ui/card';
 import { ScreenHeader } from '@/components/ui/screen-header';
+import { colors } from '@/constants/colors';
+
+function formatSessionDate(dateStr: string) {
+  const date = new Date(dateStr + 'T00:00:00');
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
 
 export default function ProfileScreen() {
+  const router = useRouter();
   const { session } = useAuth();
   const { data: profile, isLoading } = useProfile();
   const updateProfile = useUpdateProfile();
+  const { data: historySessions } = useRooms('history');
 
   const [displayName, setDisplayName] = useState('');
   const [isEditing, setIsEditing] = useState(false);
@@ -116,7 +127,37 @@ export default function ProfileScreen() {
           </TouchableOpacity>
         )}
 
-        <View className="mt-12 w-full">
+        {/* Session History */}
+        <View className="mt-10 w-full">
+          <View className="mb-3 flex-row items-center gap-2">
+            <ClockCounterClockwise size={20} color={colors.textSecondary} />
+            <Text className="text-lg font-semibold text-white">Past Rooms</Text>
+          </View>
+
+          {!historySessions?.length ? (
+            <Text className="text-sm text-text-muted">No completed rooms yet.</Text>
+          ) : (
+            historySessions.map((item) => (
+              <TouchableOpacity
+                key={item.room.id}
+                onPress={() => router.push(`/(tabs)/rooms/${item.room.id}`)}
+                activeOpacity={0.7}
+              >
+                <Card className="mb-2">
+                  <Text className="text-base font-medium text-white">{item.room.name}</Text>
+                  <View className="mt-1 flex-row items-center gap-1">
+                    <CalendarBlank size={12} color={colors.textMuted} />
+                    <Text className="text-xs text-text-muted">
+                      {formatSessionDate(item.room.session_date)}
+                    </Text>
+                  </View>
+                </Card>
+              </TouchableOpacity>
+            ))
+          )}
+        </View>
+
+        <View className="mt-8 w-full">
           <TouchableOpacity
             className="min-h-[44px] flex-row items-center justify-center gap-2 rounded-xl border border-error px-6 py-3.5"
             onPress={handleSignOut}

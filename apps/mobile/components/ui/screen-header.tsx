@@ -11,17 +11,35 @@ interface ScreenHeaderProps {
 export function ScreenHeader({ title, showBack = false, right }: ScreenHeaderProps) {
   const router = useRouter();
 
-  return (
-    <View className="flex-row items-center justify-between bg-background px-5 pb-3 pt-16">
-      <View className="flex-row items-center gap-2">
-        {showBack ? (
-          <TouchableOpacity onPress={() => router.back()} activeOpacity={0.7} className="-ml-1">
-            <CaretLeft size={24} color="#fff" weight="bold" />
-          </TouchableOpacity>
-        ) : null}
-        <Text className="text-2xl font-bold text-white">{title}</Text>
+  // Main tab pages (no back button): left-aligned title
+  // Sub-pages (with back button): center-aligned title
+  if (!showBack) {
+    return (
+      <View className="flex-row items-center justify-between bg-background px-5 pb-3 pt-16">
+        <Text className="text-xl font-bold text-white">{title}</Text>
+        {right ? <View>{right}</View> : null}
       </View>
-      {right ? <View>{right}</View> : null}
+    );
+  }
+
+  return (
+    <View className="flex-row items-center bg-background px-5 pb-3 pt-16">
+      {/* Left slot */}
+      <View className="w-10 items-start">
+        <TouchableOpacity onPress={() => router.back()} activeOpacity={0.7}>
+          <CaretLeft size={24} color="#fff" weight="bold" />
+        </TouchableOpacity>
+      </View>
+
+      {/* Center title */}
+      <View className="flex-1 items-center">
+        <Text className="text-xl font-bold text-white" numberOfLines={1}>
+          {title}
+        </Text>
+      </View>
+
+      {/* Right slot */}
+      <View className="w-10 items-end">{right ?? null}</View>
     </View>
   );
 }
