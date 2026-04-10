@@ -7,6 +7,7 @@ import { useAuth } from '@/providers/auth';
 import { uploadAvatar } from '@/lib/storage';
 import { supabase } from '@/lib/supabase';
 import { Avatar, Button } from '@/components/ui';
+import { ScreenHeader } from '@/components/ui/screen-header';
 
 export default function ProfileScreen() {
   const { session } = useAuth();
@@ -62,64 +63,70 @@ export default function ProfileScreen() {
 
   if (isLoading) {
     return (
-      <View className="flex-1 items-center justify-center bg-background">
-        <ActivityIndicator size="large" color="#22C55E" />
+      <View className="flex-1 bg-background">
+        <ScreenHeader title="Profile" />
+        <View className="flex-1 items-center justify-center">
+          <ActivityIndicator size="large" color="#22C55E" />
+        </View>
       </View>
     );
   }
 
   return (
-    <ScrollView className="flex-1 bg-background" contentContainerClassName="items-center px-6 pt-12 pb-12">
-      <Avatar
-        uri={profile?.avatar_url}
-        fallback={profile?.display_name ?? profile?.email}
-        size="lg"
-        onPress={handlePickAvatar}
-        showEditBadge={!uploading}
-      />
+    <View className="flex-1 bg-background">
+      <ScreenHeader title="Profile" />
+      <ScrollView className="flex-1" contentContainerClassName="items-center px-6 pt-4 pb-12">
+        <Avatar
+          uri={profile?.avatar_url}
+          fallback={profile?.display_name ?? profile?.email}
+          size="lg"
+          onPress={handlePickAvatar}
+          showEditBadge={!uploading}
+        />
 
-      {uploading && <ActivityIndicator size="small" color="#22C55E" className="mt-2" />}
+        {uploading && <ActivityIndicator size="small" color="#22C55E" className="mt-2" />}
 
-      <Text className="mt-3 text-sm text-text-muted">{profile?.email ?? session?.user.email}</Text>
+        <Text className="mt-3 text-sm text-text-muted">{profile?.email ?? session?.user.email}</Text>
 
-      {isEditing ? (
-        <View className="mt-4 w-full items-center gap-3">
-          <TextInput
-            className="w-full rounded-xl border border-border bg-surface-light px-4 py-3 text-center text-base text-white"
-            value={displayName}
-            onChangeText={setDisplayName}
-            placeholder="Display Name"
-            placeholderTextColor="#64748B"
-            autoFocus
-          />
-          <Button onPress={handleSave} loading={updateProfile.isPending} className="w-full">
-            Save
-          </Button>
+        {isEditing ? (
+          <View className="mt-4 w-full items-center gap-3">
+            <TextInput
+              className="w-full rounded-xl border border-border bg-surface-light px-4 py-3 text-center text-base text-white"
+              value={displayName}
+              onChangeText={setDisplayName}
+              placeholder="Display Name"
+              placeholderTextColor="#64748B"
+              autoFocus
+            />
+            <Button onPress={handleSave} loading={updateProfile.isPending} className="w-full">
+              Save
+            </Button>
+            <TouchableOpacity
+              onPress={() => setIsEditing(false)}
+              className="min-h-[44px] items-center justify-center"
+            >
+              <Text className="text-sm text-text-muted">Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <TouchableOpacity onPress={startEditing} className="mt-2 flex-row items-center gap-2">
+            <Text className="text-xl font-semibold text-white">
+              {profile?.display_name ?? 'Set your name'}
+            </Text>
+          </TouchableOpacity>
+        )}
+
+        <View className="mt-12 w-full">
           <TouchableOpacity
-            onPress={() => setIsEditing(false)}
-            className="min-h-[44px] items-center justify-center"
+            className="min-h-[44px] flex-row items-center justify-center gap-2 rounded-xl border border-error px-6 py-3.5"
+            onPress={handleSignOut}
+            activeOpacity={0.7}
           >
-            <Text className="text-sm text-text-muted">Cancel</Text>
+            <SignOut size={20} color="#EF4444" />
+            <Text className="text-base font-semibold text-error">Sign Out</Text>
           </TouchableOpacity>
         </View>
-      ) : (
-        <TouchableOpacity onPress={startEditing} className="mt-2 flex-row items-center gap-2">
-          <Text className="text-xl font-semibold text-white">
-            {profile?.display_name ?? 'Set your name'}
-          </Text>
-        </TouchableOpacity>
-      )}
-
-      <View className="mt-12 w-full">
-        <TouchableOpacity
-          className="min-h-[44px] flex-row items-center justify-center gap-2 rounded-xl border border-error px-6 py-3.5"
-          onPress={handleSignOut}
-          activeOpacity={0.7}
-        >
-          <SignOut size={20} color="#EF4444" />
-          <Text className="text-base font-semibold text-error">Sign Out</Text>
-        </TouchableOpacity>
-      </View>
-    </ScrollView>
+      </ScrollView>
+    </View>
   );
 }
