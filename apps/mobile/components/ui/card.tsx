@@ -7,7 +7,10 @@ interface CardProps {
 
 export function Card({ children, className = '' }: CardProps) {
   return (
-    <View className={`rounded-2xl bg-surface border border-border p-4 ${className}`}>
+    <View
+      accessibilityRole="none"
+      className={`rounded-2xl border border-border bg-surface p-5 ${className}`}
+    >
       {children}
     </View>
   );

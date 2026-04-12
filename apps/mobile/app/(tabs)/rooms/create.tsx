@@ -74,34 +74,34 @@ export default function CreateRoomScreen() {
       <ScreenHeader title="Create Room" showBack />
       <ScrollView
         className="flex-1"
-        contentContainerClassName="px-6 pt-4 pb-8"
+        contentContainerClassName="px-5 pt-4 pb-8"
         keyboardShouldPersistTaps="handled"
       >
         {/* Create / Join toggle */}
         <View className="mb-6 flex-row rounded-xl bg-surface p-1">
           <View className="flex-1 items-center rounded-lg bg-primary py-2.5">
-            <Text className="text-sm font-semibold text-white">Create</Text>
+            <Text className="text-base font-semibold text-white">Create</Text>
           </View>
           <TouchableOpacity
             className="flex-1 items-center rounded-lg py-2.5"
             onPress={() => router.replace('/(tabs)/rooms/join')}
             activeOpacity={0.7}
           >
-            <Text className="text-sm font-medium text-text-secondary">Join</Text>
+            <Text className="text-base font-medium text-text-secondary">Join</Text>
           </TouchableOpacity>
         </View>
 
         {error ? (
-          <View className="mb-4 items-center rounded-xl bg-error/10 px-3 py-3">
-            <Text className="text-sm text-error">{error}</Text>
+          <View className="mb-4 items-center rounded-xl bg-error/10 px-4 py-3">
+            <Text className="text-center text-base text-error">{error}</Text>
           </View>
         ) : null}
 
         {/* Room name */}
         <View className="mb-4">
-          <Text className="mb-1 text-sm font-medium text-white">Room Name *</Text>
+          <Text className="mb-2 text-base font-medium text-text-secondary">Room name *</Text>
           <TextInput
-            className="rounded-xl border border-border bg-surface px-4 py-3 text-base text-white"
+            className="min-h-[48px] rounded-xl border border-border bg-surface-light px-4 py-3.5 text-base text-white"
             value={name}
             onChangeText={(text) => {
               setName(text);
@@ -112,14 +112,16 @@ export default function CreateRoomScreen() {
             autoCorrect={false}
           />
           {roomName ? (
-            <Text className="mt-1 text-xs text-text-muted">Preview: {roomName}</Text>
+            <Text className="mt-2 text-sm text-text-secondary">Preview: {roomName}</Text>
           ) : null}
         </View>
 
         {/* Per-User Chip Limit selector */}
         <View className="mb-4">
-          <Text className="mb-1 text-sm font-medium text-white">Per-User Chip Limit</Text>
-          <Text className="mb-3 text-xs text-text-muted">
+          <Text className="mb-2 text-base font-medium text-text-secondary">
+            Per-user chip limit
+          </Text>
+          <Text className="mb-3 text-sm leading-5 text-text-secondary">
             Max chips a player can lose before being blocked from betting
           </Text>
           <View className="flex-row gap-3">
@@ -129,13 +131,13 @@ export default function CreateRoomScreen() {
                 <TouchableOpacity
                   key={option.label}
                   onPress={() => setSelectedChipLimit(option.value)}
-                  className={`flex-1 items-center rounded-xl border py-3 ${
+                  className={`min-h-[48px] flex-1 items-center justify-center rounded-xl border py-3 ${
                     isSelected ? 'border-primary bg-primary/10' : 'border-border bg-surface'
                   }`}
                   activeOpacity={0.7}
                 >
                   <Text
-                    className={`text-sm font-medium ${
+                    className={`text-base font-medium ${
                       isSelected ? 'text-primary' : 'text-text-secondary'
                     }`}
                   >
@@ -148,9 +150,9 @@ export default function CreateRoomScreen() {
         </View>
 
         {/* Admin info */}
-        <View className="mb-6 flex-row items-center gap-2 rounded-xl bg-surface px-4 py-3">
-          <Info size={18} color={colors.textMuted} />
-          <Text className="flex-1 text-xs text-text-muted">
+        <View className="mb-6 flex-row items-center gap-3 rounded-xl border border-border bg-surface px-4 py-4">
+          <Info size={22} color={colors.textMuted} />
+          <Text className="flex-1 text-sm leading-5 text-text-secondary">
             {"You'll be the Admin of this room. You can invite members after creating it."}
           </Text>
         </View>

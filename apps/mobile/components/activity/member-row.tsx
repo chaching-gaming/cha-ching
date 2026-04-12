@@ -44,7 +44,7 @@ export function MemberRow({
   );
 
   const row = (
-    <View className="min-h-[56px] flex-row items-center border-b border-border bg-background px-4 py-3">
+    <View className="min-h-[56px] flex-row items-center border-b border-border bg-background px-5 py-4">
       <Avatar
         uri={member.profiles?.avatar_url}
         fallback={member.profiles?.display_name ?? '?'}
@@ -52,9 +52,7 @@ export function MemberRow({
       />
       <Text className="ml-3 flex-1 text-lg text-white">
         {member.profiles?.display_name ?? 'Unknown'}
-        {isSelf ? (
-          <Text className="text-base text-text-muted"> (you)</Text>
-        ) : null}
+        {isSelf ? <Text className="text-sm text-text-secondary"> (you)</Text> : null}
       </Text>
       {canChangeRole ? (
         <TouchableOpacity

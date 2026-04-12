@@ -11,19 +11,24 @@ interface ListItemProps {
 export function ListItem({ title, subtitle, right, onPress, className = '' }: ListItemProps) {
   const content = (
     <View
-      className={`min-h-[44px] flex-row items-center justify-between border-b border-border px-4 py-3 ${className}`}
+      className={`min-h-[48px] flex-row items-center justify-between border-b border-border px-5 py-3.5 ${className}`}
     >
-      <View className="flex-1">
+      <View className="flex-1 pr-2">
         <Text className="text-base font-medium text-white">{title}</Text>
-        {subtitle && <Text className="mt-0.5 text-sm text-text-muted">{subtitle}</Text>}
+        {subtitle && <Text className="mt-0.5 text-sm text-text-secondary">{subtitle}</Text>}
       </View>
-      {right && <View className="ml-3">{right}</View>}
+      {right && <View className="ml-2 shrink-0">{right}</View>}
     </View>
   );
 
   if (onPress) {
     return (
-      <TouchableOpacity onPress={onPress} activeOpacity={0.7}>
+      <TouchableOpacity
+        onPress={onPress}
+        activeOpacity={0.7}
+        accessibilityRole="button"
+        accessibilityLabel={subtitle ? `${title}, ${subtitle}` : title}
+      >
         {content}
       </TouchableOpacity>
     );

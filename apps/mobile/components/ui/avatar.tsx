@@ -4,7 +4,8 @@ import FontAwesome from '@expo/vector-icons/FontAwesome';
 const sizes = {
   sm: { container: 'h-8 w-8', text: 'text-sm', icon: 14 },
   md: { container: 'h-12 w-12', text: 'text-lg', icon: 20 },
-  lg: { container: 'h-20 w-20', text: 'text-2xl', icon: 32 },
+  /** Profile hero; larger than list avatars but compact */
+  lg: { container: 'h-14 w-14', text: 'text-lg', icon: 24 },
 } as const;
 
 interface AvatarProps {
@@ -39,8 +40,8 @@ export function Avatar({
         </View>
       )}
       {showEditBadge && (
-        <View className="absolute bottom-0 right-0 h-7 w-7 items-center justify-center rounded-full border-2 border-background bg-primary">
-          <FontAwesome name="pencil" size={12} color="#fff" />
+        <View className="absolute bottom-0 right-0 h-5 w-5 items-center justify-center rounded-full border-2 border-background bg-primary">
+          <FontAwesome name="pencil" size={10} color="#fff" />
         </View>
       )}
     </View>

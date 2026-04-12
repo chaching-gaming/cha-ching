@@ -24,7 +24,7 @@ export function ScreenHeader({
   // Sub-pages (with back button): center-aligned title
   if (!showBack) {
     return (
-      <View className="flex-row items-center justify-between bg-background px-5 pb-3 pt-16">
+      <View className="flex-row items-center justify-between bg-background px-5 pb-4 pt-16">
         <Text className={titleClassName}>{title}</Text>
         {right ? <View>{right}</View> : null}
       </View>
@@ -32,7 +32,7 @@ export function ScreenHeader({
   }
 
   return (
-    <View className="flex-row items-center bg-background px-5 pb-3 pt-16">
+    <View className="flex-row items-center bg-background px-5 pb-4 pt-16">
       {/* Left slot */}
       <View className="w-12 items-start">
         <TouchableOpacity onPress={() => router.back()} activeOpacity={0.7}>

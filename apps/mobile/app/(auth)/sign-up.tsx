@@ -49,7 +49,7 @@ export default function SignUpScreen() {
   }
 
   return (
-    <Pressable className="flex-1 justify-center bg-background px-6" onPress={Keyboard.dismiss}>
+    <Pressable className="flex-1 justify-center bg-background px-5" onPress={Keyboard.dismiss}>
       <View className="mb-8 items-center">
         <Text className="text-3xl font-bold text-white">Create Account</Text>
         <Text className="mt-2 text-base text-text-secondary">Join your friends on Cha-Ching</Text>
@@ -59,8 +59,8 @@ export default function SignUpScreen() {
         <form.Subscribe selector={(state) => state.errorMap.onSubmit}>
           {(formError) =>
             formError ? (
-              <View className="mb-4 items-center rounded-xl bg-error/10 px-3 py-3">
-                <Text className="text-sm text-error">
+              <View className="mb-4 items-center rounded-xl bg-error/10 px-4 py-3">
+                <Text className="text-center text-base text-error">
                   {typeof formError === 'string' ? formError : 'An error occurred'}
                 </Text>
               </View>
