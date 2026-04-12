@@ -153,7 +153,15 @@ export function useCreateRoom() {
       p_session_date: string;
       p_chip_limit?: number | null;
     }) => {
-      const { data, error } = await supabase.rpc('create_room', params);
+      const rpcArgs =
+        params.p_chip_limit != null
+          ? {
+              p_name: params.p_name,
+              p_session_date: params.p_session_date,
+              p_chip_limit: params.p_chip_limit,
+            }
+          : { p_name: params.p_name, p_session_date: params.p_session_date };
+      const { data, error } = await supabase.rpc('create_room', rpcArgs);
       if (error) throw error;
       return data as unknown as Room;
     },
@@ -209,17 +217,48 @@ export function useReassignAdmin() {
   });
 }
 
-export function parseJoinError(error: unknown): string {
-  if (error && typeof error === 'object' && 'code' in error) {
-    const code = (error as { code: string }).code;
-    switch (code) {
-      case 'P0001':
-        return 'No room found with that code';
-      case 'P0002':
-        return 'This room is no longer active';
-      case 'P0003':
-        return "You're already a member of this room";
-    }
+/** Uses the server/PostgREST error message; no duplicated code→string maps. */
+export function getRpcErrorMessage(error: unknown, fallback = 'Something went wrong'): string {
+  if (error && typeof error === 'object' && 'message' in error) {
+    const m = (error as { message?: string }).message;
+    if (typeof m === 'string' && m.trim().length > 0) return m;
   }
-  return 'Failed to join room';
+  if (error instanceof Error && error.message) return error.message;
+  return fallback;
+}
+
+export function useUpdateMemberRole() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (params: {
+      p_room_id: string;
+      p_target_user_id: string;
+      p_new_role: 'PLAYER' | 'ATTESTOR' | 'ADMIN';
+    }) => {
+      const { error } = await supabase.rpc('update_member_role', params);
+      if (error) throw error;
+    },
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: roomMembersKey(variables.p_room_id) });
+      queryClient.invalidateQueries({ queryKey: roomDetailKey(variables.p_room_id) });
+      queryClient.invalidateQueries({ queryKey: ROOMS_KEY });
+    },
+  });
+}
+
+export function useRemoveMember() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (params: { p_room_id: string; p_target_user_id: string }) => {
+      const { error } = await supabase.rpc('remove_member', params);
+      if (error) throw error;
+    },
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: roomMembersKey(variables.p_room_id) });
+      queryClient.invalidateQueries({ queryKey: roomDetailKey(variables.p_room_id) });
+      queryClient.invalidateQueries({ queryKey: ROOMS_KEY });
+    },
+  });
 }

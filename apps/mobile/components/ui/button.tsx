@@ -14,8 +14,14 @@ const textVariants = {
   outline: 'text-text-secondary font-medium',
 } as const;
 
+const sizes = {
+  md: { container: 'min-h-[44px] px-6 py-3.5', label: 'text-base' },
+  lg: { container: 'min-h-[52px] px-6 py-4', label: 'text-lg' },
+} as const;
+
 interface ButtonProps {
   variant?: keyof typeof variants;
+  size?: keyof typeof sizes;
   onPress?: () => void;
   disabled?: boolean;
   loading?: boolean;
@@ -25,15 +31,17 @@ interface ButtonProps {
 
 export function Button({
   variant = 'primary',
+  size = 'md',
   onPress,
   disabled = false,
   loading = false,
   children,
   className = '',
 }: ButtonProps) {
+  const s = sizes[size];
   return (
     <TouchableOpacity
-      className={`min-h-[44px] items-center justify-center rounded-xl px-6 py-3.5 ${variants[variant]} ${disabled || loading ? 'opacity-50' : ''} ${className}`}
+      className={`items-center justify-center rounded-xl ${s.container} ${variants[variant]} ${disabled || loading ? 'opacity-50' : ''} ${className}`}
       onPress={onPress}
       disabled={disabled || loading}
       activeOpacity={0.7}
@@ -41,7 +49,7 @@ export function Button({
       {loading ? (
         <ActivityIndicator color={variant === 'primary' ? '#fff' : '#94A3B8'} />
       ) : (
-        <Text className={`text-base ${textVariants[variant]}`}>{children}</Text>
+        <Text className={`${s.label} ${textVariants[variant]}`}>{children}</Text>
       )}
     </TouchableOpacity>
   );

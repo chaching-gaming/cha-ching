@@ -18,7 +18,7 @@ export function RoomHeaderBar({ members, balance, onViewMembers }: RoomHeaderBar
   const overflow = members.length - MAX_AVATARS;
 
   return (
-    <View className="flex-row items-center justify-between py-3">
+    <View className="flex-row items-center justify-between py-4">
       {/* Member avatars */}
       <TouchableOpacity
         onPress={onViewMembers}
@@ -28,29 +28,29 @@ export function RoomHeaderBar({ members, balance, onViewMembers }: RoomHeaderBar
         {visible.map((member, index) => (
           <View
             key={member.id}
-            className={`rounded-full border-2 border-background ${index > 0 ? '-ml-2' : ''}`}
+            className={`rounded-full border-2 border-background ${index > 0 ? '-ml-2.5' : ''}`}
             style={{ zIndex: MAX_AVATARS - index }}
           >
             <Avatar
               uri={member.profiles?.avatar_url}
               fallback={member.profiles?.display_name ?? '?'}
-              size="sm"
+              size="md"
             />
           </View>
         ))}
         {overflow > 0 && (
-          <View className="-ml-2 h-8 w-8 items-center justify-center rounded-full border-2 border-background bg-surface-light">
-            <Text className="text-xs font-medium text-text-secondary">+{overflow}</Text>
+          <View className="-ml-2.5 h-12 w-12 items-center justify-center rounded-full border-2 border-background bg-surface-light">
+            <Text className="text-sm font-semibold text-text-secondary">+{overflow}</Text>
           </View>
         )}
       </TouchableOpacity>
 
       {/* Balance */}
       <View className="items-end">
-        <Text className="text-xs text-text-muted">Your Balance</Text>
-        <View className="flex-row items-center gap-1">
-          <Coins size={16} color={colors.primary} weight="fill" />
-          <Text className="text-base font-bold text-primary">{balance}</Text>
+        <Text className="text-base text-text-muted">Your Balance</Text>
+        <View className="flex-row items-center gap-1.5">
+          <Coins size={22} color={colors.primary} weight="fill" />
+          <Text className="text-2xl font-bold text-primary">{balance}</Text>
         </View>
       </View>
     </View>

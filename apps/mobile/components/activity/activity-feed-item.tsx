@@ -6,6 +6,8 @@ import { Avatar } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import type { ActivityItem, BetWithProfiles } from '@/hooks/use-activity-feed';
 
+const ACTIVITY_ICON = 20;
+
 function getRelativeTime(timestamp: string): string {
   const now = Date.now();
   const then = new Date(timestamp).getTime();
@@ -28,21 +30,21 @@ function getBetAction(bet: BetWithProfiles, currentUserId?: string) {
   switch (bet.status) {
     case 'OPEN':
       return {
-        icon: <Lightning size={16} color={colors.primary} weight="fill" />,
+        icon: <Lightning size={ACTIVITY_ICON} color={colors.primary} weight="fill" />,
         title: `${offererName} offered a bet`,
         badge: { variant: 'success' as const, label: 'Open' },
         avatar: bet.offered_by_profile,
       };
     case 'MATCHED':
       return {
-        icon: <Handshake size={16} color={colors.warning} weight="fill" />,
+        icon: <Handshake size={ACTIVITY_ICON} color={colors.warning} weight="fill" />,
         title: `${acceptorName} accepted ${offererName}'s bet`,
         badge: { variant: 'default' as const, label: 'Matched' },
         avatar: bet.accepted_by_profile,
       };
     case 'PENDING_RESULT':
       return {
-        icon: <Timer size={16} color={colors.warning} weight="fill" />,
+        icon: <Timer size={ACTIVITY_ICON} color={colors.warning} weight="fill" />,
         title: `${offererName} vs ${acceptorName}`,
         badge: { variant: 'default' as const, label: 'Pending' },
         avatar: bet.offered_by_profile,
@@ -58,7 +60,7 @@ function getBetAction(bet: BetWithProfiles, currentUserId?: string) {
       return {
         icon: (
           <Trophy
-            size={16}
+            size={ACTIVITY_ICON}
             color={isCurrentUserWinner ? colors.primary : colors.error}
             weight="fill"
           />
@@ -74,7 +76,7 @@ function getBetAction(bet: BetWithProfiles, currentUserId?: string) {
     case 'EXPIRED':
     case 'VOID':
       return {
-        icon: <Timer size={16} color={colors.textMuted} />,
+        icon: <Timer size={ACTIVITY_ICON} color={colors.textMuted} />,
         title: `${offererName}'s bet ${bet.status === 'EXPIRED' ? 'expired' : 'was voided'}`,
         badge: { variant: 'default' as const, label: bet.status },
         dimmed: true,
@@ -82,7 +84,7 @@ function getBetAction(bet: BetWithProfiles, currentUserId?: string) {
       };
     default:
       return {
-        icon: <Lightning size={16} color={colors.textMuted} />,
+        icon: <Lightning size={ACTIVITY_ICON} color={colors.textMuted} />,
         title: `${offererName} created a bet`,
         badge: { variant: 'default' as const, label: bet.status ?? '' },
         avatar: bet.offered_by_profile,
@@ -102,23 +104,28 @@ export function ActivityFeedItem({ item, currentUserId }: ActivityFeedItemProps)
     const dimmed = 'dimmed' in action && action.dimmed;
 
     return (
-      <View className={`flex-row items-start gap-3 py-3 ${dimmed ? 'opacity-50' : ''}`}>
+      <View className={`flex-row items-start gap-4 py-4 ${dimmed ? 'opacity-50' : ''}`}>
         <Avatar
           uri={action.avatar?.avatar_url}
           fallback={action.avatar?.display_name ?? '?'}
-          size="sm"
+          size="md"
         />
         <View className="flex-1">
-          <View className="flex-row items-center justify-between">
-            <Text className="flex-1 text-sm font-medium text-white" numberOfLines={1}>
+          <View className="flex-row items-center justify-between gap-2">
+            <Text className="flex-1 text-lg font-medium text-white" numberOfLines={2}>
               {action.title}
             </Text>
-            <Badge variant={action.badge.variant} label={action.badge.label} />
+            <Badge
+              variant={action.badge.variant}
+              label={action.badge.label}
+              className="px-4 py-2"
+              labelClassName="text-sm font-semibold"
+            />
           </View>
-          <Text className="mt-0.5 text-sm text-text-secondary" numberOfLines={1}>
+          <Text className="mt-1 text-base text-text-secondary" numberOfLines={2}>
             {bet.question} &middot; {bet.stake} chips
           </Text>
-          <Text className="mt-0.5 text-xs text-text-muted">{getRelativeTime(item.timestamp)}</Text>
+          <Text className="mt-1 text-sm text-text-muted">{getRelativeTime(item.timestamp)}</Text>
         </View>
       </View>
     );
@@ -135,28 +142,33 @@ export function ActivityFeedItem({ item, currentUserId }: ActivityFeedItemProps)
         : { variant: 'default' as const, label: 'Open' };
 
   return (
-    <View className="flex-row items-start gap-3 py-3">
+    <View className="flex-row items-start gap-4 py-4">
       <Avatar
         uri={chipRequest.requested_by_profile?.avatar_url}
         fallback={requesterName.charAt(0)}
-        size="sm"
+        size="md"
       />
       <View className="flex-1">
-        <View className="flex-row items-center justify-between">
-          <Text className="flex-1 text-sm font-medium text-white" numberOfLines={1}>
+        <View className="flex-row items-center justify-between gap-2">
+          <Text className="flex-1 text-lg font-medium text-white" numberOfLines={2}>
             {requesterName} requested more chips
           </Text>
-          <Badge variant={statusBadge.variant} label={statusBadge.label} />
+          <Badge
+            variant={statusBadge.variant}
+            label={statusBadge.label}
+            className="px-4 py-2"
+            labelClassName="text-sm font-semibold"
+          />
         </View>
         {chipRequest.current_balance != null && (
-          <View className="mt-0.5 flex-row items-center gap-1">
-            <Coins size={12} color={colors.textMuted} />
-            <Text className="text-sm text-text-secondary">
+          <View className="mt-1 flex-row items-center gap-1.5">
+            <Coins size={18} color={colors.textMuted} />
+            <Text className="text-base text-text-secondary">
               Balance: {chipRequest.current_balance}
             </Text>
           </View>
         )}
-        <Text className="mt-0.5 text-xs text-text-muted">{getRelativeTime(item.timestamp)}</Text>
+        <Text className="mt-1 text-sm text-text-muted">{getRelativeTime(item.timestamp)}</Text>
       </View>
     </View>
   );

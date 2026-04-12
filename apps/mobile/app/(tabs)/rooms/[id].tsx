@@ -1,9 +1,11 @@
 import { useCallback, useState } from 'react';
 import {
+  ActionSheetIOS,
   ActivityIndicator,
   Alert,
   FlatList,
   Modal,
+  Platform,
   RefreshControl,
   SafeAreaView,
   Text,
@@ -11,6 +13,8 @@ import {
   View,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CalendarBlank, UserPlus, X } from 'phosphor-react-native';
 
 import { colors } from '@/constants/colors';
@@ -22,7 +26,14 @@ import { MemberRow } from '@/components/activity/member-row';
 import { RoomHeaderBar } from '@/components/activity/room-header-bar';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/providers/auth';
-import { useRoomDetail, useRoomMembers, useEndSession, useReassignAdmin } from '@/hooks/use-rooms';
+import {
+  useRoomDetail,
+  useRoomMembers,
+  useEndSession,
+  useUpdateMemberRole,
+  useRemoveMember,
+  getRpcErrorMessage,
+} from '@/hooks/use-rooms';
 import {
   useRoomActivityFeed,
   useMyRoomBalance,
@@ -34,11 +45,38 @@ function formatSessionDate(dateStr: string) {
   return date.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
 }
 
+function promptMemberRole(
+  displayName: string,
+  onPick: (role: 'PLAYER' | 'ATTESTOR' | 'ADMIN') => void,
+) {
+  if (Platform.OS === 'ios') {
+    ActionSheetIOS.showActionSheetWithOptions(
+      {
+        options: ['Cancel', 'Player', 'Attestor', 'Admin'],
+        cancelButtonIndex: 0,
+      },
+      (buttonIndex) => {
+        if (buttonIndex === 1) onPick('PLAYER');
+        if (buttonIndex === 2) onPick('ATTESTOR');
+        if (buttonIndex === 3) onPick('ADMIN');
+      },
+    );
+  } else {
+    Alert.alert(`Change role: ${displayName}`, undefined, [
+      { text: 'Player', onPress: () => onPick('PLAYER') },
+      { text: 'Attestor', onPress: () => onPick('ATTESTOR') },
+      { text: 'Admin', onPress: () => onPick('ADMIN') },
+      { text: 'Cancel', style: 'cancel' },
+    ]);
+  }
+}
+
 export default function RoomDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { session: authSession } = useAuth();
   const queryClient = useQueryClient();
+  const safeInsets = useSafeAreaInsets();
 
   // Data hooks
   const { data: room, isLoading: roomLoading } = useRoomDetail(id);
@@ -49,7 +87,8 @@ export default function RoomDetailScreen() {
 
   // Mutations
   const endSession = useEndSession();
-  const reassignAdmin = useReassignAdmin();
+  const updateMemberRole = useUpdateMemberRole();
+  const removeMember = useRemoveMember();
 
   // State
   const [showMembers, setShowMembers] = useState(false);
@@ -84,27 +123,46 @@ export default function RoomDetailScreen() {
     ]);
   }
 
-  function handleReassignAdmin(userId: string) {
+  function handleChangeRoleRequest(userId: string) {
+    const target = members?.find((m) => m.user_id === userId);
+    const targetName = target?.profiles?.display_name ?? 'Member';
+
+    promptMemberRole(targetName, async (newRole) => {
+      if (target?.role === newRole) return;
+      try {
+        await updateMemberRole.mutateAsync({
+          p_room_id: id,
+          p_target_user_id: userId,
+          p_new_role: newRole,
+        });
+      } catch (err) {
+        Alert.alert('Error', getRpcErrorMessage(err));
+      }
+    });
+  }
+
+  function handleRemoveMemberRequest(userId: string) {
     const target = members?.find((m) => m.user_id === userId);
     const targetName = target?.profiles?.display_name ?? 'this member';
 
-    Alert.alert('Reassign Admin', `Make ${targetName} the admin? You will become a Player.`, [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Confirm',
-        onPress: async () => {
-          try {
-            await reassignAdmin.mutateAsync({
-              p_room_id: id,
-              p_new_admin_user_id: userId,
-            });
-          } catch (err) {
-            const message = err instanceof Error ? err.message : 'Failed to reassign admin';
-            Alert.alert('Error', message);
-          }
+    Alert.alert(
+      'Remove member',
+      `Remove ${targetName} from this session? They will lose access to the room.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Remove',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await removeMember.mutateAsync({ p_room_id: id, p_target_user_id: userId });
+            } catch (err) {
+              Alert.alert('Error', getRpcErrorMessage(err));
+            }
+          },
         },
-      },
-    ]);
+      ],
+    );
   }
 
   if (roomLoading) {
@@ -118,7 +176,7 @@ export default function RoomDetailScreen() {
   if (!room) {
     return (
       <View className="flex-1 items-center justify-center bg-background">
-        <Text className="text-base text-text-secondary">Room not found</Text>
+        <Text className="text-lg text-text-secondary">Room not found</Text>
       </View>
     );
   }
@@ -128,10 +186,11 @@ export default function RoomDetailScreen() {
       <ScreenHeader
         title={room.name}
         showBack
+        titleClassName="text-xl font-bold text-white"
         right={
           isActive ? (
             <TouchableOpacity onPress={() => router.push(`/(tabs)/rooms/invite?id=${id}`)}>
-              <UserPlus size={24} color={colors.primary} />
+              <UserPlus size={28} color={colors.primary} />
             </TouchableOpacity>
           ) : undefined
         }
@@ -163,28 +222,30 @@ export default function RoomDetailScreen() {
             />
 
             {/* Status row */}
-            <View className="mb-3 flex-row items-center justify-between">
-              <View className="flex-row items-center gap-2">
-                <CalendarBlank size={16} color={colors.textSecondary} />
-                <Text className="text-sm text-text-secondary">
+            <View className="mb-4 flex-row items-center justify-between">
+              <View className="flex-row items-center gap-2.5">
+                <CalendarBlank size={20} color={colors.textSecondary} />
+                <Text className="text-base text-text-secondary">
                   {formatSessionDate(room.session_date)}
                 </Text>
                 <Badge
                   variant={isActive ? 'success' : 'default'}
                   label={isActive ? 'Live' : 'Ended'}
+                  className="px-4 py-2"
+                  labelClassName="text-sm font-semibold"
                 />
               </View>
 
               {isAdmin && isActive && (
-                <TouchableOpacity onPress={handleEndSession}>
-                  <Text className="text-sm text-error">End Session</Text>
+                <TouchableOpacity onPress={handleEndSession} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                  <Text className="text-base font-semibold text-error">End Session</Text>
                 </TouchableOpacity>
               )}
             </View>
 
             {/* Divider + section label */}
             <View className="mb-2 border-b border-border pb-2">
-              <Text className="text-sm font-medium text-text-muted">Activity</Text>
+              <Text className="text-base font-semibold text-text-muted">Activity</Text>
             </View>
           </View>
         }
@@ -195,8 +256,8 @@ export default function RoomDetailScreen() {
             </View>
           ) : (
             <View className="items-center py-12">
-              <Text className="text-base text-text-secondary">No activity yet</Text>
-              <Text className="mt-1 text-sm text-text-muted">Create a bet to get started</Text>
+              <Text className="text-lg text-text-secondary">No activity yet</Text>
+              <Text className="mt-2 text-base text-text-muted">Create a bet to get started</Text>
             </View>
           )
         }
@@ -207,6 +268,7 @@ export default function RoomDetailScreen() {
       {isActive && (
         <View className="absolute bottom-6 left-4 right-4">
           <Button
+            size="lg"
             onPress={() => {
               /* TODO: navigate to create bet screen */
             }}
@@ -218,31 +280,40 @@ export default function RoomDetailScreen() {
 
       {/* Members Modal */}
       <Modal visible={showMembers} animationType="slide" transparent>
-        <View className="flex-1 bg-background/95">
-          <SafeAreaView className="flex-1">
-            <View className="flex-row items-center justify-between px-4 py-3">
-              <Text className="text-lg font-semibold text-white">
-                Members ({members?.length ?? 0})
-              </Text>
-              <TouchableOpacity onPress={() => setShowMembers(false)}>
-                <X size={24} color={colors.textSecondary} />
-              </TouchableOpacity>
-            </View>
+        <GestureHandlerRootView style={{ flex: 1 }}>
+          <View className="flex-1 bg-background/95">
+            <SafeAreaView className="flex-1">
+              <View className="flex-row items-center justify-between px-4 py-4">
+                <Text className="text-xl font-semibold text-white">
+                  Members ({members?.length ?? 0})
+                </Text>
+                <TouchableOpacity
+                  onPress={() => setShowMembers(false)}
+                  hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                >
+                  <X size={28} color={colors.textSecondary} />
+                </TouchableOpacity>
+              </View>
 
-            <FlatList
-              data={members ?? []}
-              keyExtractor={(item) => item.id}
-              renderItem={({ item }) => (
-                <MemberRow
-                  member={item}
-                  isAdmin={isAdmin}
-                  isActive={isActive}
-                  onReassign={handleReassignAdmin}
-                />
-              )}
-            />
-          </SafeAreaView>
-        </View>
+              <FlatList
+                data={members ?? []}
+                keyExtractor={(item) => item.id}
+                removeClippedSubviews={false}
+                contentContainerStyle={{ paddingRight: Math.max(safeInsets.right, 4) }}
+                renderItem={({ item }) => (
+                  <MemberRow
+                    member={item}
+                    isAdmin={isAdmin}
+                    isActive={isActive}
+                    currentUserId={authSession?.user.id}
+                    onChangeRole={handleChangeRoleRequest}
+                    onRemoveMember={handleRemoveMemberRequest}
+                  />
+                )}
+              />
+            </SafeAreaView>
+          </View>
+        </GestureHandlerRootView>
       </Modal>
     </View>
   );

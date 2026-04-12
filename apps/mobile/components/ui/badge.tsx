@@ -22,12 +22,19 @@ interface BadgeProps {
   variant?: keyof typeof variants;
   label: string;
   className?: string;
+  /** Tailwind text size/weight classes; defaults to text-xs font-medium */
+  labelClassName?: string;
 }
 
-export function Badge({ variant = 'default', label, className = '' }: BadgeProps) {
+export function Badge({
+  variant = 'default',
+  label,
+  className = '',
+  labelClassName = 'text-xs font-medium',
+}: BadgeProps) {
   return (
     <View className={`rounded-full px-3 py-1 ${variants[variant]} ${className}`}>
-      <Text className={`text-xs font-medium ${textVariants[variant]}`}>{label}</Text>
+      <Text className={`${labelClassName} ${textVariants[variant]}`}>{label}</Text>
     </View>
   );
 }
