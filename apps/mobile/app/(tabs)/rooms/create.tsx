@@ -118,7 +118,9 @@ export default function CreateRoomScreen() {
 
         {/* Per-User Chip Limit selector */}
         <View className="mb-4">
-          <Text className="mb-2 text-base font-medium text-text-secondary">Per-user chip limit</Text>
+          <Text className="mb-2 text-base font-medium text-text-secondary">
+            Per-user chip limit
+          </Text>
           <Text className="mb-3 text-sm leading-5 text-text-secondary">
             Max chips a player can lose before being blocked from betting
           </Text>

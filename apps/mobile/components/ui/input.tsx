@@ -12,9 +12,7 @@ interface InputProps extends Omit<TextInputProps, 'className'> {
 export function Input({ label, error, className = '', ...props }: InputProps) {
   return (
     <View className={`mb-4 ${className}`}>
-      {label && (
-        <Text className="mb-2 text-base font-medium text-text-secondary">{label}</Text>
-      )}
+      {label && <Text className="mb-2 text-base font-medium text-text-secondary">{label}</Text>}
       <TextInput
         className={`min-h-[48px] rounded-xl border bg-surface-light px-4 py-3.5 text-base text-white ${
           error ? 'border-error' : 'border-border'

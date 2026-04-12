@@ -24,9 +24,7 @@ export function TextField({
     <View className="mb-4 gap-1.5">
       {(label || labelRight) && (
         <View className="flex-row items-center justify-between">
-          {label && (
-            <Text className="text-base font-medium text-text-secondary">{label}</Text>
-          )}
+          {label && <Text className="text-base font-medium text-text-secondary">{label}</Text>}
           {labelRight}
         </View>
       )}

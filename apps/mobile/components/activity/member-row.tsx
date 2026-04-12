@@ -52,9 +52,7 @@ export function MemberRow({
       />
       <Text className="ml-3 flex-1 text-lg text-white">
         {member.profiles?.display_name ?? 'Unknown'}
-        {isSelf ? (
-          <Text className="text-sm text-text-secondary"> (you)</Text>
-        ) : null}
+        {isSelf ? <Text className="text-sm text-text-secondary"> (you)</Text> : null}
       </Text>
       {canChangeRole ? (
         <TouchableOpacity

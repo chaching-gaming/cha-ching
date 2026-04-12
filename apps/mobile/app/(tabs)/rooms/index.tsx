@@ -18,7 +18,12 @@ import { colors } from '@/constants/colors';
 import { Avatar } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { ScreenHeader } from '@/components/ui/screen-header';
-import { useRooms, useEndSession, getRpcErrorMessage, type RoomWithMembership } from '@/hooks/use-rooms';
+import {
+  useRooms,
+  useEndSession,
+  getRpcErrorMessage,
+  type RoomWithMembership,
+} from '@/hooks/use-rooms';
 
 function formatBalance(balance: number): string {
   const abs = Math.abs(balance);
@@ -42,7 +47,9 @@ function RoomCardContent({ item }: { item: RoomWithMembership }) {
       {/* Row 1: status dot + name + balance */}
       <View className="flex-row items-center justify-between">
         <View className="mr-3 flex-1 flex-row items-center gap-2">
-          <View className={`h-2.5 w-2.5 rounded-full ${isActive ? 'bg-primary' : 'bg-text-muted'}`} />
+          <View
+            className={`h-2.5 w-2.5 rounded-full ${isActive ? 'bg-primary' : 'bg-text-muted'}`}
+          />
           <Text className="text-lg font-semibold text-white" numberOfLines={1}>
             {item.room.name}
           </Text>
@@ -132,7 +139,10 @@ function RoomSwipeRow({ item }: { item: RoomWithMembership }) {
               className="min-w-[100px] justify-center self-stretch bg-error px-3"
               activeOpacity={0.85}
             >
-              <Text className="text-center text-sm font-semibold leading-5 text-white" numberOfLines={2}>
+              <Text
+                className="text-center text-sm font-semibold leading-5 text-white"
+                numberOfLines={2}
+              >
                 End session
               </Text>
             </TouchableOpacity>
