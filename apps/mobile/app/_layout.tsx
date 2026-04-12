@@ -1,3 +1,4 @@
+import 'react-native-gesture-handler';
 import '../global.css';
 
 import FontAwesome from '@expo/vector-icons/FontAwesome';
@@ -6,6 +7,7 @@ import { useFonts } from 'expo-font';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import 'react-native-reanimated';
 
 import { colors } from '@/constants/colors';
@@ -70,16 +72,18 @@ export default function RootLayout() {
   }
 
   return (
-    <Providers>
-      <ThemeProvider value={appTheme}>
-        <AuthGate>
-          <Stack screenOptions={{ headerShown: false }}>
-            <Stack.Screen name="index" />
-            <Stack.Screen name="(tabs)" />
-            <Stack.Screen name="(auth)" />
-          </Stack>
-        </AuthGate>
-      </ThemeProvider>
-    </Providers>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <Providers>
+        <ThemeProvider value={appTheme}>
+          <AuthGate>
+            <Stack screenOptions={{ headerShown: false }}>
+              <Stack.Screen name="index" />
+              <Stack.Screen name="(tabs)" />
+              <Stack.Screen name="(auth)" />
+            </Stack>
+          </AuthGate>
+        </ThemeProvider>
+      </Providers>
+    </GestureHandlerRootView>
   );
 }

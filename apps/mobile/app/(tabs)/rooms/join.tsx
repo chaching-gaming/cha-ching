@@ -18,7 +18,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { supabase } from '@/lib/supabase';
-import { useJoinRoom, parseJoinError } from '@/hooks/use-rooms';
+import { useJoinRoom, getRpcErrorMessage } from '@/hooks/use-rooms';
 import { WarningCircle } from 'phosphor-react-native';
 
 const CODE_LENGTH = 6;
@@ -244,7 +244,7 @@ export default function JoinRoomScreen() {
       const room = await joinRoom.mutateAsync({ p_invite_code: codeToUse });
       router.replace(`./${room.id}`);
     } catch (err) {
-      setError(parseJoinError(err));
+      setError(getRpcErrorMessage(err, 'Failed to join room'));
     }
   }
 
