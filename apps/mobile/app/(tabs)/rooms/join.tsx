@@ -285,7 +285,7 @@ export default function JoinRoomScreen() {
       <ScreenHeader title="Join Room" showBack />
       <ScrollView
         className="flex-1"
-        contentContainerClassName="px-6 pt-4 pb-8"
+        contentContainerClassName="px-5 pt-4 pb-8"
         keyboardShouldPersistTaps="handled"
       >
         {/* Tab toggle */}
@@ -351,8 +351,8 @@ export default function JoinRoomScreen() {
             {!previewLoading && previewNotFound && isComplete && <InvalidCodeCard />}
 
             {error ? (
-              <View className="mb-4 items-center rounded-xl bg-error/10 px-3 py-3">
-                <Text className="text-sm text-error">{error}</Text>
+              <View className="mb-4 items-center rounded-xl bg-error/10 px-4 py-3">
+                <Text className="text-center text-base text-error">{error}</Text>
               </View>
             ) : null}
 

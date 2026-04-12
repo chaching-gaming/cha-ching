@@ -38,16 +38,16 @@ function RoomCardContent({ item }: { item: RoomWithMembership }) {
   const overflow = item.room.member_count - item.memberPreviews.length;
 
   return (
-    <View className="border-b border-border bg-background px-5 py-4">
+    <View className="min-h-[56px] border-b border-border bg-background px-5 py-4">
       {/* Row 1: status dot + name + balance */}
       <View className="flex-row items-center justify-between">
         <View className="mr-3 flex-1 flex-row items-center gap-2">
-          <View className={`h-2 w-2 rounded-full ${isActive ? 'bg-primary' : 'bg-text-muted'}`} />
-          <Text className="text-base font-semibold text-white" numberOfLines={1}>
+          <View className={`h-2.5 w-2.5 rounded-full ${isActive ? 'bg-primary' : 'bg-text-muted'}`} />
+          <Text className="text-lg font-semibold text-white" numberOfLines={1}>
             {item.room.name}
           </Text>
         </View>
-        <Text className={`text-base font-bold ${balanceColor}`}>{formatBalance(balance)}</Text>
+        <Text className={`text-lg font-bold ${balanceColor}`}>{formatBalance(balance)}</Text>
       </View>
 
       {/* Row 2: avatar stack + date */}
@@ -56,19 +56,19 @@ function RoomCardContent({ item }: { item: RoomWithMembership }) {
           {item.memberPreviews.map((member, index) => (
             <View
               key={index}
-              className={`rounded-full border-2 border-background ${index > 0 ? '-ml-2' : ''}`}
+              className={`rounded-full border-2 border-background ${index > 0 ? '-ml-2.5' : ''}`}
               style={{ zIndex: 10 - index }}
             >
-              <Avatar uri={member.avatar_url} fallback={member.display_name ?? '?'} size="sm" />
+              <Avatar uri={member.avatar_url} fallback={member.display_name ?? '?'} size="md" />
             </View>
           ))}
           {overflow > 0 && (
-            <View className="-ml-2 h-8 w-8 items-center justify-center rounded-full border-2 border-background bg-surface-light">
-              <Text className="text-[10px] font-medium text-text-secondary">+{overflow}</Text>
+            <View className="-ml-2.5 h-12 w-12 items-center justify-center rounded-full border-2 border-background bg-surface-light">
+              <Text className="text-sm font-semibold text-text-secondary">+{overflow}</Text>
             </View>
           )}
         </View>
-        <Text className="text-sm text-text-muted">{formatDate(item.room.session_date)}</Text>
+        <Text className="text-sm text-text-secondary">{formatDate(item.room.session_date)}</Text>
       </View>
     </View>
   );
@@ -118,22 +118,22 @@ function RoomSwipeRow({ item }: { item: RoomWithMembership }) {
       overshootRight={false}
       containerStyle={{ overflow: 'visible' }}
       renderRightActions={() => (
-        <View className="flex-row items-stretch border-b border-border bg-background pl-2">
+        <View className="min-h-[56px] flex-row items-stretch border-b border-border bg-background pl-2">
           <TouchableOpacity
             onPress={handleShare}
-            className="min-w-[80px] justify-center self-stretch bg-surface-light px-4"
+            className="min-w-[88px] justify-center self-stretch bg-surface-light px-4"
             activeOpacity={0.85}
           >
-            <Text className="text-center text-sm font-semibold text-primary">Share</Text>
+            <Text className="text-center text-base font-semibold text-primary">Share</Text>
           </TouchableOpacity>
           {canEndSession ? (
             <TouchableOpacity
               onPress={handleEndSession}
-              className="min-w-[92px] justify-center self-stretch bg-error px-3"
+              className="min-w-[100px] justify-center self-stretch bg-error px-3"
               activeOpacity={0.85}
             >
-              <Text className="text-center text-xs font-semibold leading-4 text-white" numberOfLines={2}>
-                End
+              <Text className="text-center text-sm font-semibold leading-5 text-white" numberOfLines={2}>
+                End session
               </Text>
             </TouchableOpacity>
           ) : null}
@@ -154,9 +154,9 @@ function EmptyState() {
   const router = useRouter();
 
   return (
-    <View className="flex-1 items-center justify-center px-6">
-      <Text className="text-2xl font-bold text-white">No rooms yet</Text>
-      <Text className="mb-6 mt-2 text-center text-base text-text-secondary">
+    <View className="flex-1 items-center justify-center px-5">
+      <Text className="text-xl font-semibold text-white">No rooms yet</Text>
+      <Text className="mb-6 mt-2 text-center text-base leading-6 text-text-secondary">
         Create a room to start betting with friends, or join one with an invite code.
       </Text>
       <View className="w-full gap-3">
@@ -183,11 +183,17 @@ export default function RoomsListScreen() {
         title="Your Rooms"
         right={
           <View className="flex-row items-center gap-4">
-            <TouchableOpacity onPress={() => router.push('/(tabs)/rooms/join')}>
-              <QrCode size={24} color={colors.textSecondary} />
+            <TouchableOpacity
+              onPress={() => router.push('/(tabs)/rooms/join')}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <QrCode size={28} color={colors.textSecondary} />
             </TouchableOpacity>
-            <TouchableOpacity onPress={() => router.push('/(tabs)/rooms/create')}>
-              <Plus size={24} color={colors.primary} weight="bold" />
+            <TouchableOpacity
+              onPress={() => router.push('/(tabs)/rooms/create')}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Plus size={28} color={colors.primary} weight="bold" />
             </TouchableOpacity>
           </View>
         }

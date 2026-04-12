@@ -187,9 +187,13 @@ export default function RoomDetailScreen() {
         title={room.name}
         showBack
         titleClassName="text-xl font-bold text-white"
+        backIconSize={28}
         right={
           isActive ? (
-            <TouchableOpacity onPress={() => router.push(`/(tabs)/rooms/invite?id=${id}`)}>
+            <TouchableOpacity
+              onPress={() => router.push(`/(tabs)/rooms/invite?id=${id}`)}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
               <UserPlus size={28} color={colors.primary} />
             </TouchableOpacity>
           ) : undefined
@@ -204,7 +208,7 @@ export default function RoomDetailScreen() {
         renderItem={({ item }) => (
           <ActivityFeedItem item={item} currentUserId={authSession?.user.id} />
         )}
-        contentContainerClassName="px-4 pb-24"
+        contentContainerClassName="px-5 pb-24"
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -225,7 +229,7 @@ export default function RoomDetailScreen() {
             <View className="mb-4 flex-row items-center justify-between">
               <View className="flex-row items-center gap-2.5">
                 <CalendarBlank size={20} color={colors.textSecondary} />
-                <Text className="text-base text-text-secondary">
+                <Text className="text-sm text-text-secondary">
                   {formatSessionDate(room.session_date)}
                 </Text>
                 <Badge
@@ -238,14 +242,14 @@ export default function RoomDetailScreen() {
 
               {isAdmin && isActive && (
                 <TouchableOpacity onPress={handleEndSession} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                  <Text className="text-base font-semibold text-error">End Session</Text>
+                  <Text className="text-sm font-semibold text-error">End Session</Text>
                 </TouchableOpacity>
               )}
             </View>
 
             {/* Divider + section label */}
             <View className="mb-2 border-b border-border pb-2">
-              <Text className="text-base font-semibold text-text-muted">Activity</Text>
+              <Text className="text-sm font-semibold text-text-secondary">Activity</Text>
             </View>
           </View>
         }
@@ -256,8 +260,10 @@ export default function RoomDetailScreen() {
             </View>
           ) : (
             <View className="items-center py-12">
-              <Text className="text-lg text-text-secondary">No activity yet</Text>
-              <Text className="mt-2 text-base text-text-muted">Create a bet to get started</Text>
+              <Text className="text-xl font-semibold text-text-secondary">No activity yet</Text>
+              <Text className="mt-2 text-center text-base leading-6 text-text-secondary">
+                Create a bet to get started
+              </Text>
             </View>
           )
         }
@@ -266,7 +272,7 @@ export default function RoomDetailScreen() {
 
       {/* Floating Create Bet CTA */}
       {isActive && (
-        <View className="absolute bottom-6 left-4 right-4">
+        <View className="absolute bottom-6 left-5 right-5">
           <Button
             size="lg"
             onPress={() => {
@@ -283,8 +289,8 @@ export default function RoomDetailScreen() {
         <GestureHandlerRootView style={{ flex: 1 }}>
           <View className="flex-1 bg-background/95">
             <SafeAreaView className="flex-1">
-              <View className="flex-row items-center justify-between px-4 py-4">
-                <Text className="text-xl font-semibold text-white">
+              <View className="flex-row items-center justify-between border-b border-border px-5 py-4">
+                <Text className="text-xl font-bold text-white">
                   Members ({members?.length ?? 0})
                 </Text>
                 <TouchableOpacity

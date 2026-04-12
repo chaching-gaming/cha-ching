@@ -85,7 +85,7 @@ export default function ProfileScreen() {
       <View className="flex-1 bg-background">
         <ScreenHeader title="Profile" />
         <View className="flex-1 items-center justify-center">
-          <ActivityIndicator size="large" color="#22C55E" />
+          <ActivityIndicator size="large" color={colors.primary} />
         </View>
       </View>
     );
@@ -94,7 +94,7 @@ export default function ProfileScreen() {
   return (
     <View className="flex-1 bg-background">
       <ScreenHeader title="Profile" />
-      <ScrollView className="flex-1" contentContainerClassName="items-center px-6 pt-4 pb-12">
+      <ScrollView className="flex-1" contentContainerClassName="items-center px-5 pt-4 pb-12">
         <Avatar
           uri={profile?.avatar_url}
           fallback={profile?.display_name ?? profile?.email}
@@ -103,20 +103,20 @@ export default function ProfileScreen() {
           showEditBadge={!uploading}
         />
 
-        {uploading && <ActivityIndicator size="small" color="#22C55E" className="mt-2" />}
+        {uploading && <ActivityIndicator size="small" color={colors.primary} className="mt-2" />}
 
-        <Text className="mt-3 text-sm text-text-muted">
+        <Text className="mt-3 text-base text-text-secondary">
           {profile?.email ?? session?.user.email}
         </Text>
 
         {isEditing ? (
           <View className="mt-4 w-full items-center gap-3">
             <TextInput
-              className="w-full rounded-xl border border-border bg-surface-light px-4 py-3 text-center text-base text-white"
+              className="min-h-[48px] w-full rounded-xl border border-border bg-surface-light px-4 py-3.5 text-center text-base text-white"
               value={displayName}
               onChangeText={setDisplayName}
               placeholder="Display Name"
-              placeholderTextColor="#64748B"
+              placeholderTextColor={colors.textMuted}
               autoFocus
             />
             <Button onPress={handleSave} loading={updateProfile.isPending} className="w-full">
@@ -140,24 +140,26 @@ export default function ProfileScreen() {
         {/* Session History */}
         <View className="mt-10 w-full">
           <View className="mb-3 flex-row items-center gap-2">
-            <ClockCounterClockwise size={20} color={colors.textSecondary} />
+            <ClockCounterClockwise size={22} color={colors.textSecondary} />
             <Text className="text-lg font-semibold text-white">Past Rooms</Text>
           </View>
 
           {!historySessions?.length ? (
-            <Text className="text-sm text-text-muted">No completed rooms yet.</Text>
+            <Text className="text-base text-text-secondary">No completed rooms yet.</Text>
           ) : (
             historySessions.map((item) => (
               <TouchableOpacity
                 key={item.room.id}
                 onPress={() => router.push(`/(tabs)/rooms/${item.room.id}`)}
                 activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel={`Open ${item.room.name}, ${formatSessionDate(item.room.session_date)}`}
               >
-                <Card className="mb-2">
-                  <Text className="text-base font-medium text-white">{item.room.name}</Text>
-                  <View className="mt-1 flex-row items-center gap-1">
-                    <CalendarBlank size={12} color={colors.textMuted} />
-                    <Text className="text-xs text-text-muted">
+                <Card className="mb-3">
+                  <Text className="text-base font-semibold text-white">{item.room.name}</Text>
+                  <View className="mt-2 flex-row items-center gap-1.5">
+                    <CalendarBlank size={16} color={colors.textMuted} />
+                    <Text className="text-sm text-text-secondary">
                       {formatSessionDate(item.room.session_date)}
                     </Text>
                   </View>

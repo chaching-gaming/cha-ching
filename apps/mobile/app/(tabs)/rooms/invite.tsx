@@ -71,7 +71,7 @@ export default function InviteScreen() {
         }
       />
 
-      <View className="flex-1 items-center px-6 pt-4">
+      <View className="flex-1 items-center px-5 pt-4">
         {/* Room name & member count */}
         <Text className="text-lg font-semibold text-white">{room.name}</Text>
         <View className="mt-1 mb-8 flex-row items-center gap-1">

@@ -1,6 +1,7 @@
 import { Text, TextInput, View } from 'react-native';
 import type { TextInputProps } from 'react-native';
 import { useFieldContext } from '@/hooks/form-context';
+import { colors } from '@/constants/colors';
 
 type TextFieldProps = {
   label?: string;
@@ -23,16 +24,18 @@ export function TextField({
     <View className="mb-4 gap-1.5">
       {(label || labelRight) && (
         <View className="flex-row items-center justify-between">
-          {label && <Text className="text-sm text-text-secondary">{label}</Text>}
+          {label && (
+            <Text className="text-base font-medium text-text-secondary">{label}</Text>
+          )}
           {labelRight}
         </View>
       )}
       <View className="relative">
         <TextInput
-          className={`min-h-[44px] rounded-xl border bg-surface-light px-4 py-3 text-base text-white ${
+          className={`min-h-[48px] rounded-xl border bg-surface-light px-4 py-3.5 text-base text-white ${
             rightIcon ? 'pr-11' : ''
           } ${errors ? 'border-error' : 'border-border'}`}
-          placeholderTextColor="#64748B"
+          placeholderTextColor={colors.textMuted}
           placeholder={placeholder}
           value={field.state.value}
           onChangeText={(text) => field.handleChange(text)}
