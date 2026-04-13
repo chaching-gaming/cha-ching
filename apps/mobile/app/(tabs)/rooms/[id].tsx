@@ -276,12 +276,7 @@ export default function RoomDetailScreen() {
       {/* Floating Create Bet CTA */}
       {isActive && (
         <View className="absolute bottom-6 left-5 right-5">
-          <Button
-            size="lg"
-            onPress={() => {
-              /* TODO: navigate to create bet screen */
-            }}
-          >
+          <Button size="lg" onPress={() => router.push(`/(tabs)/rooms/create-bet?id=${id}`)}>
             Create Bet
           </Button>
         </View>

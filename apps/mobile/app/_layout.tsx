@@ -20,7 +20,9 @@ export const unstable_settings = {
   anchor: '(tabs)',
 };
 
-SplashScreen.preventAutoHideAsync();
+void SplashScreen.preventAutoHideAsync().catch(() => {
+  /* Dev / fast refresh: splash may already be hidden or not registered */
+});
 
 const appTheme = {
   ...DarkTheme,
@@ -55,19 +57,21 @@ function AuthGate({ children }: { children: React.ReactNode }) {
 }
 
 export default function RootLayout() {
-  const [loaded] = useFonts({
+  const [loaded, fontError] = useFonts({
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
     ...FontAwesome.font,
   });
 
   useEffect(() => {
-    if (loaded) {
-      SplashScreen.hideAsync();
+    if (loaded || fontError) {
+      void SplashScreen.hideAsync().catch(() => {
+        /* Dev / fast refresh: no native splash registered for this VC */
+      });
     }
-  }, [loaded]);
+  }, [loaded, fontError]);
 
-  if (!loaded) {
+  if (!loaded && !fontError) {
     return null;
   }
 

@@ -274,6 +274,36 @@ export type Database = {
         };
         Relationships: [];
       };
+      question_templates: {
+        Row: {
+          category: string;
+          created_at: string;
+          id: string;
+          options: Json;
+          question_text: string;
+          short_label: string;
+          slug: string;
+        };
+        Insert: {
+          category?: string;
+          created_at?: string;
+          id?: string;
+          options: Json;
+          question_text: string;
+          short_label: string;
+          slug: string;
+        };
+        Update: {
+          category?: string;
+          created_at?: string;
+          id?: string;
+          options?: Json;
+          question_text?: string;
+          short_label?: string;
+          slug?: string;
+        };
+        Relationships: [];
+      };
       room_members: {
         Row: {
           id: string;
@@ -362,6 +392,42 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
+      create_bet: {
+        Args: {
+          p_expires_at: string;
+          p_options: Json;
+          p_question: string;
+          p_room_id: string;
+          p_stake: number;
+          p_subject_display_name?: string;
+          p_template_id?: string;
+        };
+        Returns: {
+          accepted_by: string | null;
+          accepted_pick: string | null;
+          created_at: string | null;
+          expires_at: string | null;
+          id: string;
+          offered_by: string | null;
+          offered_pick: string | null;
+          options: Json;
+          outcome: string | null;
+          question: string;
+          room_id: string;
+          settled_at: string | null;
+          settlement_method: string | null;
+          stake: number;
+          status: string | null;
+          template_id: string | null;
+          winner: string | null;
+        };
+        SetofOptions: {
+          from: '*';
+          to: 'bets';
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
       create_room: {
         Args: { p_chip_limit?: number; p_name: string; p_session_date: string };
         Returns: {
@@ -422,6 +488,24 @@ export type Database = {
           to: 'rooms';
           isOneToOne: true;
           isSetofReturn: false;
+        };
+      };
+      list_question_templates: {
+        Args: { p_category?: string };
+        Returns: {
+          category: string;
+          created_at: string;
+          id: string;
+          options: Json;
+          question_text: string;
+          short_label: string;
+          slug: string;
+        }[];
+        SetofOptions: {
+          from: '*';
+          to: 'question_templates';
+          isOneToOne: false;
+          isSetofReturn: true;
         };
       };
       reassign_admin: {

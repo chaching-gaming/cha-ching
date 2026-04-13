@@ -6,22 +6,34 @@ import { colors } from '@/constants/colors';
 type TextFieldProps = {
   label?: string;
   labelRight?: React.ReactNode;
+  leftIcon?: React.ReactNode;
   rightIcon?: React.ReactNode;
+  /** Applied before updating field value (e.g. strip non-digits) */
+  transformValue?: (text: string) => string;
+  /** Extra classes on the TextInput (e.g. larger stake typography) */
+  inputClassName?: string;
+  /** Classes on the outer field wrapper (default includes bottom margin) */
+  className?: string;
   placeholder?: string;
 } & Omit<TextInputProps, 'value' | 'onChangeText' | 'onBlur'>;
 
 export function TextField({
   label,
   labelRight,
+  leftIcon,
   rightIcon,
+  transformValue,
+  inputClassName = '',
+  className = '',
   placeholder,
   ...inputProps
 }: TextFieldProps) {
   const field = useFieldContext<string>();
   const errors = field.state.meta.errors[0];
+  const padH = `${leftIcon ? 'pl-11' : 'pl-4'} ${rightIcon ? 'pr-11' : 'pr-4'}`;
 
   return (
-    <View className="mb-4 gap-1.5">
+    <View className={`mb-4 gap-1.5 ${className}`.trim()}>
       {(label || labelRight) && (
         <View className="flex-row items-center justify-between">
           {label && <Text className="text-base font-medium text-text-secondary">{label}</Text>}
@@ -30,16 +42,24 @@ export function TextField({
       )}
       <View className="relative">
         <TextInput
-          className={`min-h-[48px] rounded-xl border bg-surface-light px-4 py-3.5 text-base text-white ${
-            rightIcon ? 'pr-11' : ''
-          } ${errors ? 'border-error' : 'border-border'}`}
+          className={`min-h-[48px] rounded-xl border bg-surface-light py-3.5 text-base text-white ${padH} ${
+            errors ? 'border-error' : 'border-border'
+          } ${inputClassName}`}
           placeholderTextColor={colors.textMuted}
           placeholder={placeholder}
           value={field.state.value}
-          onChangeText={(text) => field.handleChange(text)}
+          onChangeText={(text) => {
+            const next = transformValue ? transformValue(text) : text;
+            field.handleChange(next);
+          }}
           onBlur={field.handleBlur}
           {...inputProps}
         />
+        {leftIcon && (
+          <View className="pointer-events-none absolute top-0 bottom-0 left-0 w-11 items-center justify-center">
+            {leftIcon}
+          </View>
+        )}
         {rightIcon && (
           <View className="absolute top-0 right-0 bottom-0 w-11 items-center justify-center">
             {rightIcon}
