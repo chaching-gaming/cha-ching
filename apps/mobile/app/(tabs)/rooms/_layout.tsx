@@ -8,6 +8,7 @@ export default function RoomsLayout() {
       <Stack.Screen name="create" />
       <Stack.Screen name="join" />
       <Stack.Screen name="invite" />
+      <Stack.Screen name="create-bet" />
     </Stack>
   );
 }

@@ -4,6 +4,13 @@ import { supabase } from '@/lib/supabase';
 import type { Database } from '@cha-ching/types';
 import { useAuth } from '@/providers/auth';
 
+/** Supabase reuses `channel(topic)` if that topic is still registered; topics must be unique per subscription. */
+function realtimeTopicToken(): string {
+  const c = globalThis.crypto;
+  if (c && typeof c.randomUUID === 'function') return c.randomUUID();
+  return `${Date.now()}-${Math.random().toString(36).slice(2, 11)}-${Math.random().toString(36).slice(2, 11)}`;
+}
+
 type Bet = Database['public']['Tables']['bets']['Row'];
 type ChipRequest = Database['public']['Tables']['chip_requests']['Row'];
 type Profile = Database['public']['Tables']['profiles']['Row'];
@@ -21,7 +28,7 @@ export type ActivityItem =
   | { type: 'bet'; timestamp: string; bet: BetWithProfiles }
   | { type: 'chip_request'; timestamp: string; chipRequest: ChipRequestWithProfile };
 
-const roomBetsKey = (roomId: string) => ['rooms', roomId, 'bets'] as const;
+export const roomBetsKey = (roomId: string) => ['rooms', roomId, 'bets'] as const;
 const roomChipRequestsKey = (roomId: string) => ['rooms', roomId, 'chip_requests'] as const;
 const roomBalanceKey = (roomId: string) => ['rooms', roomId, 'balance'] as const;
 
@@ -110,8 +117,23 @@ export function useRealtimeActivityFeed(roomId: string) {
   const queryClient = useQueryClient();
 
   useEffect(() => {
-    const channel = supabase
-      .channel(`room-${roomId}-activity`)
+    if (!roomId) return;
+
+    // Drop any legacy single-topic channel from older app versions / hot reload.
+    // `RealtimeClient.channel()` returns the *existing* instance while it is still
+    // registered; a new `.on(postgres_changes)` then throws if that channel is
+    // already joining or joined.
+    const legacyTopic = `realtime:room-${roomId}-activity`;
+    for (const ch of [...supabase.getChannels()]) {
+      if (ch.topic === legacyTopic) {
+        void supabase.removeChannel(ch);
+      }
+    }
+
+    const token = realtimeTopicToken();
+    // One channel per postgres_changes listener; never reuse a stable topic string.
+    const betsChannel = supabase
+      .channel(`cc-feed:${roomId}:bets:${token}`)
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'bets', filter: `room_id=eq.${roomId}` },
@@ -120,6 +142,10 @@ export function useRealtimeActivityFeed(roomId: string) {
           queryClient.invalidateQueries({ queryKey: roomBalanceKey(roomId) });
         },
       )
+      .subscribe();
+
+    const chipRequestsChannel = supabase
+      .channel(`cc-feed:${roomId}:chips:${token}`)
       .on(
         'postgres_changes',
         {
@@ -136,7 +162,10 @@ export function useRealtimeActivityFeed(roomId: string) {
       .subscribe();
 
     return () => {
-      supabase.removeChannel(channel);
+      void (async () => {
+        await supabase.removeChannel(betsChannel);
+        await supabase.removeChannel(chipRequestsChannel);
+      })();
     };
   }, [roomId, queryClient]);
 }

@@ -4,6 +4,8 @@ import { CaretLeft } from 'phosphor-react-native';
 
 interface ScreenHeaderProps {
   title: string;
+  /** Optional line under title (e.g. room name on sub-pages) */
+  subtitle?: string;
   showBack?: boolean;
   right?: React.ReactNode;
   /** Override default title typography (default: text-xl font-bold) */
@@ -13,6 +15,7 @@ interface ScreenHeaderProps {
 
 export function ScreenHeader({
   title,
+  subtitle,
   showBack = false,
   right,
   titleClassName = 'text-xl font-bold text-white',
@@ -45,6 +48,14 @@ export function ScreenHeader({
         <Text className={titleClassName} numberOfLines={1}>
           {title}
         </Text>
+        {subtitle ? (
+          <Text
+            className="mt-0.5 max-w-full px-1 text-center text-sm font-semibold text-primary"
+            numberOfLines={1}
+          >
+            {subtitle}
+          </Text>
+        ) : null}
       </View>
 
       {/* Right slot */}

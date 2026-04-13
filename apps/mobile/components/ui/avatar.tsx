@@ -6,6 +6,8 @@ const sizes = {
   md: { container: 'h-12 w-12', text: 'text-lg', icon: 20 },
   /** Profile hero; larger than list avatars but compact */
   lg: { container: 'h-14 w-14', text: 'text-lg', icon: 24 },
+  /** Bet picker / large tap targets */
+  xl: { container: 'h-16 w-16', text: 'text-xl', icon: 28 },
 } as const;
 
 interface AvatarProps {
