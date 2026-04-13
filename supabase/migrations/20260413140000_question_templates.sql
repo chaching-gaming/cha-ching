@@ -14,6 +14,7 @@ create table public.question_templates (
 
 create index idx_question_templates_category on public.question_templates (category);
 
+-- Every array element must be a JSON string (CHECK cannot express this without a trigger).
 create or replace function public.validate_question_template_options()
 returns trigger
 language plpgsql
@@ -44,6 +45,7 @@ on public.question_templates for select
 to authenticated
 using (true);
 
+-- RPC: list templates by category (defaults to golf).
 create or replace function public.list_question_templates(p_category text default 'golf')
 returns setof public.question_templates
 language sql
@@ -61,6 +63,7 @@ $$;
 
 grant execute on function public.list_question_templates(text) to authenticated;
 
+-- Seed golf templates
 insert into public.question_templates (question_text, options, category) values
   (
     'Who wins the hole?',
