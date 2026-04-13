@@ -33,7 +33,6 @@ export type Database = {
           accepted_by: string | null;
           accepted_pick: string | null;
           created_at: string | null;
-          event_id: string | null;
           expires_at: string | null;
           id: string;
           offered_by: string | null;
@@ -41,7 +40,7 @@ export type Database = {
           options: Json;
           outcome: string | null;
           question: string;
-          room_id: string | null;
+          room_id: string;
           settled_at: string | null;
           settlement_method: string | null;
           stake: number;
@@ -53,7 +52,6 @@ export type Database = {
           accepted_by?: string | null;
           accepted_pick?: string | null;
           created_at?: string | null;
-          event_id?: string | null;
           expires_at?: string | null;
           id?: string;
           offered_by?: string | null;
@@ -61,7 +59,7 @@ export type Database = {
           options: Json;
           outcome?: string | null;
           question: string;
-          room_id?: string | null;
+          room_id: string;
           settled_at?: string | null;
           settlement_method?: string | null;
           stake: number;
@@ -73,7 +71,6 @@ export type Database = {
           accepted_by?: string | null;
           accepted_pick?: string | null;
           created_at?: string | null;
-          event_id?: string | null;
           expires_at?: string | null;
           id?: string;
           offered_by?: string | null;
@@ -81,7 +78,7 @@ export type Database = {
           options?: Json;
           outcome?: string | null;
           question?: string;
-          room_id?: string | null;
+          room_id?: string;
           settled_at?: string | null;
           settlement_method?: string | null;
           stake?: number;
@@ -95,13 +92,6 @@ export type Database = {
             columns: ['accepted_by'];
             isOneToOne: false;
             referencedRelation: 'profiles';
-            referencedColumns: ['id'];
-          },
-          {
-            foreignKeyName: 'bets_event_id_fkey';
-            columns: ['event_id'];
-            isOneToOne: false;
-            referencedRelation: 'events';
             referencedColumns: ['id'];
           },
           {
@@ -162,51 +152,6 @@ export type Database = {
           },
           {
             foreignKeyName: 'chip_requests_room_id_fkey';
-            columns: ['room_id'];
-            isOneToOne: false;
-            referencedRelation: 'rooms';
-            referencedColumns: ['id'];
-          },
-        ];
-      };
-      events: {
-        Row: {
-          created_at: string | null;
-          created_by: string | null;
-          event_date: string | null;
-          id: string;
-          name: string;
-          room_id: string | null;
-          status: string | null;
-        };
-        Insert: {
-          created_at?: string | null;
-          created_by?: string | null;
-          event_date?: string | null;
-          id?: string;
-          name: string;
-          room_id?: string | null;
-          status?: string | null;
-        };
-        Update: {
-          created_at?: string | null;
-          created_by?: string | null;
-          event_date?: string | null;
-          id?: string;
-          name?: string;
-          room_id?: string | null;
-          status?: string | null;
-        };
-        Relationships: [
-          {
-            foreignKeyName: 'events_created_by_fkey';
-            columns: ['created_by'];
-            isOneToOne: false;
-            referencedRelation: 'profiles';
-            referencedColumns: ['id'];
-          },
-          {
-            foreignKeyName: 'events_room_id_fkey';
             columns: ['room_id'];
             isOneToOne: false;
             referencedRelation: 'rooms';
