@@ -274,6 +274,30 @@ export type Database = {
         };
         Relationships: [];
       };
+      question_templates: {
+        Row: {
+          category: string;
+          created_at: string;
+          id: string;
+          options: Json;
+          question_text: string;
+        };
+        Insert: {
+          category?: string;
+          created_at?: string;
+          id?: string;
+          options: Json;
+          question_text: string;
+        };
+        Update: {
+          category?: string;
+          created_at?: string;
+          id?: string;
+          options?: Json;
+          question_text?: string;
+        };
+        Relationships: [];
+      };
       room_members: {
         Row: {
           id: string;
@@ -422,6 +446,22 @@ export type Database = {
           to: 'rooms';
           isOneToOne: true;
           isSetofReturn: false;
+        };
+      };
+      list_question_templates: {
+        Args: { p_category?: string };
+        Returns: {
+          category: string;
+          created_at: string;
+          id: string;
+          options: Json;
+          question_text: string;
+        }[];
+        SetofOptions: {
+          from: '*';
+          to: 'question_templates';
+          isOneToOne: false;
+          isSetofReturn: true;
         };
       };
       reassign_admin: {
