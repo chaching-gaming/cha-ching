@@ -1,8 +1,20 @@
 import { View } from 'react-native';
+import { getFocusedRouteNameFromRoute } from '@react-navigation/native';
 import { Tabs } from 'expo-router';
 import { House, Newspaper, Plus, ChartBar, UserCircle } from 'phosphor-react-native';
 
 import { colors } from '@/constants/colors';
+
+const TAB_BAR_STYLE = {
+  backgroundColor: colors.surface,
+  borderTopColor: colors.border,
+  height: 80,
+  paddingBottom: 20,
+  paddingTop: 8,
+} as const;
+
+/** Rooms list only; stack sub-routes hide the tab bar for focused flows. */
+const ROOMS_TAB_LIST_ROUTE = 'index';
 
 export default function TabLayout() {
   return (
@@ -10,23 +22,22 @@ export default function TabLayout() {
       screenOptions={{
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.textMuted,
-        tabBarStyle: {
-          backgroundColor: colors.surface,
-          borderTopColor: colors.border,
-          height: 80,
-          paddingBottom: 20,
-          paddingTop: 8,
-        },
+        tabBarStyle: TAB_BAR_STYLE,
         headerShown: false,
       }}
     >
       <Tabs.Screen
         name="rooms"
-        options={{
-          title: 'Rooms',
-          tabBarIcon: ({ color, focused }) => (
-            <House size={24} color={color} weight={focused ? 'fill' : 'regular'} />
-          ),
+        options={({ route }) => {
+          const focusedRoute = getFocusedRouteNameFromRoute(route) ?? ROOMS_TAB_LIST_ROUTE;
+          const hideTabBar = focusedRoute !== ROOMS_TAB_LIST_ROUTE;
+          return {
+            title: 'Rooms',
+            tabBarStyle: hideTabBar ? { display: 'none' } : TAB_BAR_STYLE,
+            tabBarIcon: ({ color, focused }) => (
+              <House size={24} color={color} weight={focused ? 'fill' : 'regular'} />
+            ),
+          };
         }}
       />
       <Tabs.Screen

@@ -24,16 +24,12 @@ import {
   getRpcErrorMessage,
   type RoomWithMembership,
 } from '@/hooks/use-rooms';
+import { formatSessionDateShort } from '@/lib/date-format';
 
 function formatBalance(balance: number): string {
   const abs = Math.abs(balance);
   const formatted = abs >= 1000 ? abs.toLocaleString() : String(abs);
   return balance >= 0 ? `+${formatted}` : `-${formatted}`;
-}
-
-function formatDate(dateStr: string): string {
-  const date = new Date(dateStr + 'T00:00:00');
-  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
 function RoomCardContent({ item }: { item: RoomWithMembership }) {
@@ -75,7 +71,9 @@ function RoomCardContent({ item }: { item: RoomWithMembership }) {
             </View>
           )}
         </View>
-        <Text className="text-sm text-text-secondary">{formatDate(item.room.session_date)}</Text>
+        <Text className="text-sm text-text-secondary">
+          {formatSessionDateShort(item.room.session_date)}
+        </Text>
       </View>
     </View>
   );

@@ -22,7 +22,7 @@ import { Button } from '@/components/ui/button';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { useForm } from '@/hooks/use-form';
 import { useCreateBet } from '@/hooks/use-create-bet';
-import { useQuestionTemplates, type QuestionTemplate } from '@/hooks/use-question-templates';
+import { useQuestionTemplates } from '@/hooks/use-question-templates';
 import {
   getRpcErrorMessage,
   useRoomDetail,
@@ -166,16 +166,6 @@ export default function CreateBetScreen() {
     });
     setReviewOpen(true);
   }
-
-  const selectTemplate = useCallback(
-    (t: QuestionTemplate) => {
-      form.setErrorMap({});
-      form.setFieldValue('templateId', t.id);
-      form.setFieldValue('writeInOpen', false);
-      form.setFieldValue('writeInBody', '');
-    },
-    [form],
-  );
 
   const openWriteIn = useCallback(() => {
     form.setErrorMap({});
@@ -325,35 +315,27 @@ export default function CreateBetScreen() {
                   {templatesLoading ? (
                     <ActivityIndicator color={colors.primary} />
                   ) : (
-                    <FlatList
-                      data={templates ?? []}
-                      numColumns={2}
-                      scrollEnabled={false}
-                      keyExtractor={(item) => item.id}
-                      columnWrapperStyle={{ gap: 12, marginBottom: 12 }}
-                      renderItem={({ item }) => {
-                        const selected = templateId === item.id;
-                        return (
-                          <TouchableOpacity
-                            onPress={() => selectTemplate(item)}
-                            disabled={!sessionActive}
-                            className={`min-h-[132px] flex-1 items-center justify-center rounded-2xl border-2 px-3 py-4 ${
-                              selected ? 'border-primary bg-primary/15' : 'border-border bg-surface'
-                            }`}
-                            activeOpacity={0.8}
-                            style={{ maxWidth: '48%', flexGrow: 1, flexBasis: '48%' }}
-                          >
-                            <BetTemplateIcon slug={item.slug} color={colors.primary} size={40} />
-                            <Text className="mt-3 text-center text-base font-bold text-white">
-                              {item.short_label}
-                            </Text>
-                            <Text className="mt-1 text-center text-xs text-text-secondary">
-                              Yes / No
-                            </Text>
-                          </TouchableOpacity>
-                        );
-                      }}
-                    />
+                    <form.AppField name="templateId">
+                      {(field) => (
+                        <field.OptionField
+                          layout="grid-2"
+                          className="mb-0"
+                          disabled={!sessionActive}
+                          onSelectionChange={() => {
+                            form.setErrorMap({});
+                            form.setFieldValue('writeInOpen', false);
+                            form.setFieldValue('writeInBody', '');
+                          }}
+                          options={(templates ?? []).map((t) => ({
+                            id: t.id,
+                            value: t.id,
+                            label: t.short_label,
+                            sublabel: 'Yes / No',
+                            icon: <BetTemplateIcon slug={t.slug} color={colors.primary} size={40} />,
+                          }))}
+                        />
+                      )}
+                    </form.AppField>
                   )}
 
                   <TouchableOpacity
@@ -398,7 +380,7 @@ export default function CreateBetScreen() {
                 <form.AppField name="stake">
                   {(field) => (
                     <field.TextField
-                      leftIcon={<Coins size={22} color={colors.primary} weight="fill" />}
+                      leftIcon={<Coins size={22} color={colors.chipsIcon} weight="fill" />}
                       transformValue={(t) => t.replace(/\D/g, '')}
                       placeholder="0"
                       keyboardType="number-pad"
@@ -417,32 +399,20 @@ export default function CreateBetScreen() {
           {/* Expiry */}
           <View className="mb-6">
             <Text className="mb-2 text-base font-semibold text-white">Expires</Text>
-            <form.Subscribe selector={(state) => state.values.expiryIndex}>
-              {(expiryIndex) => (
-                <View className="flex-row flex-wrap gap-2">
-                  {EXPIRY_PRESETS.map((preset, i) => {
-                    const selected = expiryIndex === i;
-                    return (
-                      <TouchableOpacity
-                        key={preset.label}
-                        onPress={() => form.setFieldValue('expiryIndex', i)}
-                        disabled={!sessionActive}
-                        className={`min-h-[48px] min-w-[68px] items-center justify-center rounded-2xl border-2 px-3 ${
-                          selected ? 'border-primary bg-primary/15' : 'border-border bg-surface'
-                        }`}
-                        activeOpacity={0.75}
-                      >
-                        <Text
-                          className={`text-sm font-bold ${selected ? 'text-primary' : 'text-text-secondary'}`}
-                        >
-                          {preset.label}
-                        </Text>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
+            <form.AppField name="expiryIndex">
+              {(field) => (
+                <field.OptionField
+                  layout="wrap"
+                  className="mb-0"
+                  disabled={!sessionActive}
+                  options={EXPIRY_PRESETS.map((preset, i) => ({
+                    id: `expiry-${i}`,
+                    label: preset.label,
+                    value: i,
+                  }))}
+                />
               )}
-            </form.Subscribe>
+            </form.AppField>
           </View>
 
           <Button size="lg" disabled={!sessionActive} onPress={handleReview}>

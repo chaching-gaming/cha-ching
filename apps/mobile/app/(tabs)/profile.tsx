@@ -20,11 +20,7 @@ import { Avatar, Button } from '@/components/ui';
 import { Card } from '@/components/ui/card';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { colors } from '@/constants/colors';
-
-function formatSessionDate(dateStr: string) {
-  const date = new Date(dateStr + 'T00:00:00');
-  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-}
+import { formatSessionDateMedium } from '@/lib/date-format';
 
 export default function ProfileScreen() {
   const router = useRouter();
@@ -153,14 +149,14 @@ export default function ProfileScreen() {
                 onPress={() => router.push(`/(tabs)/rooms/${item.room.id}`)}
                 activeOpacity={0.7}
                 accessibilityRole="button"
-                accessibilityLabel={`Open ${item.room.name}, ${formatSessionDate(item.room.session_date)}`}
+                accessibilityLabel={`Open ${item.room.name}, ${formatSessionDateMedium(item.room.session_date)}`}
               >
                 <Card className="mb-3">
                   <Text className="text-base font-semibold text-white">{item.room.name}</Text>
                   <View className="mt-2 flex-row items-center gap-1.5">
                     <CalendarBlank size={16} color={colors.textMuted} />
                     <Text className="text-sm text-text-secondary">
-                      {formatSessionDate(item.room.session_date)}
+                      {formatSessionDateMedium(item.room.session_date)}
                     </Text>
                   </View>
                 </Card>

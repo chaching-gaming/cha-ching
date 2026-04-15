@@ -49,7 +49,7 @@ export function RoomHeaderBar({ members, balance, onViewMembers }: RoomHeaderBar
       <View className="items-end">
         <Text className="text-base text-text-muted">Your Balance</Text>
         <View className="flex-row items-center gap-1.5">
-          <Coins size={22} color={colors.primary} weight="fill" />
+          <Coins size={22} color={colors.chipsIcon} weight="fill" />
           <Text className="text-2xl font-bold text-primary">{balance}</Text>
         </View>
       </View>

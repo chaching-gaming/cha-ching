@@ -4,6 +4,8 @@ const variants = {
   admin: 'bg-primary/20',
   player: 'bg-blue-500/20',
   attestor: 'bg-warning/20',
+  /** Matched / in-play bets — distinct from open (green) */
+  matched: 'bg-indigo-500/25',
   success: 'bg-primary/20',
   error: 'bg-error/20',
   default: 'bg-surface-light',
@@ -13,6 +15,7 @@ const textVariants = {
   admin: 'text-primary',
   player: 'text-blue-400',
   attestor: 'text-warning',
+  matched: 'text-indigo-300',
   success: 'text-primary',
   error: 'text-error',
   default: 'text-text-secondary',
