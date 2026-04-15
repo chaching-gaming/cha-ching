@@ -7,6 +7,7 @@ import { colors } from '@/constants/colors';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { useCreateRoom } from '@/hooks/use-rooms';
 import { useForm } from '@/hooks/use-form';
+import { formatSessionDateShort, formatTodayCalendarDate } from '@/lib/date-format';
 
 const CHIP_LIMIT_OPTIONS = [
   { label: '-1,000', value: -1000 },
@@ -19,23 +20,10 @@ const createRoomSchema = z.object({
   chipLimit: z.number().nullable(),
 });
 
-function todayDateString() {
-  const d = new Date();
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${y}-${m}-${day}`;
-}
-
-function formatDatePreview(dateStr: string) {
-  const date = new Date(dateStr + 'T00:00:00');
-  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-}
-
 export default function CreateRoomScreen() {
   const router = useRouter();
   const createRoom = useCreateRoom();
-  const today = todayDateString();
+  const today = formatTodayCalendarDate();
 
   const form = useForm({
     defaultValues: {
@@ -113,7 +101,7 @@ export default function CreateRoomScreen() {
           <form.Subscribe selector={(state) => state.values.name}>
             {(name) => {
               const trimmed = name.trim();
-              const preview = trimmed ? `${trimmed} - ${formatDatePreview(today)}` : '';
+              const preview = trimmed ? `${trimmed} - ${formatSessionDateShort(today)}` : '';
               return preview ? (
                 <Text className="-mt-2.5 mb-4 text-sm text-text-secondary">Preview: {preview}</Text>
               ) : null;

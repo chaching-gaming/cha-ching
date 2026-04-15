@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActionSheetIOS,
   ActivityIndicator,
@@ -38,11 +38,36 @@ import {
   useRoomActivityFeed,
   useMyRoomBalance,
   useRealtimeActivityFeed,
+  type ActivityItem,
 } from '@/hooks/use-activity-feed';
+import { formatSessionDateLong } from '@/lib/date-format';
+import { getEffectiveBetStatus } from '@/lib/effective-bet-status';
 
-function formatSessionDate(dateStr: string) {
-  const date = new Date(dateStr + 'T00:00:00');
-  return date.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+type ActivityFilter = 'open' | 'live' | 'settled' | 'expired';
+
+/** Open = unmatched offers still accepting a counterparty. Live = matched / awaiting result / disputed. */
+const ACTIVITY_FILTER_OPTIONS: { key: ActivityFilter; label: string }[] = [
+  { key: 'open', label: 'Open' },
+  { key: 'live', label: 'Live' },
+  { key: 'expired', label: 'Expired' },
+  { key: 'settled', label: 'Settled' },
+];
+
+function matchesActivityFilter(item: ActivityItem, filter: ActivityFilter): boolean {
+  if (item.type === 'chip_request') return true;
+  const { bet } = item;
+  switch (filter) {
+    case 'open':
+      return bet.status === 'OPEN' && getEffectiveBetStatus(bet) !== 'EXPIRED';
+    case 'live':
+      return (
+        bet.status === 'MATCHED' || bet.status === 'PENDING_RESULT' || bet.status === 'DISPUTED'
+      );
+    case 'expired':
+      return getEffectiveBetStatus(bet) === 'EXPIRED';
+    case 'settled':
+      return bet.status === 'SETTLED' || bet.status === 'VOID';
+  }
 }
 
 function promptMemberRole(
@@ -93,6 +118,16 @@ export default function RoomDetailScreen() {
   // State
   const [showMembers, setShowMembers] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [activityFilter, setActivityFilter] = useState<ActivityFilter>('open');
+  const [expiryFilterTick, setExpiryFilterTick] = useState(0);
+
+  const needsExpiryFilterTick = activityFilter === 'open' || activityFilter === 'expired';
+
+  useEffect(() => {
+    if (!needsExpiryFilterTick) return;
+    const id = setInterval(() => setExpiryFilterTick((t) => t + 1), 1000);
+    return () => clearInterval(id);
+  }, [needsExpiryFilterTick]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -104,6 +139,44 @@ export default function RoomDetailScreen() {
   const currentMember = members?.find((m) => m.user_id === authSession?.user.id);
   const isAdmin = currentMember?.role === 'ADMIN';
   const isActive = room?.is_active ?? false;
+
+  const filteredActivity = useMemo(() => {
+    void expiryFilterTick;
+    const list = activityItems ?? [];
+    return list.filter((item) => matchesActivityFilter(item, activityFilter));
+  }, [activityItems, activityFilter, expiryFilterTick]);
+
+  const emptyFeedCopy = useMemo(() => {
+    const total = activityItems?.length ?? 0;
+    if (total === 0) {
+      return {
+        title: 'No activity yet',
+        body: 'Create a bet to get the room going. Chip requests will appear here too.',
+      };
+    }
+    switch (activityFilter) {
+      case 'open':
+        return {
+          title: 'No open bets',
+          body: 'Create a new offer, or check Live for bets already matched.',
+        };
+      case 'live':
+        return {
+          title: 'Nothing in play',
+          body: 'No matched or pending bets. Check Open for offers waiting on a match.',
+        };
+      case 'expired':
+        return {
+          title: 'No expired bets',
+          body: 'Offers that hit their deadline without a match appear here.',
+        };
+      case 'settled':
+        return {
+          title: 'No finished bets',
+          body: 'Settled and voided bets show in this tab. Expired offers are under Expired.',
+        };
+    }
+  }, [activityItems, activityFilter]);
 
   function handleEndSession() {
     Alert.alert('End Session', 'Are you sure? This will prevent new joins and bets.', [
@@ -201,13 +274,11 @@ export default function RoomDetailScreen() {
       />
 
       <FlatList
-        data={activityItems ?? []}
+        data={filteredActivity}
         keyExtractor={(item) =>
           item.type === 'bet' ? `bet-${item.bet.id}` : `cr-${item.chipRequest.id}`
         }
-        renderItem={({ item }) => (
-          <ActivityFeedItem item={item} currentUserId={authSession?.user.id} />
-        )}
+        renderItem={({ item }) => <ActivityFeedItem item={item} />}
         contentContainerClassName="px-5 pb-24"
         refreshControl={
           <RefreshControl
@@ -230,7 +301,7 @@ export default function RoomDetailScreen() {
               <View className="flex-row items-center gap-2.5">
                 <CalendarBlank size={20} color={colors.textSecondary} />
                 <Text className="text-sm text-text-secondary">
-                  {formatSessionDate(room.session_date)}
+                  {formatSessionDateLong(room.session_date)}
                 </Text>
                 <Badge
                   variant={isActive ? 'success' : 'default'}
@@ -250,9 +321,33 @@ export default function RoomDetailScreen() {
               )}
             </View>
 
-            {/* Divider + section label */}
+            {/* Bets & activity */}
             <View className="mb-2 border-b border-border pb-2">
-              <Text className="text-sm font-semibold text-text-secondary">Activity</Text>
+              <Text className="text-sm font-semibold text-text-secondary">Bets & activity</Text>
+            </View>
+
+            <View className="mb-3 flex-row flex-wrap gap-2">
+              {ACTIVITY_FILTER_OPTIONS.map(({ key, label }) => {
+                const selected = activityFilter === key;
+                return (
+                  <TouchableOpacity
+                    key={key}
+                    onPress={() => setActivityFilter(key)}
+                    activeOpacity={0.75}
+                    className={`rounded-full border px-3.5 py-2 ${
+                      selected ? 'border-primary bg-primary/15' : 'border-border bg-surface'
+                    }`}
+                  >
+                    <Text
+                      className={`text-sm font-semibold ${
+                        selected ? 'text-primary' : 'text-text-secondary'
+                      }`}
+                    >
+                      {label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
             </View>
           </View>
         }
@@ -262,15 +357,18 @@ export default function RoomDetailScreen() {
               <ActivityIndicator color={colors.primary} />
             </View>
           ) : (
-            <View className="items-center py-12">
-              <Text className="text-xl font-semibold text-text-secondary">No activity yet</Text>
-              <Text className="mt-2 text-center text-base leading-6 text-text-secondary">
-                Create a bet to get started
+            <View className="items-center px-2 py-12">
+              <Text className="text-center text-xl font-semibold text-text-secondary">
+                {emptyFeedCopy.title}
               </Text>
+              {emptyFeedCopy.body ? (
+                <Text className="mt-2 max-w-sm text-center text-base leading-6 text-text-secondary">
+                  {emptyFeedCopy.body}
+                </Text>
+              ) : null}
             </View>
           )
         }
-        ItemSeparatorComponent={() => <View className="border-b border-border" />}
       />
 
       {/* Floating Create Bet CTA */}

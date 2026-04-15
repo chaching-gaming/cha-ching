@@ -392,6 +392,34 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
+      accept_bet: {
+        Args: { p_bet_id: string; p_pick: string };
+        Returns: {
+          accepted_by: string | null;
+          accepted_pick: string | null;
+          created_at: string | null;
+          expires_at: string | null;
+          id: string;
+          offered_by: string | null;
+          offered_pick: string | null;
+          options: Json;
+          outcome: string | null;
+          question: string;
+          room_id: string;
+          settled_at: string | null;
+          settlement_method: string | null;
+          stake: number;
+          status: string | null;
+          template_id: string | null;
+          winner: string | null;
+        };
+        SetofOptions: {
+          from: '*';
+          to: 'bets';
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
       create_bet: {
         Args: {
           p_expires_at: string;
