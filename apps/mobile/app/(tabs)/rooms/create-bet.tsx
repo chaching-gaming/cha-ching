@@ -331,7 +331,9 @@ export default function CreateBetScreen() {
                             value: t.id,
                             label: t.short_label,
                             sublabel: 'Yes / No',
-                            icon: <BetTemplateIcon slug={t.slug} color={colors.primary} size={40} />,
+                            icon: (
+                              <BetTemplateIcon slug={t.slug} color={colors.primary} size={40} />
+                            ),
                           }))}
                         />
                       )}

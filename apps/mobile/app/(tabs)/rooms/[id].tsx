@@ -61,9 +61,7 @@ function matchesActivityFilter(item: ActivityItem, filter: ActivityFilter): bool
       return bet.status === 'OPEN' && getEffectiveBetStatus(bet) !== 'EXPIRED';
     case 'live':
       return (
-        bet.status === 'MATCHED' ||
-        bet.status === 'PENDING_RESULT' ||
-        bet.status === 'DISPUTED'
+        bet.status === 'MATCHED' || bet.status === 'PENDING_RESULT' || bet.status === 'DISPUTED'
       );
     case 'expired':
       return getEffectiveBetStatus(bet) === 'EXPIRED';
@@ -123,8 +121,7 @@ export default function RoomDetailScreen() {
   const [activityFilter, setActivityFilter] = useState<ActivityFilter>('open');
   const [expiryFilterTick, setExpiryFilterTick] = useState(0);
 
-  const needsExpiryFilterTick =
-    activityFilter === 'open' || activityFilter === 'expired';
+  const needsExpiryFilterTick = activityFilter === 'open' || activityFilter === 'expired';
 
   useEffect(() => {
     if (!needsExpiryFilterTick) return;

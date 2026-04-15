@@ -90,11 +90,7 @@ function BetActivityCard({ bet, timestamp }: { bet: BetWithProfiles; timestamp: 
       <View className="flex-row items-center justify-between gap-2">
         {showHeaderAvatar ? (
           <View className="min-w-0 flex-1 flex-row items-center gap-2.5">
-            <Avatar
-              uri={bet.offered_by_profile?.avatar_url}
-              fallback={offererName}
-              size="md"
-            />
+            <Avatar uri={bet.offered_by_profile?.avatar_url} fallback={offererName} size="md" />
             <Text className="min-w-0 flex-1 text-base text-text-secondary" numberOfLines={1}>
               <Text className="font-semibold text-white">{offererName}</Text>
               {' posted'}
@@ -108,11 +104,7 @@ function BetActivityCard({ bet, timestamp }: { bet: BetWithProfiles; timestamp: 
           </Text>
         ) : (
           <View className="min-w-0 flex-1 flex-row items-center gap-2.5">
-            <Avatar
-              uri={bet.offered_by_profile?.avatar_url}
-              fallback={offererName}
-              size="md"
-            />
+            <Avatar uri={bet.offered_by_profile?.avatar_url} fallback={offererName} size="md" />
             <Text className="text-base text-text-secondary" numberOfLines={1}>
               <Text className="font-semibold text-white">{offererName}</Text>
             </Text>
@@ -130,7 +122,8 @@ function BetActivityCard({ bet, timestamp }: { bet: BetWithProfiles; timestamp: 
         {bet.question}
       </Text>
 
-      {picks && (dbStatus === 'MATCHED' || dbStatus === 'PENDING_RESULT' || dbStatus === 'DISPUTED') ? (
+      {picks &&
+      (dbStatus === 'MATCHED' || dbStatus === 'PENDING_RESULT' || dbStatus === 'DISPUTED') ? (
         <View className="mt-3 flex-row items-stretch gap-2">
           <View className="min-w-0 flex-1 rounded-xl border border-border bg-surface-light px-2 py-2.5">
             <Text className="text-center text-xs font-semibold text-primary" numberOfLines={1}>
