@@ -2,9 +2,19 @@ import { useState } from 'react';
 import { Alert, Keyboard, Pressable, Text, TouchableOpacity, View } from 'react-native';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { Link } from 'expo-router';
+import { z } from 'zod';
 import { supabase } from '@/lib/supabase';
 import { signInWithOAuth } from '@/lib/oauth';
 import { useForm } from '@/hooks/use-form';
+
+const signUpSchema = z.object({
+  displayName: z.string().min(1, 'Display name is required'),
+  email: z.string().min(1, 'Email is required').email('Invalid email address'),
+  password: z
+    .string()
+    .min(1, 'Password is required')
+    .min(8, 'Password must be at least 8 characters'),
+});
 
 export default function SignUpScreen() {
   const [oauthLoading, setOauthLoading] = useState(false);
@@ -14,6 +24,9 @@ export default function SignUpScreen() {
       displayName: '',
       email: '',
       password: '',
+    },
+    validators: {
+      onChange: signUpSchema,
     },
     onSubmit: async ({ value, formApi }) => {
       const { error } = await supabase.auth.signUp({
