@@ -14,6 +14,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Coins, PencilSimple, X } from 'phosphor-react-native';
+import { z } from 'zod';
 
 import { colors } from '@/constants/colors';
 import { Avatar } from '@/components/ui/avatar';
@@ -37,12 +38,31 @@ import {
 
 const BINARY_OPTIONS = ['Yes', 'No'] as const;
 
+const createBetSchema = z
+  .object({
+    memberId: z.string().min(1, 'Choose who this bet is about'),
+    templateId: z.string().nullable(),
+    writeInOpen: z.boolean(),
+    writeInBody: z.string(),
+    stake: z
+      .string()
+      .min(1, 'Stake is required')
+      .refine((v) => parseInt(v, 10) > 0, 'Enter a positive stake (whole chips)'),
+    expiryIndex: z.number(),
+  })
+  .refine(
+    (data) => data.templateId !== null || (data.writeInOpen && data.writeInBody.trim().length > 0),
+    { message: 'Pick a template or write your own question' },
+  );
+
 type ReviewPayload = {
   finalQuestion: string;
   stake: number;
   expiryIndex: number;
   templateId: string | null;
   subjectDisplayName: string | null;
+  memberAvatarUrl: string | null;
+  memberDisplayName: string;
 };
 
 function memberDisplayName(m: RoomMemberWithProfile): string {
@@ -58,78 +78,100 @@ export default function CreateBetScreen() {
   const { data: templates, isLoading: templatesLoading } = useQuestionTemplates('golf');
   const createBet = useCreateBet();
 
-  const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null);
-  const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
-  const [writeInOpen, setWriteInOpen] = useState(false);
-  const [expiryIndex, setExpiryIndex] = useState(0);
   const [reviewOpen, setReviewOpen] = useState(false);
   const [reviewPayload, setReviewPayload] = useState<ReviewPayload | null>(null);
-  const [sheetError, setSheetError] = useState<string | null>(null);
-  const [isPosting, setIsPosting] = useState(false);
-
-  const selectedMember = useMemo(
-    () => members?.find((m) => m.user_id === selectedMemberId) ?? null,
-    [members, selectedMemberId],
-  );
-
-  const displayName = selectedMember ? memberDisplayName(selectedMember) : '';
 
   const form = useForm({
     defaultValues: {
-      stake: '10',
+      memberId: '',
+      templateId: null as string | null,
+      writeInOpen: false,
       writeInBody: '',
+      stake: '10',
+      expiryIndex: 0,
+    },
+    validators: {
+      onChange: createBetSchema,
     },
     onSubmit: async ({ value, formApi }) => {
-      if (!room || !room.is_active) return;
+      if (!roomId) return;
 
-      if (!selectedMemberId || !selectedMember) {
-        formApi.setErrorMap({
-          onSubmit: { fields: {}, form: 'Choose who this bet is about' },
+      const member = members?.find((m) => m.user_id === value.memberId) ?? null;
+      if (!member) return;
+
+      const name = memberDisplayName(member);
+      const tpl = templates?.find((t) => t.id === value.templateId) ?? null;
+      const finalQuestion = tpl
+        ? composeTemplateQuestion(tpl.question_text, name)
+        : composeWriteInQuestion(value.writeInBody.trim(), name);
+
+      const stakeNum = parseInt(value.stake, 10);
+      const expiresAt = new Date(
+        Date.now() + EXPIRY_PRESETS[value.expiryIndex].offsetMs,
+      ).toISOString();
+
+      try {
+        await createBet.mutateAsync({
+          p_room_id: roomId,
+          p_question: finalQuestion,
+          p_options: [...BINARY_OPTIONS],
+          p_stake: stakeNum,
+          p_expires_at: expiresAt,
+          p_template_id: tpl?.id ?? null,
+          p_subject_display_name: tpl ? name : null,
         });
-        return;
-      }
-
-      if (!selectedTemplateId && (!writeInOpen || !value.writeInBody.trim())) {
+        setReviewOpen(false);
+        setReviewPayload(null);
+        router.replace(`/(tabs)/rooms/${roomId}`);
+      } catch (err) {
         formApi.setErrorMap({
-          onSubmit: { fields: {}, form: 'Pick a template or write your own question' },
+          onSubmit: { fields: {}, form: getRpcErrorMessage(err) },
         });
-        return;
       }
-
-      const tpl = templates?.find((t) => t.id === selectedTemplateId) ?? null;
-      let finalQuestion = '';
-      if (tpl) {
-        finalQuestion = composeTemplateQuestion(tpl.question_text, displayName);
-      } else {
-        finalQuestion = composeWriteInQuestion(value.writeInBody.trim(), displayName);
-      }
-
-      const stakeNum = parseInt(value.stake.replace(/\D/g, ''), 10);
-      if (!Number.isFinite(stakeNum) || stakeNum <= 0) {
-        formApi.setErrorMap({
-          onSubmit: { fields: {}, form: 'Enter a positive stake (whole chips)' },
-        });
-        return;
-      }
-
-      formApi.setErrorMap({});
-      setReviewPayload({
-        finalQuestion,
-        stake: stakeNum,
-        expiryIndex,
-        templateId: tpl?.id ?? null,
-        subjectDisplayName: tpl ? displayName : null,
-      });
-      setReviewOpen(true);
-      setSheetError(null);
     },
   });
+
+  function handleReview() {
+    if (!room?.is_active) return;
+
+    const values = form.state.values;
+    const result = createBetSchema.safeParse(values);
+    if (!result.success) {
+      form.setErrorMap({
+        onSubmit: { fields: {}, form: result.error.issues[0]?.message ?? 'Please fix the errors' },
+      });
+      return;
+    }
+
+    const member = members?.find((m) => m.user_id === values.memberId) ?? null;
+    if (!member) return;
+
+    const name = memberDisplayName(member);
+    const tpl = templates?.find((t) => t.id === values.templateId) ?? null;
+    const finalQuestion = tpl
+      ? composeTemplateQuestion(tpl.question_text, name)
+      : composeWriteInQuestion(values.writeInBody.trim(), name);
+
+    const stakeNum = parseInt(values.stake, 10);
+
+    form.setErrorMap({});
+    setReviewPayload({
+      finalQuestion,
+      stake: stakeNum,
+      expiryIndex: values.expiryIndex,
+      templateId: tpl?.id ?? null,
+      subjectDisplayName: tpl ? name : null,
+      memberAvatarUrl: member.profiles?.avatar_url ?? null,
+      memberDisplayName: name,
+    });
+    setReviewOpen(true);
+  }
 
   const selectTemplate = useCallback(
     (t: QuestionTemplate) => {
       form.setErrorMap({});
-      setSelectedTemplateId(t.id);
-      setWriteInOpen(false);
+      form.setFieldValue('templateId', t.id);
+      form.setFieldValue('writeInOpen', false);
       form.setFieldValue('writeInBody', '');
     },
     [form],
@@ -137,50 +179,21 @@ export default function CreateBetScreen() {
 
   const openWriteIn = useCallback(() => {
     form.setErrorMap({});
-    setSelectedTemplateId(null);
-    setWriteInOpen(true);
+    form.setFieldValue('templateId', null);
+    form.setFieldValue('writeInOpen', true);
   }, [form]);
 
   const closeReview = useCallback(() => {
-    if (isPosting) return;
+    if (form.state.isSubmitting) return;
     setReviewOpen(false);
     setReviewPayload(null);
-    setSheetError(null);
-  }, [isPosting]);
+    form.setErrorMap({});
+  }, [form]);
 
   const reviewTemplate = useMemo(
     () => templates?.find((t) => t.id === reviewPayload?.templateId) ?? null,
     [templates, reviewPayload?.templateId],
   );
-
-  const postBet = useCallback(async () => {
-    if (!roomId || !reviewPayload) return;
-
-    const expiresAt = new Date(
-      Date.now() + EXPIRY_PRESETS[reviewPayload.expiryIndex].offsetMs,
-    ).toISOString();
-
-    try {
-      setSheetError(null);
-      setIsPosting(true);
-      await createBet.mutateAsync({
-        p_room_id: roomId,
-        p_question: reviewPayload.finalQuestion,
-        p_options: [...BINARY_OPTIONS],
-        p_stake: reviewPayload.stake,
-        p_expires_at: expiresAt,
-        p_template_id: reviewPayload.templateId,
-        p_subject_display_name: reviewPayload.subjectDisplayName,
-      });
-      setReviewOpen(false);
-      setReviewPayload(null);
-      router.replace(`/(tabs)/rooms/${roomId}`);
-    } catch (err) {
-      setSheetError(getRpcErrorMessage(err));
-    } finally {
-      setIsPosting(false);
-    }
-  }, [roomId, reviewPayload, createBet, router]);
 
   if (!roomId) {
     return (
@@ -254,114 +267,127 @@ export default function CreateBetScreen() {
             {membersLoading ? (
               <ActivityIndicator color={colors.primary} />
             ) : (
-              <FlatList
-                horizontal
-                data={members ?? []}
-                keyExtractor={(item) => item.id}
-                showsHorizontalScrollIndicator={false}
-                contentContainerClassName="gap-3"
-                renderItem={({ item }) => {
-                  const selected = item.user_id === selectedMemberId;
-                  const name = memberDisplayName(item);
-                  return (
-                    <TouchableOpacity
-                      onPress={() => {
-                        form.setErrorMap({});
-                        setSelectedMemberId(item.user_id);
-                      }}
-                      disabled={!sessionActive}
-                      className={`items-center rounded-2xl px-2 py-2 ${
-                        selected ? 'bg-primary/15' : 'bg-transparent'
-                      }`}
-                      activeOpacity={0.75}
-                      hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
-                    >
-                      <View
-                        className={`rounded-full p-1 ${
-                          selected ? 'border-2 border-primary' : 'border-2 border-transparent'
-                        }`}
-                      >
-                        <Avatar uri={item.profiles?.avatar_url} fallback={name} size="xl" />
-                      </View>
-                      <Text
-                        className="mt-1.5 max-w-[76px] text-center text-xs font-medium text-text-secondary"
-                        numberOfLines={1}
-                      >
-                        {name}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                }}
-              />
+              <form.Subscribe selector={(state) => state.values.memberId}>
+                {(memberId) => (
+                  <FlatList
+                    horizontal
+                    data={members ?? []}
+                    keyExtractor={(item) => item.id}
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerClassName="gap-3"
+                    renderItem={({ item }) => {
+                      const selected = item.user_id === memberId;
+                      const name = memberDisplayName(item);
+                      return (
+                        <TouchableOpacity
+                          onPress={() => {
+                            form.setErrorMap({});
+                            const uid = item.user_id;
+                            if (uid) form.setFieldValue('memberId', uid);
+                          }}
+                          disabled={!sessionActive}
+                          className={`items-center rounded-2xl px-2 py-2 ${
+                            selected ? 'bg-primary/15' : 'bg-transparent'
+                          }`}
+                          activeOpacity={0.75}
+                          hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
+                        >
+                          <View
+                            className={`rounded-full p-1 ${
+                              selected ? 'border-2 border-primary' : 'border-2 border-transparent'
+                            }`}
+                          >
+                            <Avatar uri={item.profiles?.avatar_url} fallback={name} size="xl" />
+                          </View>
+                          <Text
+                            className="mt-1.5 max-w-[76px] text-center text-xs font-medium text-text-secondary"
+                            numberOfLines={1}
+                          >
+                            {name}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    }}
+                  />
+                )}
+              </form.Subscribe>
             )}
           </View>
 
           {/* Templates */}
           <View className="mb-4">
             <Text className="mb-3 text-base font-semibold text-white">Choose a bet</Text>
-            {templatesLoading ? (
-              <ActivityIndicator color={colors.primary} />
-            ) : (
-              <FlatList
-                data={templates ?? []}
-                numColumns={2}
-                scrollEnabled={false}
-                keyExtractor={(item) => item.id}
-                columnWrapperStyle={{ gap: 12, marginBottom: 12 }}
-                renderItem={({ item }) => {
-                  const selected = selectedTemplateId === item.id;
-                  return (
-                    <TouchableOpacity
-                      onPress={() => selectTemplate(item)}
-                      disabled={!sessionActive}
-                      className={`min-h-[132px] flex-1 items-center justify-center rounded-2xl border-2 px-3 py-4 ${
-                        selected ? 'border-primary bg-primary/15' : 'border-border bg-surface'
-                      }`}
-                      activeOpacity={0.8}
-                      style={{ maxWidth: '48%', flexGrow: 1, flexBasis: '48%' }}
-                    >
-                      <BetTemplateIcon slug={item.slug} color={colors.primary} size={40} />
-                      <Text className="mt-3 text-center text-base font-bold text-white">
-                        {item.short_label}
-                      </Text>
-                      <Text className="mt-1 text-center text-xs text-text-secondary">Yes / No</Text>
-                    </TouchableOpacity>
-                  );
-                }}
-              />
-            )}
-
-            <TouchableOpacity
-              onPress={openWriteIn}
-              disabled={!sessionActive}
-              className={`mt-1 min-h-[72px] flex-row items-center justify-center gap-2 rounded-2xl border-2 border-dashed px-4 py-3 ${
-                writeInOpen && !selectedTemplateId
-                  ? 'border-primary bg-primary/10'
-                  : 'border-border'
-              }`}
-              activeOpacity={0.75}
+            <form.Subscribe
+              selector={(state) => [state.values.templateId, state.values.writeInOpen] as const}
             >
-              <PencilSimple size={22} color={colors.primary} weight="bold" />
-              <View>
-                <Text className="text-base font-semibold text-white">Write-in (custom)</Text>
-                <Text className="text-sm text-text-secondary">Yes / No answers</Text>
-              </View>
-            </TouchableOpacity>
+              {([templateId, writeInOpen]) => (
+                <>
+                  {templatesLoading ? (
+                    <ActivityIndicator color={colors.primary} />
+                  ) : (
+                    <FlatList
+                      data={templates ?? []}
+                      numColumns={2}
+                      scrollEnabled={false}
+                      keyExtractor={(item) => item.id}
+                      columnWrapperStyle={{ gap: 12, marginBottom: 12 }}
+                      renderItem={({ item }) => {
+                        const selected = templateId === item.id;
+                        return (
+                          <TouchableOpacity
+                            onPress={() => selectTemplate(item)}
+                            disabled={!sessionActive}
+                            className={`min-h-[132px] flex-1 items-center justify-center rounded-2xl border-2 px-3 py-4 ${
+                              selected ? 'border-primary bg-primary/15' : 'border-border bg-surface'
+                            }`}
+                            activeOpacity={0.8}
+                            style={{ maxWidth: '48%', flexGrow: 1, flexBasis: '48%' }}
+                          >
+                            <BetTemplateIcon slug={item.slug} color={colors.primary} size={40} />
+                            <Text className="mt-3 text-center text-base font-bold text-white">
+                              {item.short_label}
+                            </Text>
+                            <Text className="mt-1 text-center text-xs text-text-secondary">
+                              Yes / No
+                            </Text>
+                          </TouchableOpacity>
+                        );
+                      }}
+                    />
+                  )}
 
-            {writeInOpen ? (
-              <form.AppField name="writeInBody">
-                {(field) => (
-                  <field.TextField
-                    label="Your question"
-                    placeholder="We will add the player name for you"
-                    placeholderTextColor={colors.textMuted}
-                    multiline
-                    editable={sessionActive}
-                    className="mt-3 mb-0"
-                  />
-                )}
-              </form.AppField>
-            ) : null}
+                  <TouchableOpacity
+                    onPress={openWriteIn}
+                    disabled={!sessionActive}
+                    className={`mt-1 min-h-[72px] flex-row items-center justify-center gap-2 rounded-2xl border-2 border-dashed px-4 py-3 ${
+                      writeInOpen && !templateId ? 'border-primary bg-primary/10' : 'border-border'
+                    }`}
+                    activeOpacity={0.75}
+                  >
+                    <PencilSimple size={22} color={colors.primary} weight="bold" />
+                    <View>
+                      <Text className="text-base font-semibold text-white">Write-in (custom)</Text>
+                      <Text className="text-sm text-text-secondary">Yes / No answers</Text>
+                    </View>
+                  </TouchableOpacity>
+
+                  {writeInOpen ? (
+                    <form.AppField name="writeInBody">
+                      {(field) => (
+                        <field.TextField
+                          label="Your question"
+                          placeholder="We will add the player name for you"
+                          placeholderTextColor={colors.textMuted}
+                          multiline
+                          editable={sessionActive}
+                          className="mt-3 mb-0"
+                        />
+                      )}
+                    </form.AppField>
+                  ) : null}
+                </>
+              )}
+            </form.Subscribe>
           </View>
 
           {/* Stake */}
@@ -369,18 +395,7 @@ export default function CreateBetScreen() {
             <Text className="mb-2 text-base font-semibold text-white">Stake</Text>
             <View className="flex-row items-center rounded-2xl border-2 border-border bg-surface px-2 py-1">
               <View className="min-w-0 flex-1">
-                <form.AppField
-                  name="stake"
-                  validators={{
-                    onSubmit: ({ value }) => {
-                      const n = parseInt(value.replace(/\D/g, ''), 10);
-                      if (!Number.isFinite(n) || n <= 0) {
-                        return 'Enter a positive stake (whole chips)';
-                      }
-                      return undefined;
-                    },
-                  }}
-                >
+                <form.AppField name="stake">
                   {(field) => (
                     <field.TextField
                       leftIcon={<Coins size={22} color={colors.primary} weight="fill" />}
@@ -402,125 +417,125 @@ export default function CreateBetScreen() {
           {/* Expiry */}
           <View className="mb-6">
             <Text className="mb-2 text-base font-semibold text-white">Expires</Text>
-            <View className="flex-row flex-wrap gap-2">
-              {EXPIRY_PRESETS.map((preset, i) => {
-                const selected = expiryIndex === i;
-                return (
-                  <TouchableOpacity
-                    key={preset.label}
-                    onPress={() => setExpiryIndex(i)}
-                    disabled={!sessionActive}
-                    className={`min-h-[48px] min-w-[68px] items-center justify-center rounded-2xl border-2 px-3 ${
-                      selected ? 'border-primary bg-primary/15' : 'border-border bg-surface'
-                    }`}
-                    activeOpacity={0.75}
-                  >
-                    <Text
-                      className={`text-sm font-bold ${selected ? 'text-primary' : 'text-text-secondary'}`}
-                    >
-                      {preset.label}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
+            <form.Subscribe selector={(state) => state.values.expiryIndex}>
+              {(expiryIndex) => (
+                <View className="flex-row flex-wrap gap-2">
+                  {EXPIRY_PRESETS.map((preset, i) => {
+                    const selected = expiryIndex === i;
+                    return (
+                      <TouchableOpacity
+                        key={preset.label}
+                        onPress={() => form.setFieldValue('expiryIndex', i)}
+                        disabled={!sessionActive}
+                        className={`min-h-[48px] min-w-[68px] items-center justify-center rounded-2xl border-2 px-3 ${
+                          selected ? 'border-primary bg-primary/15' : 'border-border bg-surface'
+                        }`}
+                        activeOpacity={0.75}
+                      >
+                        <Text
+                          className={`text-sm font-bold ${selected ? 'text-primary' : 'text-text-secondary'}`}
+                        >
+                          {preset.label}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              )}
+            </form.Subscribe>
           </View>
 
-          <form.Subscribe selector={(state) => state.isSubmitting}>
-            {(isSubmitting) => (
-              <Button
-                size="lg"
-                loading={isSubmitting}
-                disabled={!sessionActive}
-                onPress={() => {
-                  if (!sessionActive) return;
-                  void form.handleSubmit();
-                }}
-              >
-                Review and Post
-              </Button>
-            )}
-          </form.Subscribe>
+          <Button size="lg" disabled={!sessionActive} onPress={handleReview}>
+            Review and Post
+          </Button>
         </ScrollView>
 
         <Modal visible={reviewOpen} animationType="slide" transparent onRequestClose={closeReview}>
           <GestureHandlerRootView style={{ flex: 1 }}>
-            <Pressable
-              className="flex-1 justify-end bg-black/65"
-              onPress={closeReview}
-              disabled={isPosting}
+            <form.Subscribe
+              selector={(state) => [state.isSubmitting, state.errorMap.onSubmit] as const}
             >
-              <Pressable
-                className="rounded-t-3xl border-t border-border bg-background px-5 pt-4"
-                style={{ paddingBottom: Math.max(safeInsets.bottom, 20) }}
-                onPress={(e) => e.stopPropagation()}
-              >
-                <View className="mb-4 flex-row items-center justify-between">
-                  <Text className="text-xl font-bold text-white">Review bet</Text>
-                  <TouchableOpacity
-                    onPress={closeReview}
-                    disabled={isPosting}
-                    hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+              {([isSubmitting, submitError]) => (
+                <Pressable
+                  className="flex-1 justify-end bg-black/65"
+                  onPress={closeReview}
+                  disabled={isSubmitting}
+                >
+                  <Pressable
+                    className="rounded-t-3xl border-t border-border bg-background px-5 pt-4"
+                    style={{ paddingBottom: Math.max(safeInsets.bottom, 20) }}
+                    onPress={(e) => e.stopPropagation()}
                   >
-                    <X size={26} color={colors.textSecondary} />
-                  </TouchableOpacity>
-                </View>
+                    <View className="mb-4 flex-row items-center justify-between">
+                      <Text className="text-xl font-bold text-white">Review bet</Text>
+                      <TouchableOpacity
+                        onPress={closeReview}
+                        disabled={isSubmitting}
+                        hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                      >
+                        <X size={26} color={colors.textSecondary} />
+                      </TouchableOpacity>
+                    </View>
 
-                {sheetError ? (
-                  <View className="mb-4 rounded-xl bg-error/10 px-4 py-3">
-                    <Text className="text-center text-base text-error">{sheetError}</Text>
-                  </View>
-                ) : null}
+                    {submitError ? (
+                      <View className="mb-4 rounded-xl bg-error/10 px-4 py-3">
+                        <Text className="text-center text-base text-error">
+                          {typeof submitError === 'string' ? submitError : 'An error occurred'}
+                        </Text>
+                      </View>
+                    ) : null}
 
-                <View className="mb-4 flex-row items-center gap-3">
-                  <Avatar
-                    uri={selectedMember?.profiles?.avatar_url}
-                    fallback={displayName}
-                    size="lg"
-                  />
-                  <View className="flex-1">
-                    <Text className="text-sm font-medium text-text-secondary">Player</Text>
-                    <Text className="text-lg font-semibold text-white">{displayName}</Text>
-                  </View>
-                </View>
+                    <View className="mb-4 flex-row items-center gap-3">
+                      <Avatar
+                        uri={reviewPayload?.memberAvatarUrl}
+                        fallback={reviewPayload?.memberDisplayName ?? ''}
+                        size="lg"
+                      />
+                      <View className="flex-1">
+                        <Text className="text-sm font-medium text-text-secondary">Player</Text>
+                        <Text className="text-lg font-semibold text-white">
+                          {reviewPayload?.memberDisplayName}
+                        </Text>
+                      </View>
+                    </View>
 
-                <View className="mb-4 rounded-2xl border border-border bg-surface px-4 py-3">
-                  <Text className="text-sm font-medium text-text-secondary">Question</Text>
-                  <Text className="mt-1 text-base leading-6 text-white">
-                    {reviewPayload?.finalQuestion}
-                  </Text>
-                </View>
+                    <View className="mb-4 rounded-2xl border border-border bg-surface px-4 py-3">
+                      <Text className="text-sm font-medium text-text-secondary">Question</Text>
+                      <Text className="mt-1 text-base leading-6 text-white">
+                        {reviewPayload?.finalQuestion}
+                      </Text>
+                    </View>
 
-                {reviewPayload?.templateId && reviewTemplate ? (
-                  <View className="mb-3 flex-row justify-between border-b border-border py-2">
-                    <Text className="text-sm text-text-secondary">Template</Text>
-                    <Text className="text-sm font-semibold text-white">
-                      {reviewTemplate.short_label}
-                    </Text>
-                  </View>
-                ) : null}
+                    {reviewPayload?.templateId && reviewTemplate ? (
+                      <View className="mb-3 flex-row justify-between border-b border-border py-2">
+                        <Text className="text-sm text-text-secondary">Template</Text>
+                        <Text className="text-sm font-semibold text-white">
+                          {reviewTemplate.short_label}
+                        </Text>
+                      </View>
+                    ) : null}
 
-                <View className="mb-3 flex-row justify-between border-b border-border py-2">
-                  <Text className="text-sm text-text-secondary">Stake</Text>
-                  <Text className="text-sm font-semibold text-white">
-                    {reviewPayload?.stake ?? 0} chips
-                  </Text>
-                </View>
+                    <View className="mb-3 flex-row justify-between border-b border-border py-2">
+                      <Text className="text-sm text-text-secondary">Stake</Text>
+                      <Text className="text-sm font-semibold text-white">
+                        {reviewPayload?.stake ?? 0} chips
+                      </Text>
+                    </View>
 
-                <View className="mb-6 flex-row justify-between border-b border-border py-2">
-                  <Text className="text-sm text-text-secondary">Expires in</Text>
-                  <Text className="text-sm font-semibold text-white">
-                    {reviewPayload
-                      ? EXPIRY_PRESETS[reviewPayload.expiryIndex].label
-                      : EXPIRY_PRESETS[expiryIndex].label}
-                  </Text>
-                </View>
+                    <View className="mb-6 flex-row justify-between border-b border-border py-2">
+                      <Text className="text-sm text-text-secondary">Expires in</Text>
+                      <Text className="text-sm font-semibold text-white">
+                        {EXPIRY_PRESETS[reviewPayload?.expiryIndex ?? 0].label}
+                      </Text>
+                    </View>
 
-                <Button onPress={postBet} loading={isPosting}>
-                  Post Bet to Room
-                </Button>
-              </Pressable>
-            </Pressable>
+                    <Button onPress={() => form.handleSubmit()} loading={isSubmitting}>
+                      Post Bet to Room
+                    </Button>
+                  </Pressable>
+                </Pressable>
+              )}
+            </form.Subscribe>
           </GestureHandlerRootView>
         </Modal>
       </form.AppForm>
