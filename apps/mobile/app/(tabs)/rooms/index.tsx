@@ -25,17 +25,12 @@ import {
   type RoomWithMembership,
 } from '@/hooks/use-rooms';
 import { formatSessionDateShort } from '@/lib/date-format';
-
-function formatBalance(balance: number): string {
-  const abs = Math.abs(balance);
-  const formatted = abs >= 1000 ? abs.toLocaleString() : String(abs);
-  return balance >= 0 ? `+${formatted}` : `-${formatted}`;
-}
+import { balanceColorClass, formatBalance } from '@/lib/format-balance';
 
 function RoomCardContent({ item }: { item: RoomWithMembership }) {
   const isActive = item.room.is_active;
   const balance = item.balance;
-  const balanceColor = balance >= 0 ? 'text-primary' : 'text-error';
+  const balanceColor = balanceColorClass(balance);
   const overflow = item.room.member_count - item.memberPreviews.length;
 
   return (

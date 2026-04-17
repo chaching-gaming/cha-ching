@@ -4,6 +4,7 @@ import { Coins } from 'phosphor-react-native';
 import { colors } from '@/constants/colors';
 import { Avatar } from '@/components/ui/avatar';
 import type { RoomMemberWithProfile } from '@/hooks/use-rooms';
+import { balanceColorClass, formatBalance } from '@/lib/format-balance';
 
 interface RoomHeaderBarProps {
   members: RoomMemberWithProfile[];
@@ -50,7 +51,9 @@ export function RoomHeaderBar({ members, balance, onViewMembers }: RoomHeaderBar
         <Text className="text-base text-text-muted">Your Balance</Text>
         <View className="flex-row items-center gap-1.5">
           <Coins size={22} color={colors.chipsIcon} weight="fill" />
-          <Text className="text-2xl font-bold text-primary">{balance}</Text>
+          <Text className={`text-2xl font-bold ${balanceColorClass(balance)}`}>
+            {formatBalance(balance)}
+          </Text>
         </View>
       </View>
     </View>

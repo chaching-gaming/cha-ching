@@ -278,7 +278,14 @@ export default function RoomDetailScreen() {
         keyExtractor={(item) =>
           item.type === 'bet' ? `bet-${item.bet.id}` : `cr-${item.chipRequest.id}`
         }
-        renderItem={({ item }) => <ActivityFeedItem item={item} />}
+        renderItem={({ item }) => (
+          <ActivityFeedItem
+            item={item}
+            currentUserId={authSession?.user.id}
+            roomActive={isActive}
+            roomId={id}
+          />
+        )}
         contentContainerClassName="px-5 pb-24"
         refreshControl={
           <RefreshControl

@@ -30,7 +30,7 @@ export type ActivityItem =
 
 export const roomBetsKey = (roomId: string) => ['rooms', roomId, 'bets'] as const;
 const roomChipRequestsKey = (roomId: string) => ['rooms', roomId, 'chip_requests'] as const;
-const roomBalanceKey = (roomId: string) => ['rooms', roomId, 'balance'] as const;
+export const roomBalanceKey = (roomId: string) => ['rooms', roomId, 'balance'] as const;
 
 export function useRoomBets(roomId: string) {
   const { session } = useAuth();

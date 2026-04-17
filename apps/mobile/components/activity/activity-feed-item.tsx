@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Text, View } from 'react-native';
-import { Check, Coins, Timer, Warning } from 'phosphor-react-native';
+import { ArrowRight, Check, Coins, Timer, Warning } from 'phosphor-react-native';
 
 import { colors } from '@/constants/colors';
 import { Avatar } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
+import { SwipeToAcceptRow } from '@/components/activity/swipe-to-accept-row';
 import type { ActivityItem, BetWithProfiles } from '@/hooks/use-activity-feed';
 import { formatBetCountdown, formatRelativeActivityTime } from '@/lib/date-format';
 import { getEffectiveBetStatus } from '@/lib/effective-bet-status';
@@ -37,7 +38,15 @@ function getBetStatusPill(status: string | null | undefined): {
   }
 }
 
-function BetActivityCard({ bet, timestamp }: { bet: BetWithProfiles; timestamp: string }) {
+function BetActivityCard({
+  bet,
+  timestamp,
+  showAcceptHint,
+}: {
+  bet: BetWithProfiles;
+  timestamp: string;
+  showAcceptHint?: boolean;
+}) {
   const [tick, setTick] = useState(0);
   const dbStatus = bet.status ?? '';
 
@@ -178,17 +187,54 @@ function BetActivityCard({ bet, timestamp }: { bet: BetWithProfiles; timestamp: 
       </View>
 
       <Text className="mt-2 text-xs text-text-muted">{formatRelativeActivityTime(timestamp)}</Text>
+
+      {showAcceptHint ? (
+        <View className="mt-3 flex-row items-center justify-center gap-2 rounded-xl border border-primary/30 bg-primary/10 py-3">
+          <ArrowRight size={18} color={colors.primary} weight="bold" />
+          <Text className="text-sm font-semibold text-primary">Swipe to accept</Text>
+        </View>
+      ) : null}
     </View>
   );
 }
 
 interface ActivityFeedItemProps {
   item: ActivityItem;
+  /** Current user's id — used to gate the Accept swipe so users can't accept their own offers. */
+  currentUserId?: string | null;
+  /** When false, accept affordance is hidden (e.g., session ended). */
+  roomActive?: boolean;
+  /** Room id, required by the accept mutation for cache invalidation. */
+  roomId?: string;
 }
 
-export function ActivityFeedItem({ item }: ActivityFeedItemProps) {
+export function ActivityFeedItem({
+  item,
+  currentUserId,
+  roomActive,
+  roomId,
+}: ActivityFeedItemProps) {
   if (item.type === 'bet') {
-    return <BetActivityCard bet={item.bet} timestamp={item.timestamp} />;
+    const canAccept =
+      roomActive &&
+      !!roomId &&
+      !!currentUserId &&
+      item.bet.status === 'OPEN' &&
+      item.bet.offered_by !== currentUserId &&
+      getEffectiveBetStatus(item.bet) !== 'EXPIRED';
+
+    const card = (
+      <BetActivityCard bet={item.bet} timestamp={item.timestamp} showAcceptHint={canAccept} />
+    );
+
+    if (canAccept) {
+      return (
+        <SwipeToAcceptRow bet={item.bet} roomId={roomId!}>
+          {card}
+        </SwipeToAcceptRow>
+      );
+    }
+    return card;
   }
 
   const { chipRequest } = item;
