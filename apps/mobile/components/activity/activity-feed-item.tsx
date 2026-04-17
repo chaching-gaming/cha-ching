@@ -104,7 +104,10 @@ function BetActivityCard({
             <Avatar uri={bet.offered_by_profile?.avatar_url} fallback={offererName} size="md" />
             <Text className="min-w-0 flex-1 text-base text-text-secondary" numberOfLines={1}>
               <Text className="font-semibold text-white">{offererName}</Text>
-              {' posted'}
+              {effectiveStatus === 'OPEN' && bet.offered_pick ? ' picked ' : ' posted'}
+              {effectiveStatus === 'OPEN' && bet.offered_pick ? (
+                <Text className="font-bold text-primary">{bet.offered_pick}</Text>
+              ) : null}
             </Text>
           </View>
         ) : showVsHeader ? (

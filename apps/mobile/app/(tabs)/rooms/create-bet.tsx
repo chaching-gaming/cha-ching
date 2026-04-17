@@ -48,6 +48,7 @@ const createBetSchema = z
       .min(1, 'Stake is required')
       .refine((v) => parseInt(v, 10) > 0, 'Enter a positive stake (whole chips)'),
     expiryIndex: z.number(),
+    offeredPick: z.string().min(1, 'Pick your side'),
   })
   .refine(
     (data) => data.templateId !== null || (data.writeInOpen && data.writeInBody.trim().length > 0),
@@ -62,6 +63,7 @@ type ReviewPayload = {
   subjectDisplayName: string | null;
   memberAvatarUrl: string | null;
   memberDisplayName: string;
+  offeredPick: string;
 };
 
 function memberDisplayName(m: RoomMemberWithProfile): string {
@@ -88,6 +90,7 @@ export default function CreateBetScreen() {
       writeInBody: '',
       stake: '10',
       expiryIndex: 0,
+      offeredPick: '',
     },
     validators: {
       onChange: createBetSchema,
@@ -116,6 +119,7 @@ export default function CreateBetScreen() {
           p_options: [...BINARY_OPTIONS],
           p_stake: stakeNum,
           p_expires_at: expiresAt,
+          p_offered_pick: value.offeredPick,
           p_template_id: tpl?.id ?? null,
           p_subject_display_name: tpl ? name : null,
         });
@@ -162,6 +166,7 @@ export default function CreateBetScreen() {
       subjectDisplayName: tpl ? name : null,
       memberAvatarUrl: member.profiles?.avatar_url ?? null,
       memberDisplayName: name,
+      offeredPick: values.offeredPick,
     });
     setReviewOpen(true);
   }
@@ -369,6 +374,29 @@ export default function CreateBetScreen() {
             </form.Subscribe>
           </View>
 
+          {/* Your pick */}
+          <View className="mb-5">
+            <Text className="mb-2 text-base font-semibold text-white">Your pick</Text>
+            <Text className="mb-2 text-sm text-text-secondary">
+              Pick the side you think will happen. The other player will be assigned the opposite.
+            </Text>
+            <form.AppField name="offeredPick">
+              {(field) => (
+                <field.OptionField
+                  layout="wrap"
+                  className="mb-0"
+                  disabled={!sessionActive}
+                  onSelectionChange={() => form.setErrorMap({})}
+                  options={BINARY_OPTIONS.map((opt) => ({
+                    id: `pick-${opt}`,
+                    label: opt,
+                    value: opt,
+                  }))}
+                />
+              )}
+            </form.AppField>
+          </View>
+
           {/* Stake */}
           <View className="mb-5">
             <Text className="mb-2 text-base font-semibold text-white">Stake</Text>
@@ -481,6 +509,13 @@ export default function CreateBetScreen() {
                         </Text>
                       </View>
                     ) : null}
+
+                    <View className="mb-3 flex-row justify-between border-b border-border py-2">
+                      <Text className="text-sm text-text-secondary">Your pick</Text>
+                      <Text className="text-sm font-semibold text-primary">
+                        {reviewPayload?.offeredPick}
+                      </Text>
+                    </View>
 
                     <View className="mb-3 flex-row justify-between border-b border-border py-2">
                       <Text className="text-sm text-text-secondary">Stake</Text>

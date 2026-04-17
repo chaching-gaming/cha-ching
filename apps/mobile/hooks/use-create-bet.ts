@@ -17,6 +17,7 @@ export function useCreateBet() {
       p_options: string[];
       p_stake: number;
       p_expires_at: string;
+      p_offered_pick: string;
       p_template_id?: string | null;
       p_subject_display_name?: string | null;
     }) => {
@@ -26,6 +27,7 @@ export function useCreateBet() {
         p_options: string[];
         p_stake: number;
         p_expires_at: string;
+        p_offered_pick: string;
         p_template_id?: string;
         p_subject_display_name?: string;
       } = {
@@ -34,6 +36,7 @@ export function useCreateBet() {
         p_options: params.p_options,
         p_stake: params.p_stake,
         p_expires_at: params.p_expires_at,
+        p_offered_pick: params.p_offered_pick,
       };
       if (params.p_template_id) {
         args.p_template_id = params.p_template_id;

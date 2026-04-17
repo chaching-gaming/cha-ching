@@ -24,9 +24,7 @@ export function SwipeToAcceptRow({ bet, roomId, children }: Props) {
   const oppositePick = useMemo(() => {
     const opts = Array.isArray(bet.options) ? (bet.options as unknown[]) : [];
     const offered = bet.offered_pick?.trim().toLowerCase();
-    const candidate = opts.find(
-      (o) => typeof o === 'string' && o.trim().toLowerCase() !== offered,
-    );
+    const candidate = opts.find((o) => typeof o === 'string' && o.trim().toLowerCase() !== offered);
     return typeof candidate === 'string' ? candidate : null;
   }, [bet.options, bet.offered_pick]);
 

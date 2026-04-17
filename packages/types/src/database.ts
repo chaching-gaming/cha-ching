@@ -423,6 +423,7 @@ export type Database = {
       create_bet: {
         Args: {
           p_expires_at: string;
+          p_offered_pick: string;
           p_options: Json;
           p_question: string;
           p_room_id: string;
