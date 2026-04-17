@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Text, View } from 'react-native';
-import { ArrowRight, Check, Coins, Timer, Warning } from 'phosphor-react-native';
+import { Text, TouchableOpacity, View } from 'react-native';
+import { ArrowRight, Check, Coins, Timer, Trophy, Warning } from 'phosphor-react-native';
 
 import { colors } from '@/constants/colors';
 import { Avatar } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
+import { ResolveDisputeSheet } from '@/components/activity/resolve-dispute-sheet';
+import { SubmitOutcomeSheet } from '@/components/activity/submit-outcome-sheet';
 import { SwipeToAcceptRow } from '@/components/activity/swipe-to-accept-row';
 import type { ActivityItem, BetWithProfiles } from '@/hooks/use-activity-feed';
 import { formatBetCountdown, formatRelativeActivityTime } from '@/lib/date-format';
@@ -42,12 +44,22 @@ function BetActivityCard({
   bet,
   timestamp,
   showAcceptHint,
+  currentUserId,
+  currentUserRole,
+  roomActive,
+  roomId,
 }: {
   bet: BetWithProfiles;
   timestamp: string;
   showAcceptHint?: boolean;
+  currentUserId?: string | null;
+  currentUserRole?: 'PLAYER' | 'ATTESTOR' | 'ADMIN' | string | null;
+  roomActive?: boolean;
+  roomId?: string;
 }) {
   const [tick, setTick] = useState(0);
+  const [submitSheetOpen, setSubmitSheetOpen] = useState(false);
+  const [disputeSheetOpen, setDisputeSheetOpen] = useState(false);
   const dbStatus = bet.status ?? '';
 
   useEffect(() => {
@@ -78,52 +90,48 @@ function BetActivityCard({
     return 'Someone';
   }, [dbStatus, bet.winner, bet.offered_by, bet.accepted_by, offererName, acceptorName]);
 
-  const showHeaderAvatar =
-    effectiveStatus === 'OPEN' ||
-    effectiveStatus === 'SETTLED' ||
-    effectiveStatus === 'EXPIRED' ||
-    effectiveStatus === 'VOID';
-  const showVsHeader =
-    dbStatus === 'MATCHED' || dbStatus === 'PENDING_RESULT' || dbStatus === 'DISPUTED';
-
   const countdown =
     effectiveStatus === 'OPEN' ? formatBetCountdown(bet.expires_at, new Date()) : null;
 
-  const picks =
-    bet.offered_pick && bet.accepted_pick
-      ? { offered: bet.offered_pick, accepted: bet.accepted_pick }
-      : null;
+  const showSubmissionStatus = dbStatus === 'MATCHED' || dbStatus === 'PENDING_RESULT';
+  const offererSubmitted = useMemo(
+    () => bet.outcome_submissions.some((s) => s.user_id === bet.offered_by),
+    [bet.outcome_submissions, bet.offered_by],
+  );
+  const acceptorSubmitted = useMemo(
+    () => bet.outcome_submissions.some((s) => s.user_id === bet.accepted_by),
+    [bet.outcome_submissions, bet.accepted_by],
+  );
+  const submittedCount = (offererSubmitted ? 1 : 0) + (acceptorSubmitted ? 1 : 0);
+  const mySubmission = useMemo(
+    () =>
+      currentUserId
+        ? (bet.outcome_submissions.find((s) => s.user_id === currentUserId) ?? null)
+        : null,
+    [bet.outcome_submissions, currentUserId],
+  );
+  const isParticipant =
+    !!currentUserId && (currentUserId === bet.offered_by || currentUserId === bet.accepted_by);
+  const canSubmitOutcome =
+    !!roomActive && !!roomId && isParticipant && !mySubmission && showSubmissionStatus;
+
+  const canResolveDispute =
+    dbStatus === 'DISPUTED' &&
+    !!roomId &&
+    (currentUserRole === 'ATTESTOR' || currentUserRole === 'ADMIN');
 
   return (
     <View
       className={`mb-3 rounded-2xl border border-border bg-surface px-4 py-3.5 ${dimmed ? 'opacity-60' : ''}`}
     >
-      <View className="flex-row items-center justify-between gap-2">
-        {showHeaderAvatar ? (
-          <View className="min-w-0 flex-1 flex-row items-center gap-2.5">
-            <Avatar uri={bet.offered_by_profile?.avatar_url} fallback={offererName} size="md" />
-            <Text className="min-w-0 flex-1 text-base text-text-secondary" numberOfLines={1}>
-              <Text className="font-semibold text-white">{offererName}</Text>
-              {effectiveStatus === 'OPEN' && bet.offered_pick ? ' picked ' : ' posted'}
-              {effectiveStatus === 'OPEN' && bet.offered_pick ? (
-                <Text className="font-bold text-primary">{bet.offered_pick}</Text>
-              ) : null}
-            </Text>
-          </View>
-        ) : showVsHeader ? (
-          <Text className="min-w-0 flex-1 text-base text-text-secondary" numberOfLines={2}>
-            <Text className="font-semibold text-white">{offererName}</Text>
-            {' vs '}
-            <Text className="font-semibold text-white">{acceptorName}</Text>
-          </Text>
-        ) : (
-          <View className="min-w-0 flex-1 flex-row items-center gap-2.5">
-            <Avatar uri={bet.offered_by_profile?.avatar_url} fallback={offererName} size="md" />
-            <Text className="text-base text-text-secondary" numberOfLines={1}>
-              <Text className="font-semibold text-white">{offererName}</Text>
-            </Text>
-          </View>
-        )}
+      <View className="mb-3 flex-row items-center justify-between gap-2">
+        <Text className="text-xs font-semibold uppercase tracking-widest text-text-muted">
+          {effectiveStatus === 'OPEN'
+            ? `${offererName}'s offer`
+            : effectiveStatus === 'EXPIRED' || effectiveStatus === 'VOID'
+              ? `${offererName}'s offer`
+              : `${offererName} vs ${acceptorName}`}
+        </Text>
         <Badge
           variant={pill.variant}
           label={pill.label}
@@ -132,31 +140,46 @@ function BetActivityCard({
         />
       </View>
 
-      <Text className="mt-3 text-lg font-bold leading-6 text-white" numberOfLines={4}>
+      <Text className="text-lg font-bold leading-6 text-white" numberOfLines={4}>
         {bet.question}
       </Text>
 
-      {picks &&
-      (dbStatus === 'MATCHED' || dbStatus === 'PENDING_RESULT' || dbStatus === 'DISPUTED') ? (
-        <View className="mt-3 flex-row items-stretch gap-2">
-          <View className="min-w-0 flex-1 rounded-xl border border-border bg-surface-light px-2 py-2.5">
-            <Text className="text-center text-xs font-semibold text-primary" numberOfLines={1}>
-              {offererName}
-            </Text>
-            <Text className="mt-0.5 text-center text-sm font-bold text-white" numberOfLines={1}>
-              {picks.offered}
-            </Text>
+      {bet.offered_pick ? (
+        <PicksMatchup
+          offererName={offererName}
+          offererAvatar={bet.offered_by_profile?.avatar_url}
+          offererPick={bet.offered_pick}
+          offererIsWinner={dbStatus === 'SETTLED' && bet.winner === bet.offered_by}
+          acceptorName={acceptorName}
+          acceptorAvatar={bet.accepted_by_profile?.avatar_url ?? null}
+          acceptorPick={bet.accepted_pick}
+          acceptorIsWinner={dbStatus === 'SETTLED' && bet.winner === bet.accepted_by}
+          oppositePickHint={getOppositeOption(bet)}
+          isOpen={effectiveStatus === 'OPEN'}
+        />
+      ) : null}
+
+      {showSubmissionStatus ? (
+        <View className="mt-3 flex-row items-center gap-3 rounded-xl border border-border bg-surface-light px-3 py-2.5">
+          <View className="min-w-0 flex-1">
+            <Text className="text-sm font-semibold text-white">{submittedCount}/2 submitted</Text>
+            {mySubmission ? (
+              <Text className="mt-0.5 text-xs font-medium text-primary" numberOfLines={1}>
+                ✓ You reported &ldquo;{mySubmission.selected_option}&rdquo;
+              </Text>
+            ) : null}
           </View>
-          <View className="justify-center px-0.5">
-            <Text className="text-[10px] font-bold tracking-widest text-text-muted">VS</Text>
-          </View>
-          <View className="min-w-0 flex-1 rounded-xl border border-border bg-surface-light px-2 py-2.5">
-            <Text className="text-center text-xs font-semibold text-error" numberOfLines={1}>
-              {acceptorName}
-            </Text>
-            <Text className="mt-0.5 text-center text-sm font-bold text-white" numberOfLines={1}>
-              {picks.accepted}
-            </Text>
+          <View className="flex-row items-center gap-2.5">
+            <SubmissionAvatar
+              uri={bet.offered_by_profile?.avatar_url}
+              fallback={offererName}
+              submitted={offererSubmitted}
+            />
+            <SubmissionAvatar
+              uri={bet.accepted_by_profile?.avatar_url}
+              fallback={acceptorName}
+              submitted={acceptorSubmitted}
+            />
           </View>
         </View>
       ) : null}
@@ -176,8 +199,10 @@ function BetActivityCard({
 
         {dbStatus === 'SETTLED' && winnerName ? (
           <View className="flex-row items-center gap-1.5">
-            <Check size={18} color={colors.primary} weight="bold" />
-            <Text className="text-sm font-semibold text-primary">Winner: {winnerName}</Text>
+            <Trophy size={18} color={colors.primary} weight="fill" />
+            <Text className="text-sm font-semibold text-primary">
+              {winnerName} +{(2 * bet.stake).toLocaleString('en-US')}
+            </Text>
           </View>
         ) : null}
 
@@ -197,6 +222,193 @@ function BetActivityCard({
           <Text className="text-sm font-semibold text-primary">Swipe to accept</Text>
         </View>
       ) : null}
+
+      {canSubmitOutcome ? (
+        <TouchableOpacity
+          onPress={() => setSubmitSheetOpen(true)}
+          activeOpacity={0.8}
+          className="mt-3 flex-row items-center justify-center gap-2 rounded-xl bg-primary py-3"
+        >
+          <Check size={18} color="#ffffff" weight="bold" />
+          <Text className="text-sm font-bold text-white">Submit outcome</Text>
+        </TouchableOpacity>
+      ) : null}
+
+      {canSubmitOutcome && roomId ? (
+        <SubmitOutcomeSheet
+          visible={submitSheetOpen}
+          onClose={() => setSubmitSheetOpen(false)}
+          bet={bet}
+          roomId={roomId}
+        />
+      ) : null}
+
+      {canResolveDispute ? (
+        <TouchableOpacity
+          onPress={() => setDisputeSheetOpen(true)}
+          activeOpacity={0.8}
+          className="mt-3 flex-row items-center justify-center gap-2 rounded-xl bg-warning py-3"
+        >
+          <Warning size={18} color="#ffffff" weight="bold" />
+          <Text className="text-sm font-bold text-white">Resolve dispute</Text>
+        </TouchableOpacity>
+      ) : null}
+
+      {canResolveDispute && roomId ? (
+        <ResolveDisputeSheet
+          visible={disputeSheetOpen}
+          onClose={() => setDisputeSheetOpen(false)}
+          bet={bet}
+          roomId={roomId}
+        />
+      ) : null}
+    </View>
+  );
+}
+
+function getOppositeOption(bet: BetWithProfiles): string | null {
+  const opts = Array.isArray(bet.options) ? (bet.options as unknown[]) : [];
+  const offered = bet.offered_pick?.trim().toLowerCase();
+  const candidate = opts.find((o) => typeof o === 'string' && o.trim().toLowerCase() !== offered);
+  return typeof candidate === 'string' ? candidate : null;
+}
+
+function PickPill({ label, variant }: { label: string; variant: 'primary' | 'error' | 'ghost' }) {
+  const containerClass =
+    variant === 'primary'
+      ? 'border-primary bg-primary/15'
+      : variant === 'error'
+        ? 'border-error bg-error/15'
+        : 'border-border bg-surface-light opacity-60';
+  const textClass =
+    variant === 'primary' ? 'text-primary' : variant === 'error' ? 'text-error' : 'text-text-muted';
+  return (
+    <View className={`rounded-full border-2 px-4 py-1 ${containerClass}`}>
+      <Text className={`text-sm font-bold ${textClass}`}>{label.toUpperCase()}</Text>
+    </View>
+  );
+}
+
+function PicksMatchup({
+  offererName,
+  offererAvatar,
+  offererPick,
+  offererIsWinner,
+  acceptorName,
+  acceptorAvatar,
+  acceptorPick,
+  acceptorIsWinner,
+  oppositePickHint,
+  isOpen,
+}: {
+  offererName: string;
+  offererAvatar?: string | null;
+  offererPick: string;
+  offererIsWinner: boolean;
+  acceptorName: string;
+  acceptorAvatar?: string | null;
+  acceptorPick: string | null;
+  acceptorIsWinner: boolean;
+  oppositePickHint: string | null;
+  isOpen: boolean;
+}) {
+  const acceptorSlotEmpty = isOpen || !acceptorPick;
+  return (
+    <View className="mt-4 flex-row items-center gap-3">
+      <PlayerSide
+        name={offererName}
+        avatarUri={offererAvatar}
+        pick={offererPick}
+        pickVariant="primary"
+        isWinner={offererIsWinner}
+        dim={acceptorIsWinner}
+      />
+
+      <View className="items-center">
+        <Text className="text-[10px] font-bold tracking-widest text-text-muted">VS</Text>
+      </View>
+
+      {acceptorSlotEmpty ? (
+        <PlayerSide
+          name="Open"
+          avatarUri={null}
+          pick={oppositePickHint ?? '—'}
+          pickVariant="ghost"
+          isWinner={false}
+          dim={false}
+          ghost
+        />
+      ) : (
+        <PlayerSide
+          name={acceptorName}
+          avatarUri={acceptorAvatar}
+          pick={acceptorPick ?? '—'}
+          pickVariant="error"
+          isWinner={acceptorIsWinner}
+          dim={offererIsWinner}
+        />
+      )}
+    </View>
+  );
+}
+
+function PlayerSide({
+  name,
+  avatarUri,
+  pick,
+  pickVariant,
+  isWinner,
+  dim,
+  ghost,
+}: {
+  name: string;
+  avatarUri?: string | null;
+  pick: string;
+  pickVariant: 'primary' | 'error' | 'ghost';
+  isWinner: boolean;
+  dim: boolean;
+  ghost?: boolean;
+}) {
+  return (
+    <View className={`flex-1 items-center gap-2 ${dim ? 'opacity-50' : ''}`}>
+      <View className="relative">
+        <Avatar
+          uri={avatarUri}
+          fallback={ghost ? '?' : name}
+          size="lg"
+          className={ghost ? 'opacity-40' : ''}
+        />
+        {isWinner ? (
+          <View className="absolute -right-1.5 -top-1.5 h-7 w-7 items-center justify-center rounded-full border-2 border-surface bg-primary">
+            <Trophy size={14} color="#ffffff" weight="fill" />
+          </View>
+        ) : null}
+      </View>
+      <Text className="text-center text-xs font-semibold text-text-secondary" numberOfLines={1}>
+        {name}
+      </Text>
+      <PickPill label={pick} variant={pickVariant} />
+    </View>
+  );
+}
+
+function SubmissionAvatar({
+  uri,
+  fallback,
+  submitted,
+}: {
+  uri?: string | null;
+  fallback: string;
+  submitted: boolean;
+}) {
+  return (
+    <View className="relative">
+      <Avatar uri={uri} fallback={fallback} size="sm" className={submitted ? '' : 'opacity-40'} />
+      {submitted ? (
+        <View className="absolute -bottom-0.5 -right-0.5 h-4 w-4 items-center justify-center rounded-full border-2 border-surface-light bg-primary">
+          <Check size={8} color="#ffffff" weight="bold" />
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -205,6 +417,8 @@ interface ActivityFeedItemProps {
   item: ActivityItem;
   /** Current user's id — used to gate the Accept swipe so users can't accept their own offers. */
   currentUserId?: string | null;
+  /** Current user's room role — gates the attestor "Resolve dispute" action. */
+  currentUserRole?: 'PLAYER' | 'ATTESTOR' | 'ADMIN' | string | null;
   /** When false, accept affordance is hidden (e.g., session ended). */
   roomActive?: boolean;
   /** Room id, required by the accept mutation for cache invalidation. */
@@ -214,6 +428,7 @@ interface ActivityFeedItemProps {
 export function ActivityFeedItem({
   item,
   currentUserId,
+  currentUserRole,
   roomActive,
   roomId,
 }: ActivityFeedItemProps) {
@@ -227,7 +442,15 @@ export function ActivityFeedItem({
       getEffectiveBetStatus(item.bet) !== 'EXPIRED';
 
     const card = (
-      <BetActivityCard bet={item.bet} timestamp={item.timestamp} showAcceptHint={canAccept} />
+      <BetActivityCard
+        bet={item.bet}
+        timestamp={item.timestamp}
+        showAcceptHint={canAccept}
+        currentUserId={currentUserId}
+        currentUserRole={currentUserRole}
+        roomActive={roomActive}
+        roomId={roomId}
+      />
     );
 
     if (canAccept) {

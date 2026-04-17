@@ -497,7 +497,9 @@ export type Database = {
           isSetofReturn: false;
         };
       };
+      expire_open_bets: { Args: never; Returns: number };
       get_my_room_balance: { Args: { p_room_id: string }; Returns: number };
+      is_room_attestor: { Args: { p_room_id: string }; Returns: boolean };
       is_room_member: { Args: { p_room_id: string }; Returns: boolean };
       join_room_via_invite: {
         Args: { p_invite_code: string };
@@ -544,6 +546,78 @@ export type Database = {
       remove_member: {
         Args: { p_room_id: string; p_target_user_id: string };
         Returns: undefined;
+      };
+      resolve_dispute: {
+        Args: { p_bet_id: string; p_final_option: string };
+        Returns: {
+          accepted_by: string | null;
+          accepted_pick: string | null;
+          created_at: string | null;
+          expires_at: string | null;
+          id: string;
+          offered_by: string | null;
+          offered_pick: string | null;
+          options: Json;
+          outcome: string | null;
+          question: string;
+          room_id: string;
+          settled_at: string | null;
+          settlement_method: string | null;
+          stake: number;
+          status: string | null;
+          template_id: string | null;
+          winner: string | null;
+        };
+        SetofOptions: {
+          from: '*';
+          to: 'bets';
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
+      settle_bet: {
+        Args: { p_bet_id: string };
+        Returns: {
+          accepted_by: string | null;
+          accepted_pick: string | null;
+          created_at: string | null;
+          expires_at: string | null;
+          id: string;
+          offered_by: string | null;
+          offered_pick: string | null;
+          options: Json;
+          outcome: string | null;
+          question: string;
+          room_id: string;
+          settled_at: string | null;
+          settlement_method: string | null;
+          stake: number;
+          status: string | null;
+          template_id: string | null;
+          winner: string | null;
+        };
+        SetofOptions: {
+          from: '*';
+          to: 'bets';
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
+      submit_outcome: {
+        Args: { p_bet_id: string; p_selected_option: string };
+        Returns: {
+          bet_id: string | null;
+          id: string;
+          selected_option: string;
+          submitted_at: string | null;
+          user_id: string | null;
+        };
+        SetofOptions: {
+          from: '*';
+          to: 'outcome_submissions';
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
       };
       update_member_role: {
         Args: {

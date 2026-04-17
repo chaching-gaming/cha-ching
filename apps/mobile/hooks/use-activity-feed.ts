@@ -14,10 +14,12 @@ function realtimeTopicToken(): string {
 type Bet = Database['public']['Tables']['bets']['Row'];
 type ChipRequest = Database['public']['Tables']['chip_requests']['Row'];
 type Profile = Database['public']['Tables']['profiles']['Row'];
+export type OutcomeSubmission = Database['public']['Tables']['outcome_submissions']['Row'];
 
 export type BetWithProfiles = Bet & {
   offered_by_profile: Profile | null;
   accepted_by_profile: Profile | null;
+  outcome_submissions: OutcomeSubmission[];
 };
 
 export type ChipRequestWithProfile = ChipRequest & {
@@ -41,7 +43,7 @@ export function useRoomBets(roomId: string) {
       const { data, error } = await supabase
         .from('bets')
         .select(
-          '*, offered_by_profile:profiles!bets_offered_by_fkey(*), accepted_by_profile:profiles!bets_accepted_by_fkey(*)',
+          '*, offered_by_profile:profiles!bets_offered_by_fkey(*), accepted_by_profile:profiles!bets_accepted_by_fkey(*), outcome_submissions(*)',
         )
         .eq('room_id', roomId)
         .order('created_at', { ascending: false });
@@ -161,10 +163,24 @@ export function useRealtimeActivityFeed(roomId: string) {
       )
       .subscribe();
 
+    // outcome_submissions has no room_id column, so we can't server-filter.
+    // Traffic is low (≤2 rows per bet); client-side invalidation handles the over-fetch.
+    const outcomeSubmissionsChannel = supabase
+      .channel(`cc-feed:${roomId}:outcomes:${token}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'outcome_submissions' },
+        () => {
+          queryClient.invalidateQueries({ queryKey: roomBetsKey(roomId) });
+        },
+      )
+      .subscribe();
+
     return () => {
       void (async () => {
         await supabase.removeChannel(betsChannel);
         await supabase.removeChannel(chipRequestsChannel);
+        await supabase.removeChannel(outcomeSubmissionsChannel);
       })();
     };
   }, [roomId, queryClient]);

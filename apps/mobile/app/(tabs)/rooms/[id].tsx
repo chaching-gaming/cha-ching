@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useState } from 'react';
 import {
   ActionSheetIOS,
   ActivityIndicator,
@@ -15,21 +15,19 @@ import {
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { CalendarBlank, UserPlus, X } from 'phosphor-react-native';
+import { Plus, UserPlus, X } from 'phosphor-react-native';
 
 import { colors } from '@/constants/colors';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { ActivityFeedItem } from '@/components/activity/activity-feed-item';
 import { MemberRow } from '@/components/activity/member-row';
 import { RoomHeaderBar } from '@/components/activity/room-header-bar';
+import { WinnerCelebration } from '@/components/activity/winner-celebration';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/providers/auth';
 import {
   useRoomDetail,
   useRoomMembers,
-  useEndSession,
   useUpdateMemberRole,
   useRemoveMember,
   getRpcErrorMessage,
@@ -38,37 +36,8 @@ import {
   useRoomActivityFeed,
   useMyRoomBalance,
   useRealtimeActivityFeed,
-  type ActivityItem,
 } from '@/hooks/use-activity-feed';
-import { formatSessionDateLong } from '@/lib/date-format';
-import { getEffectiveBetStatus } from '@/lib/effective-bet-status';
-
-type ActivityFilter = 'open' | 'live' | 'settled' | 'expired';
-
-/** Open = unmatched offers still accepting a counterparty. Live = matched / awaiting result / disputed. */
-const ACTIVITY_FILTER_OPTIONS: { key: ActivityFilter; label: string }[] = [
-  { key: 'open', label: 'Open' },
-  { key: 'live', label: 'Live' },
-  { key: 'expired', label: 'Expired' },
-  { key: 'settled', label: 'Settled' },
-];
-
-function matchesActivityFilter(item: ActivityItem, filter: ActivityFilter): boolean {
-  if (item.type === 'chip_request') return true;
-  const { bet } = item;
-  switch (filter) {
-    case 'open':
-      return bet.status === 'OPEN' && getEffectiveBetStatus(bet) !== 'EXPIRED';
-    case 'live':
-      return (
-        bet.status === 'MATCHED' || bet.status === 'PENDING_RESULT' || bet.status === 'DISPUTED'
-      );
-    case 'expired':
-      return getEffectiveBetStatus(bet) === 'EXPIRED';
-    case 'settled':
-      return bet.status === 'SETTLED' || bet.status === 'VOID';
-  }
-}
+import { useWinnerCelebration } from '@/hooks/use-winner-celebration';
 
 function promptMemberRole(
   displayName: string,
@@ -111,23 +80,12 @@ export default function RoomDetailScreen() {
   useRealtimeActivityFeed(id);
 
   // Mutations
-  const endSession = useEndSession();
   const updateMemberRole = useUpdateMemberRole();
   const removeMember = useRemoveMember();
 
   // State
   const [showMembers, setShowMembers] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
-  const [activityFilter, setActivityFilter] = useState<ActivityFilter>('open');
-  const [expiryFilterTick, setExpiryFilterTick] = useState(0);
-
-  const needsExpiryFilterTick = activityFilter === 'open' || activityFilter === 'expired';
-
-  useEffect(() => {
-    if (!needsExpiryFilterTick) return;
-    const id = setInterval(() => setExpiryFilterTick((t) => t + 1), 1000);
-    return () => clearInterval(id);
-  }, [needsExpiryFilterTick]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -140,61 +98,14 @@ export default function RoomDetailScreen() {
   const isAdmin = currentMember?.role === 'ADMIN';
   const isActive = room?.is_active ?? false;
 
-  const filteredActivity = useMemo(() => {
-    void expiryFilterTick;
-    const list = activityItems ?? [];
-    return list.filter((item) => matchesActivityFilter(item, activityFilter));
-  }, [activityItems, activityFilter, expiryFilterTick]);
+  const feedItems = activityItems ?? [];
 
-  const emptyFeedCopy = useMemo(() => {
-    const total = activityItems?.length ?? 0;
-    if (total === 0) {
-      return {
-        title: 'No activity yet',
-        body: 'Create a bet to get the room going. Chip requests will appear here too.',
-      };
-    }
-    switch (activityFilter) {
-      case 'open':
-        return {
-          title: 'No open bets',
-          body: 'Create a new offer, or check Live for bets already matched.',
-        };
-      case 'live':
-        return {
-          title: 'Nothing in play',
-          body: 'No matched or pending bets. Check Open for offers waiting on a match.',
-        };
-      case 'expired':
-        return {
-          title: 'No expired bets',
-          body: 'Offers that hit their deadline without a match appear here.',
-        };
-      case 'settled':
-        return {
-          title: 'No finished bets',
-          body: 'Settled and voided bets show in this tab. Expired offers are under Expired.',
-        };
-    }
-  }, [activityItems, activityFilter]);
-
-  function handleEndSession() {
-    Alert.alert('End Session', 'Are you sure? This will prevent new joins and bets.', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'End Session',
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            await endSession.mutateAsync({ p_room_id: id });
-          } catch (err) {
-            const message = err instanceof Error ? err.message : 'Failed to end session';
-            Alert.alert('Error', message);
-          }
-        },
-      },
-    ]);
-  }
+  // Detects live bet.status → SETTLED transitions and queues a celebration
+  // for the current user if they were a participant.
+  const { celebratingBet, dismissCelebration } = useWinnerCelebration(
+    feedItems,
+    authSession?.user.id ?? null,
+  );
 
   function handleChangeRoleRequest(userId: string) {
     const target = members?.find((m) => m.user_id === userId);
@@ -266,6 +177,7 @@ export default function RoomDetailScreen() {
             <TouchableOpacity
               onPress={() => router.push(`/(tabs)/rooms/invite?id=${id}`)}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              accessibilityLabel="Invite to room"
             >
               <UserPlus size={28} color={colors.primary} />
             </TouchableOpacity>
@@ -274,7 +186,7 @@ export default function RoomDetailScreen() {
       />
 
       <FlatList
-        data={filteredActivity}
+        data={feedItems}
         keyExtractor={(item) =>
           item.type === 'bet' ? `bet-${item.bet.id}` : `cr-${item.chipRequest.id}`
         }
@@ -282,6 +194,7 @@ export default function RoomDetailScreen() {
           <ActivityFeedItem
             item={item}
             currentUserId={authSession?.user.id}
+            currentUserRole={currentMember?.role ?? null}
             roomActive={isActive}
             roomId={id}
           />
@@ -295,68 +208,11 @@ export default function RoomDetailScreen() {
           />
         }
         ListHeaderComponent={
-          <View>
-            {/* Member avatars + balance */}
-            <RoomHeaderBar
-              members={members ?? []}
-              balance={balance ?? 0}
-              onViewMembers={() => setShowMembers(true)}
-            />
-
-            {/* Status row */}
-            <View className="mb-4 flex-row items-center justify-between">
-              <View className="flex-row items-center gap-2.5">
-                <CalendarBlank size={20} color={colors.textSecondary} />
-                <Text className="text-sm text-text-secondary">
-                  {formatSessionDateLong(room.session_date)}
-                </Text>
-                <Badge
-                  variant={isActive ? 'success' : 'default'}
-                  label={isActive ? 'Live' : 'Ended'}
-                  className="px-4 py-2"
-                  labelClassName="text-sm font-semibold"
-                />
-              </View>
-
-              {isAdmin && isActive && (
-                <TouchableOpacity
-                  onPress={handleEndSession}
-                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                >
-                  <Text className="text-sm font-semibold text-error">End Session</Text>
-                </TouchableOpacity>
-              )}
-            </View>
-
-            {/* Bets & activity */}
-            <View className="mb-2 border-b border-border pb-2">
-              <Text className="text-sm font-semibold text-text-secondary">Bets & activity</Text>
-            </View>
-
-            <View className="mb-3 flex-row flex-wrap gap-2">
-              {ACTIVITY_FILTER_OPTIONS.map(({ key, label }) => {
-                const selected = activityFilter === key;
-                return (
-                  <TouchableOpacity
-                    key={key}
-                    onPress={() => setActivityFilter(key)}
-                    activeOpacity={0.75}
-                    className={`rounded-full border px-3.5 py-2 ${
-                      selected ? 'border-primary bg-primary/15' : 'border-border bg-surface'
-                    }`}
-                  >
-                    <Text
-                      className={`text-sm font-semibold ${
-                        selected ? 'text-primary' : 'text-text-secondary'
-                      }`}
-                    >
-                      {label}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-          </View>
+          <RoomHeaderBar
+            members={members ?? []}
+            balance={balance ?? 0}
+            onViewMembers={() => setShowMembers(true)}
+          />
         }
         ListEmptyComponent={
           feedLoading ? (
@@ -366,26 +222,39 @@ export default function RoomDetailScreen() {
           ) : (
             <View className="items-center px-2 py-12">
               <Text className="text-center text-xl font-semibold text-text-secondary">
-                {emptyFeedCopy.title}
+                No bets yet
               </Text>
-              {emptyFeedCopy.body ? (
-                <Text className="mt-2 max-w-sm text-center text-base leading-6 text-text-secondary">
-                  {emptyFeedCopy.body}
-                </Text>
-              ) : null}
+              <Text className="mt-2 max-w-sm text-center text-base leading-6 text-text-secondary">
+                Tap Create Bet to start the action.
+              </Text>
             </View>
           )
         }
       />
 
-      {/* Floating Create Bet CTA */}
-      {isActive && (
-        <View className="absolute bottom-6 left-5 right-5">
-          <Button size="lg" onPress={() => router.push(`/(tabs)/rooms/create-bet?id=${id}`)}>
-            Create Bet
-          </Button>
-        </View>
-      )}
+      <WinnerCelebration
+        bet={celebratingBet}
+        currentUserId={authSession?.user.id ?? null}
+        onDismiss={dismissCelebration}
+      />
+
+      {isActive ? (
+        <TouchableOpacity
+          onPress={() => router.push(`/(tabs)/rooms/create-bet?id=${id}`)}
+          activeOpacity={0.85}
+          accessibilityLabel="Create bet"
+          className="absolute bottom-6 right-5 h-14 w-14 items-center justify-center rounded-full bg-primary"
+          style={{
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 4 },
+            shadowOpacity: 0.35,
+            shadowRadius: 6,
+            elevation: 6,
+          }}
+        >
+          <Plus size={28} color="#ffffff" weight="bold" />
+        </TouchableOpacity>
+      ) : null}
 
       {/* Members Modal */}
       <Modal visible={showMembers} animationType="slide" transparent>
