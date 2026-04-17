@@ -1,14 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import {
-  ActivityIndicator,
-  Keyboard,
-  Pressable,
-  ScrollView,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { ActivityIndicator, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { Users } from 'phosphor-react-native';
@@ -16,6 +7,7 @@ import { Users } from 'phosphor-react-native';
 import { colors } from '@/constants/colors';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { KeyboardAwareScrollView } from '@/components/form/keyboard-aware-scroll-view';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { supabase } from '@/lib/supabase';
 import { useJoinRoom, getRpcErrorMessage } from '@/hooks/use-rooms';
@@ -281,13 +273,9 @@ export default function JoinRoomScreen() {
   }
 
   return (
-    <Pressable className="flex-1 bg-background" onPress={Keyboard.dismiss}>
+    <View className="flex-1 bg-background">
       <ScreenHeader title="Join Room" showBack />
-      <ScrollView
-        className="flex-1"
-        contentContainerClassName="px-5 pt-4 pb-8"
-        keyboardShouldPersistTaps="handled"
-      >
+      <KeyboardAwareScrollView contentContainerClassName="px-5 pt-4 pb-8">
         {/* Tab toggle */}
         <View className="mb-6 flex-row rounded-xl bg-surface p-1">
           <TouchableOpacity
@@ -430,7 +418,7 @@ export default function JoinRoomScreen() {
             )}
           </>
         )}
-      </ScrollView>
-    </Pressable>
+      </KeyboardAwareScrollView>
+    </View>
   );
 }

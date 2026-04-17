@@ -9,6 +9,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import 'react-native-reanimated';
+import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 
 import { colors } from '@/constants/colors';
 import { Providers } from '@/providers';
@@ -79,13 +80,15 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <Providers>
         <ThemeProvider value={appTheme}>
-          <AuthGate>
-            <Stack screenOptions={{ headerShown: false }}>
-              <Stack.Screen name="index" />
-              <Stack.Screen name="(tabs)" />
-              <Stack.Screen name="(auth)" />
-            </Stack>
-          </AuthGate>
+          <BottomSheetModalProvider>
+            <AuthGate>
+              <Stack screenOptions={{ headerShown: false }}>
+                <Stack.Screen name="index" />
+                <Stack.Screen name="(tabs)" />
+                <Stack.Screen name="(auth)" />
+              </Stack>
+            </AuthGate>
+          </BottomSheetModalProvider>
         </ThemeProvider>
       </Providers>
     </GestureHandlerRootView>

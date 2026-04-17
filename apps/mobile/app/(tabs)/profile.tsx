@@ -1,13 +1,5 @@
 import { useState } from 'react';
-import {
-  ActivityIndicator,
-  Alert,
-  ScrollView,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { ActivityIndicator, Alert, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { CalendarBlank, ClockCounterClockwise, SignOut } from 'phosphor-react-native';
 import * as ImagePicker from 'expo-image-picker';
@@ -18,6 +10,7 @@ import { uploadAvatar } from '@/lib/storage';
 import { supabase } from '@/lib/supabase';
 import { Avatar, Button } from '@/components/ui';
 import { Card } from '@/components/ui/card';
+import { KeyboardAwareScrollView } from '@/components/form/keyboard-aware-scroll-view';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { colors } from '@/constants/colors';
 import { formatSessionDateMedium } from '@/lib/date-format';
@@ -90,7 +83,7 @@ export default function ProfileScreen() {
   return (
     <View className="flex-1 bg-background">
       <ScreenHeader title="Profile" />
-      <ScrollView className="flex-1" contentContainerClassName="items-center px-5 pt-4 pb-12">
+      <KeyboardAwareScrollView contentContainerClassName="items-center px-5 pt-4 pb-12">
         <Avatar
           uri={profile?.avatar_url}
           fallback={profile?.display_name ?? profile?.email}
@@ -175,7 +168,7 @@ export default function ProfileScreen() {
             <Text className="text-base font-semibold text-error">Sign Out</Text>
           </TouchableOpacity>
         </View>
-      </ScrollView>
+      </KeyboardAwareScrollView>
     </View>
   );
 }

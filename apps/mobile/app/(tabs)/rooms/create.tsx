@@ -1,9 +1,10 @@
-import { Keyboard, Pressable, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { Text, TouchableOpacity, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Info } from 'phosphor-react-native';
 import { z } from 'zod';
 
 import { colors } from '@/constants/colors';
+import { KeyboardAwareScrollView } from '@/components/form/keyboard-aware-scroll-view';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { useCreateRoom } from '@/hooks/use-rooms';
 import { useForm } from '@/hooks/use-form';
@@ -54,13 +55,9 @@ export default function CreateRoomScreen() {
   });
 
   return (
-    <Pressable className="flex-1 bg-background" onPress={Keyboard.dismiss}>
+    <View className="flex-1 bg-background">
       <ScreenHeader title="Create Room" showBack />
-      <ScrollView
-        className="flex-1"
-        contentContainerClassName="px-5 pt-4 pb-8"
-        keyboardShouldPersistTaps="handled"
-      >
+      <KeyboardAwareScrollView contentContainerClassName="px-5 pt-4 pb-8">
         {/* Create / Join toggle */}
         <View className="mb-6 flex-row rounded-xl bg-surface p-1">
           <View className="flex-1 items-center rounded-lg bg-primary py-2.5">
@@ -128,7 +125,7 @@ export default function CreateRoomScreen() {
 
           <form.SubmitButton>Create Room</form.SubmitButton>
         </form.AppForm>
-      </ScrollView>
-    </Pressable>
+      </KeyboardAwareScrollView>
+    </View>
   );
 }

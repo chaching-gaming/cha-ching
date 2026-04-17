@@ -1,10 +1,11 @@
 import { useState } from 'react';
-import { Alert, Keyboard, Pressable, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, Text, TouchableOpacity, View } from 'react-native';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { Link } from 'expo-router';
 import { z } from 'zod';
 import { supabase } from '@/lib/supabase';
 import { signInWithOAuth } from '@/lib/oauth';
+import { KeyboardAwareScrollView } from '@/components/form/keyboard-aware-scroll-view';
 import { useForm } from '@/hooks/use-form';
 
 const signUpSchema = z.object({
@@ -62,7 +63,10 @@ export default function SignUpScreen() {
   }
 
   return (
-    <Pressable className="flex-1 justify-center bg-background px-5" onPress={Keyboard.dismiss}>
+    <KeyboardAwareScrollView
+      className="flex-1 bg-background"
+      contentContainerClassName="flex-grow justify-center px-5 py-8"
+    >
       <View className="mb-8 items-center">
         <Text className="text-3xl font-bold text-white">Create Account</Text>
         <Text className="mt-2 text-base text-text-secondary">Join your friends on Cha-Ching</Text>
@@ -150,6 +154,6 @@ export default function SignUpScreen() {
           </Text>
         </TouchableOpacity>
       </Link>
-    </Pressable>
+    </KeyboardAwareScrollView>
   );
 }

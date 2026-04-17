@@ -2,10 +2,8 @@ import { useCallback, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
-  Keyboard,
   Modal,
   Pressable,
-  ScrollView,
   Text,
   TouchableOpacity,
   View,
@@ -19,6 +17,7 @@ import { z } from 'zod';
 import { colors } from '@/constants/colors';
 import { Avatar } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
+import { KeyboardAwareScrollView } from '@/components/form/keyboard-aware-scroll-view';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { useForm } from '@/hooks/use-form';
 import { useCreateBet } from '@/hooks/use-create-bet';
@@ -212,7 +211,7 @@ export default function CreateBetScreen() {
   const sessionActive = room.is_active;
 
   return (
-    <Pressable className="flex-1 bg-background" onPress={Keyboard.dismiss}>
+    <View className="flex-1 bg-background">
       <ScreenHeader title="Create Bet" subtitle={room.name} showBack />
 
       <View className="px-5 pb-3">
@@ -226,11 +225,7 @@ export default function CreateBetScreen() {
       </View>
 
       <form.AppForm>
-        <ScrollView
-          className="flex-1"
-          contentContainerClassName="px-5 pb-10 pt-1"
-          keyboardShouldPersistTaps="handled"
-        >
+        <KeyboardAwareScrollView contentContainerClassName="px-5 pb-10 pt-1">
           {!sessionActive ? (
             <View className="mb-4 rounded-xl border border-border bg-surface px-4 py-3">
               <Text className="text-center text-base text-text-secondary">
@@ -420,7 +415,7 @@ export default function CreateBetScreen() {
           <Button size="lg" disabled={!sessionActive} onPress={handleReview}>
             Review and Post
           </Button>
-        </ScrollView>
+        </KeyboardAwareScrollView>
 
         <Modal visible={reviewOpen} animationType="slide" transparent onRequestClose={closeReview}>
           <GestureHandlerRootView style={{ flex: 1 }}>
@@ -511,6 +506,6 @@ export default function CreateBetScreen() {
           </GestureHandlerRootView>
         </Modal>
       </form.AppForm>
-    </Pressable>
+    </View>
   );
 }
