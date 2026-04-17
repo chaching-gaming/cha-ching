@@ -51,7 +51,9 @@ function BetActivityCard({ bet, timestamp }: { bet: BetWithProfiles; timestamp: 
 
   const effectiveStatus = useMemo(
     () => getEffectiveBetStatus(bet, new Date()),
-    [bet.status, bet.expires_at, tick],
+    // `tick` forces re-evaluation each second so an OPEN bet flips to EXPIRED at the right time.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [bet, tick],
   );
 
   const offererName = bet.offered_by_profile?.display_name ?? 'Someone';
