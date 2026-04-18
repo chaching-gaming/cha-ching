@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
+import { useRouter } from 'expo-router';
 import { ArrowRight, Check, Coins, Timer, Trophy, Warning } from 'phosphor-react-native';
 
 import { colors } from '@/constants/colors';
@@ -7,7 +8,6 @@ import { Avatar } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { ResolveDisputeSheet } from '@/components/activity/resolve-dispute-sheet';
 import { SubmitOutcomeSheet } from '@/components/activity/submit-outcome-sheet';
-import { SwipeToAcceptRow } from '@/components/activity/swipe-to-accept-row';
 import type { ActivityItem, BetWithProfiles } from '@/hooks/use-activity-feed';
 import { formatBetCountdown, formatRelativeActivityTime } from '@/lib/date-format';
 import { getEffectiveBetStatus } from '@/lib/effective-bet-status';
@@ -57,6 +57,7 @@ function BetActivityCard({
   roomActive?: boolean;
   roomId?: string;
 }) {
+  const router = useRouter();
   const [tick, setTick] = useState(0);
   const [submitSheetOpen, setSubmitSheetOpen] = useState(false);
   const [disputeSheetOpen, setDisputeSheetOpen] = useState(false);
@@ -217,10 +218,14 @@ function BetActivityCard({
       <Text className="mt-2 text-xs text-text-muted">{formatRelativeActivityTime(timestamp)}</Text>
 
       {showAcceptHint ? (
-        <View className="mt-3 flex-row items-center justify-center gap-2 rounded-xl border border-primary/30 bg-primary/10 py-3">
-          <ArrowRight size={18} color={colors.primary} weight="bold" />
-          <Text className="text-sm font-semibold text-primary">Swipe to accept</Text>
-        </View>
+        <TouchableOpacity
+          onPress={() => router.push(`/(tabs)/rooms/accept-bet?betId=${bet.id}`)}
+          activeOpacity={0.85}
+          className="mt-3 flex-row items-center justify-center gap-2 rounded-xl bg-primary py-3"
+        >
+          <ArrowRight size={18} color="#ffffff" weight="bold" />
+          <Text className="text-sm font-bold text-white">Accept bet</Text>
+        </TouchableOpacity>
       ) : null}
 
       {canSubmitOutcome ? (
@@ -453,13 +458,6 @@ export function ActivityFeedItem({
       />
     );
 
-    if (canAccept) {
-      return (
-        <SwipeToAcceptRow bet={item.bet} roomId={roomId!}>
-          {card}
-        </SwipeToAcceptRow>
-      );
-    }
     return card;
   }
 

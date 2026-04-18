@@ -7,12 +7,21 @@ import type { ActivityItem, BetWithProfiles } from '@/hooks/use-activity-feed';
  * is the winner, queues a celebration. On first data load we seed the "seen" set so we don't
  * fire for historical settlements.
  */
-export function useWinnerCelebration(items: ActivityItem[], currentUserId: string | null) {
+export function useWinnerCelebration(
+  items: ActivityItem[],
+  currentUserId: string | null,
+  isLoading: boolean,
+) {
   const seenSettled = useRef<Set<string>>(new Set());
   const initialized = useRef(false);
   const [celebratingBet, setCelebratingBet] = useState<BetWithProfiles | null>(null);
 
   useEffect(() => {
+    // Wait until the query has actually returned before seeding. Otherwise the empty
+    // first-render `items` marks us initialized and every historical SETTLED bet
+    // arriving on the next render fires as a "new" transition.
+    if (isLoading) return;
+
     const settledBets: BetWithProfiles[] = items
       .filter((it): it is Extract<ActivityItem, { type: 'bet' }> => it.type === 'bet')
       .map((it) => it.bet)
@@ -32,7 +41,7 @@ export function useWinnerCelebration(items: ActivityItem[], currentUserId: strin
         return; // Celebrate one at a time; rest sit queued in the seen set.
       }
     }
-  }, [items, currentUserId]);
+  }, [items, currentUserId, isLoading]);
 
   const dismissCelebration = () => setCelebratingBet(null);
 

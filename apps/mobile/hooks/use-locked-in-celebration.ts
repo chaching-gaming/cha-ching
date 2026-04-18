@@ -7,12 +7,21 @@ import type { ActivityItem, BetWithProfiles } from '@/hooks/use-activity-feed';
  * celebration for the current user if they're a participant. Seeded on first load so
  * historical MATCHED / PENDING_RESULT / DISPUTED / SETTLED bets don't fire.
  */
-export function useLockedInCelebration(items: ActivityItem[], currentUserId: string | null) {
+export function useLockedInCelebration(
+  items: ActivityItem[],
+  currentUserId: string | null,
+  isLoading: boolean,
+) {
   const seenMatched = useRef<Set<string>>(new Set());
   const initialized = useRef(false);
   const [lockedInBet, setLockedInBet] = useState<BetWithProfiles | null>(null);
 
   useEffect(() => {
+    // Wait until the query has actually returned before seeding. Otherwise the empty
+    // first-render `items` marks us initialized and every historical matched bet
+    // arriving on the next render fires as a "new" transition.
+    if (isLoading) return;
+
     const lockedBets: BetWithProfiles[] = items
       .filter((it): it is Extract<ActivityItem, { type: 'bet' }> => it.type === 'bet')
       .map((it) => it.bet)
@@ -40,7 +49,7 @@ export function useLockedInCelebration(items: ActivityItem[], currentUserId: str
         return; // One at a time.
       }
     }
-  }, [items, currentUserId]);
+  }, [items, currentUserId, isLoading]);
 
   const dismissLockedIn = () => setLockedInBet(null);
 

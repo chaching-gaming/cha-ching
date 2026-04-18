@@ -53,16 +53,19 @@ export default function RoomDetailScreen() {
   const feedItems = activityItems ?? [];
 
   // Detects live bet.status → SETTLED transitions and queues a celebration
-  // for the current user if they were a participant.
+  // for the current user if they were a participant. `feedLoading` gates the
+  // initial seed so historical SETTLED bets don't fire on first render.
   const { celebratingBet, dismissCelebration } = useWinnerCelebration(
     feedItems,
     authSession?.user.id ?? null,
+    feedLoading,
   );
 
   // Detects OPEN → MATCHED transitions and queues a "You're locked in" flash.
   const { lockedInBet, dismissLockedIn } = useLockedInCelebration(
     feedItems,
     authSession?.user.id ?? null,
+    feedLoading,
   );
 
   const openSettings = useCallback(() => {

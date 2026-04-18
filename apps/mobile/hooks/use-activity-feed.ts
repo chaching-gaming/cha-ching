@@ -55,6 +55,29 @@ export function useRoomBets(roomId: string) {
   });
 }
 
+export const betDetailKey = (betId: string) => ['bets', betId] as const;
+
+export function useBetDetail(betId: string) {
+  const { session } = useAuth();
+
+  return useQuery({
+    queryKey: betDetailKey(betId),
+    queryFn: async (): Promise<BetWithProfiles> => {
+      const { data, error } = await supabase
+        .from('bets')
+        .select(
+          '*, offered_by_profile:profiles!bets_offered_by_fkey(*), accepted_by_profile:profiles!bets_accepted_by_fkey(*), outcome_submissions(*)',
+        )
+        .eq('id', betId)
+        .single();
+
+      if (error) throw error;
+      return data as unknown as BetWithProfiles;
+    },
+    enabled: !!session?.user.id && !!betId,
+  });
+}
+
 export function useRoomChipRequests(roomId: string) {
   const { session } = useAuth();
 
