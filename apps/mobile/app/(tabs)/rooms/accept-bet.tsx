@@ -10,8 +10,10 @@ import { Button } from '@/components/ui/button';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { useAcceptBet } from '@/hooks/use-accept-bet';
 import { useBetDetail } from '@/hooks/use-activity-feed';
+import { useQuestionTemplates } from '@/hooks/use-question-templates';
 import { useAuth } from '@/providers/auth';
 import { getRpcErrorMessage } from '@/hooks/use-rooms';
+import { BetTemplateIcon } from '@/lib/bet-create-ui';
 
 export default function AcceptBetScreen() {
   const { betId } = useLocalSearchParams<{ betId: string }>();
@@ -19,6 +21,7 @@ export default function AcceptBetScreen() {
   const safeInsets = useSafeAreaInsets();
   const { session } = useAuth();
   const { data: bet, isLoading } = useBetDetail(betId ?? '');
+  const { data: templates } = useQuestionTemplates('golf');
   const acceptBet = useAcceptBet();
 
   const options = useMemo(() => {
@@ -44,6 +47,11 @@ export default function AcceptBetScreen() {
   const offererName = bet?.offered_by_profile?.display_name ?? 'Someone';
   const isOwnBet = !!session?.user.id && bet?.offered_by === session.user.id;
   const isNotOpen = !!bet && bet.status !== 'OPEN';
+
+  const template = useMemo(() => {
+    if (!bet?.template_id || !templates) return null;
+    return templates.find((t) => t.id === bet.template_id) ?? null;
+  }, [bet?.template_id, templates]);
 
   const handleLockIn = useCallback(() => {
     if (!bet || !selected) return;
@@ -106,17 +114,36 @@ export default function AcceptBetScreen() {
         </Text>
         <Text className="text-sm text-text-secondary">posted this bet</Text>
 
-        {/* Bet as a quote box */}
-        <View className="mt-6 w-full rounded-3xl border border-border bg-surface px-6 py-5">
-          <Text className="text-center text-[10px] font-bold uppercase tracking-widest text-text-muted">
-            The bet
-          </Text>
-          <Text
-            className="mt-2 text-center text-xl font-bold leading-7 text-white"
-            numberOfLines={4}
-          >
-            &ldquo;{bet.question}&rdquo;
-          </Text>
+        {/* Bet card — template icon for template bets, quote box for write-ins */}
+        <View className="mt-6 w-full items-center rounded-3xl border border-border bg-surface px-6 py-5">
+          {template ? (
+            <>
+              <View className="h-16 w-16 items-center justify-center rounded-2xl bg-primary/15">
+                <BetTemplateIcon slug={template.slug} color={colors.primary} size={40} />
+              </View>
+              <Text className="mt-3 text-sm font-bold uppercase tracking-widest text-primary">
+                {template.short_label}
+              </Text>
+              <Text
+                className="mt-2 text-center text-lg font-semibold leading-6 text-white"
+                numberOfLines={4}
+              >
+                {bet.question}
+              </Text>
+            </>
+          ) : (
+            <>
+              <Text className="text-[10px] font-bold uppercase tracking-widest text-text-muted">
+                The bet
+              </Text>
+              <Text
+                className="mt-2 text-center text-xl font-bold leading-7 text-white"
+                numberOfLines={4}
+              >
+                &ldquo;{bet.question}&rdquo;
+              </Text>
+            </>
+          )}
         </View>
 
         {/* Stake pill */}
