@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { ResolveDisputeSheet } from '@/components/activity/resolve-dispute-sheet';
 import { SubmitOutcomeSheet } from '@/components/activity/submit-outcome-sheet';
 import { SwipeToAcceptRow } from '@/components/activity/swipe-to-accept-row';
-import type { ActivityItem, BetWithProfiles } from '@/hooks/use-activity-feed';
+import type { ActivityItem, BetStakeWithProfile, BetWithProfiles } from '@/hooks/use-activity-feed';
 import { formatBetCountdown, formatRelativeActivityTime } from '@/lib/date-format';
 import { getEffectiveBetStatus } from '@/lib/effective-bet-status';
 
@@ -72,37 +72,52 @@ function BetActivityCard({
 
   const effectiveStatus = useMemo(
     () => getEffectiveBetStatus(bet, new Date()),
-    // `tick` forces re-evaluation each second so an OPEN bet flips to EXPIRED at the right time.
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [bet, tick],
   );
 
-  const offererName = bet.offered_by_profile?.display_name ?? 'Someone';
-  const acceptorName = bet.accepted_by_profile?.display_name ?? 'Someone';
-  const pill = getBetStatusPill(effectiveStatus);
+  const options = useMemo(() => {
+    const raw = Array.isArray(bet.options) ? (bet.options as unknown[]) : [];
+    return raw.filter((o): o is string => typeof o === 'string' && o.trim().length > 0);
+  }, [bet.options]);
 
+  const stakes = useMemo(() => bet.stakes ?? [], [bet.stakes]);
+  const stakesByPick = useMemo(() => groupStakesByPick(options, stakes), [options, stakes]);
+
+  const pool = stakes.length * (bet.stake ?? 0);
+  const pill = getBetStatusPill(effectiveStatus);
   const dimmed = effectiveStatus === 'EXPIRED' || effectiveStatus === 'VOID';
 
-  const winnerName = useMemo(() => {
-    if (dbStatus !== 'SETTLED') return null;
-    if (bet.winner === bet.offered_by) return offererName;
-    if (bet.winner === bet.accepted_by) return acceptorName;
-    return 'Someone';
-  }, [dbStatus, bet.winner, bet.offered_by, bet.accepted_by, offererName, acceptorName]);
+  const subjectName = bet.subject_profile?.display_name ?? null;
+  const offererName = bet.offered_by_profile?.display_name ?? 'Someone';
 
   const countdown =
     effectiveStatus === 'OPEN' ? formatBetCountdown(bet.expires_at, new Date()) : null;
 
-  const showSubmissionStatus = dbStatus === 'MATCHED' || dbStatus === 'PENDING_RESULT';
-  const offererSubmitted = useMemo(
-    () => bet.outcome_submissions.some((s) => s.user_id === bet.offered_by),
-    [bet.outcome_submissions, bet.offered_by],
-  );
-  const acceptorSubmitted = useMemo(
-    () => bet.outcome_submissions.some((s) => s.user_id === bet.accepted_by),
-    [bet.outcome_submissions, bet.accepted_by],
-  );
-  const submittedCount = (offererSubmitted ? 1 : 0) + (acceptorSubmitted ? 1 : 0);
+  // Winners = stakes whose pick matches bet.outcome. Per-winner payout is the
+  // pool split evenly (integer division; remainder truncated server-side too).
+  const winningStakes = useMemo(() => {
+    if (dbStatus !== 'SETTLED' || !bet.outcome) return [] as BetStakeWithProfile[];
+    const outcome = bet.outcome.trim().toLowerCase();
+    return stakes.filter((s) => s.pick.trim().toLowerCase() === outcome);
+  }, [dbStatus, bet.outcome, stakes]);
+
+  const perWinnerPayout = winningStakes.length > 0 ? Math.floor(pool / winningStakes.length) : 0;
+  const currentUserWon = !!currentUserId && winningStakes.some((s) => s.user_id === currentUserId);
+
+  // A bet is "live for submissions" once both sides are staked — whether or
+  // not the expiry cron has flipped it to PENDING_RESULT yet. Server mirrors
+  // this rule inside submit_outcome (see 20260423 migration).
+  const distinctPicksStaked = useMemo(() => {
+    const set = new Set(stakes.map((s) => s.pick.trim().toLowerCase()));
+    return set.size;
+  }, [stakes]);
+  const bothSidesStaked = distinctPicksStaked >= 2;
+
+  const showSubmissionStatus =
+    dbStatus === 'PENDING_RESULT' || (dbStatus === 'OPEN' && bothSidesStaked);
+  const totalParticipants = stakes.length;
+  const submittedCount = bet.outcome_submissions.length;
   const mySubmission = useMemo(
     () =>
       currentUserId
@@ -110,8 +125,8 @@ function BetActivityCard({
         : null,
     [bet.outcome_submissions, currentUserId],
   );
-  const isParticipant =
-    !!currentUserId && (currentUserId === bet.offered_by || currentUserId === bet.accepted_by);
+
+  const isParticipant = !!currentUserId && stakes.some((s) => s.user_id === currentUserId);
   const canSubmitOutcome =
     !!roomActive && !!roomId && isParticipant && !mySubmission && showSubmissionStatus;
 
@@ -120,17 +135,24 @@ function BetActivityCard({
     !!roomId &&
     (currentUserRole === 'ATTESTOR' || currentUserRole === 'ADMIN');
 
+  // Header subtitle: for SETTLED/VOID we lean on the badge; otherwise show
+  // "about <subject>" if the bet has a subject distinct from the creator.
+  const subtitle = subjectName
+    ? subjectName === offererName
+      ? `${offererName}'s offer`
+      : `${offererName} · about ${subjectName}`
+    : `${offererName}'s offer`;
+
   return (
     <View
       className={`mb-3 rounded-2xl border border-border bg-surface px-4 py-3.5 ${dimmed ? 'opacity-60' : ''}`}
     >
       <View className="mb-3 flex-row items-center justify-between gap-2">
-        <Text className="text-xs font-semibold uppercase tracking-widest text-text-muted">
-          {effectiveStatus === 'OPEN'
-            ? `${offererName}'s offer`
-            : effectiveStatus === 'EXPIRED' || effectiveStatus === 'VOID'
-              ? `${offererName}'s offer`
-              : `${offererName} vs ${acceptorName}`}
+        <Text
+          className="shrink text-xs font-semibold uppercase tracking-widest text-text-muted"
+          numberOfLines={1}
+        >
+          {subtitle}
         </Text>
         <Badge
           variant={pill.variant}
@@ -144,42 +166,26 @@ function BetActivityCard({
         {bet.question}
       </Text>
 
-      {bet.offered_pick ? (
-        <PicksMatchup
-          offererName={offererName}
-          offererAvatar={bet.offered_by_profile?.avatar_url}
-          offererPick={bet.offered_pick}
-          offererIsWinner={dbStatus === 'SETTLED' && bet.winner === bet.offered_by}
-          acceptorName={acceptorName}
-          acceptorAvatar={bet.accepted_by_profile?.avatar_url ?? null}
-          acceptorPick={bet.accepted_pick}
-          acceptorIsWinner={dbStatus === 'SETTLED' && bet.winner === bet.accepted_by}
-          oppositePickHint={getOppositeOption(bet)}
-          isOpen={effectiveStatus === 'OPEN'}
+      {options.length > 0 ? (
+        <PoolTally
+          options={options}
+          stakesByPick={stakesByPick}
+          winningPick={dbStatus === 'SETTLED' ? bet.outcome : null}
+          currentUserId={currentUserId ?? null}
         />
       ) : null}
 
       {showSubmissionStatus ? (
         <View className="mt-3 flex-row items-center gap-3 rounded-xl border border-border bg-surface-light px-3 py-2.5">
           <View className="min-w-0 flex-1">
-            <Text className="text-sm font-semibold text-white">{submittedCount}/2 submitted</Text>
+            <Text className="text-sm font-semibold text-white">
+              {submittedCount}/{totalParticipants} submitted
+            </Text>
             {mySubmission ? (
               <Text className="mt-0.5 text-xs font-medium text-primary" numberOfLines={1}>
                 ✓ You reported &ldquo;{mySubmission.selected_option}&rdquo;
               </Text>
             ) : null}
-          </View>
-          <View className="flex-row items-center gap-2.5">
-            <SubmissionAvatar
-              uri={bet.offered_by_profile?.avatar_url}
-              fallback={offererName}
-              submitted={offererSubmitted}
-            />
-            <SubmissionAvatar
-              uri={bet.accepted_by_profile?.avatar_url}
-              fallback={acceptorName}
-              submitted={acceptorSubmitted}
-            />
           </View>
         </View>
       ) : null}
@@ -187,7 +193,9 @@ function BetActivityCard({
       <View className="mt-3 flex-row flex-wrap items-center justify-between gap-x-3 gap-y-2">
         <View className="flex-row items-center gap-1.5">
           <Coins size={20} color={colors.chipsIcon} weight="fill" />
-          <Text className="text-base font-semibold text-white">{formatStakeChips(bet.stake)}</Text>
+          <Text className="text-base font-semibold text-white">
+            {formatStakeChips(bet.stake)} · pool {pool.toLocaleString('en-US')}
+          </Text>
         </View>
 
         {countdown ? (
@@ -197,12 +205,25 @@ function BetActivityCard({
           </View>
         ) : null}
 
-        {dbStatus === 'SETTLED' && winnerName ? (
+        {dbStatus === 'SETTLED' && bet.outcome ? (
           <View className="flex-row items-center gap-1.5">
             <Trophy size={18} color={colors.primary} weight="fill" />
             <Text className="text-sm font-semibold text-primary">
-              {winnerName} +{(2 * bet.stake).toLocaleString('en-US')}
+              {bet.outcome.toUpperCase()}
+              {perWinnerPayout > 0
+                ? ` · +${perWinnerPayout.toLocaleString('en-US')}${
+                    winningStakes.length > 1 ? ' each' : ''
+                  }`
+                : ''}
+              {currentUserWon ? ' · you won' : ''}
             </Text>
+          </View>
+        ) : null}
+
+        {dbStatus === 'VOID' ? (
+          <View className="flex-row items-center gap-1.5">
+            <Warning size={18} color={colors.textMuted} weight="fill" />
+            <Text className="text-sm font-semibold text-text-muted">Voided · stakes refunded</Text>
           </View>
         ) : null}
 
@@ -219,7 +240,7 @@ function BetActivityCard({
       {showAcceptHint ? (
         <View className="mt-3 flex-row items-center justify-center gap-2 rounded-xl border border-primary/30 bg-primary/10 py-3">
           <ArrowRight size={18} color={colors.primary} weight="bold" />
-          <Text className="text-sm font-semibold text-primary">Swipe to accept</Text>
+          <Text className="text-sm font-semibold text-primary">Swipe to join</Text>
         </View>
       ) : null}
 
@@ -266,147 +287,118 @@ function BetActivityCard({
   );
 }
 
-function getOppositeOption(bet: BetWithProfiles): string | null {
-  const opts = Array.isArray(bet.options) ? (bet.options as unknown[]) : [];
-  const offered = bet.offered_pick?.trim().toLowerCase();
-  const candidate = opts.find((o) => typeof o === 'string' && o.trim().toLowerCase() !== offered);
-  return typeof candidate === 'string' ? candidate : null;
+function groupStakesByPick(
+  options: string[],
+  stakes: BetStakeWithProfile[],
+): Record<string, BetStakeWithProfile[]> {
+  const out: Record<string, BetStakeWithProfile[]> = {};
+  for (const option of options) out[option] = [];
+  for (const stake of stakes) {
+    const key = options.find((o) => o.trim().toLowerCase() === stake.pick.trim().toLowerCase());
+    if (key) out[key].push(stake);
+  }
+  return out;
 }
 
-function PickPill({ label, variant }: { label: string; variant: 'primary' | 'error' | 'ghost' }) {
-  const containerClass =
-    variant === 'primary'
-      ? 'border-primary bg-primary/15'
-      : variant === 'error'
-        ? 'border-error bg-error/15'
-        : 'border-border bg-surface-light opacity-60';
-  const textClass =
-    variant === 'primary' ? 'text-primary' : variant === 'error' ? 'text-error' : 'text-text-muted';
-  return (
-    <View className={`rounded-full border-2 px-4 py-1 ${containerClass}`}>
-      <Text className={`text-sm font-bold ${textClass}`}>{label.toUpperCase()}</Text>
-    </View>
-  );
-}
-
-function PicksMatchup({
-  offererName,
-  offererAvatar,
-  offererPick,
-  offererIsWinner,
-  acceptorName,
-  acceptorAvatar,
-  acceptorPick,
-  acceptorIsWinner,
-  oppositePickHint,
-  isOpen,
+function PoolTally({
+  options,
+  stakesByPick,
+  winningPick,
+  currentUserId,
 }: {
-  offererName: string;
-  offererAvatar?: string | null;
-  offererPick: string;
-  offererIsWinner: boolean;
-  acceptorName: string;
-  acceptorAvatar?: string | null;
-  acceptorPick: string | null;
-  acceptorIsWinner: boolean;
-  oppositePickHint: string | null;
-  isOpen: boolean;
+  options: string[];
+  stakesByPick: Record<string, BetStakeWithProfile[]>;
+  winningPick: string | null;
+  currentUserId: string | null;
 }) {
-  const acceptorSlotEmpty = isOpen || !acceptorPick;
+  if (options.length === 0) return null;
   return (
-    <View className="mt-4 flex-row items-center gap-3">
-      <PlayerSide
-        name={offererName}
-        avatarUri={offererAvatar}
-        pick={offererPick}
-        pickVariant="primary"
-        isWinner={offererIsWinner}
-        dim={acceptorIsWinner}
-      />
-
-      <View className="items-center">
-        <Text className="text-[10px] font-bold tracking-widest text-text-muted">VS</Text>
-      </View>
-
-      {acceptorSlotEmpty ? (
-        <PlayerSide
-          name="Open"
-          avatarUri={null}
-          pick={oppositePickHint ?? '—'}
-          pickVariant="ghost"
-          isWinner={false}
-          dim={false}
-          ghost
-        />
-      ) : (
-        <PlayerSide
-          name={acceptorName}
-          avatarUri={acceptorAvatar}
-          pick={acceptorPick ?? '—'}
-          pickVariant="error"
-          isWinner={acceptorIsWinner}
-          dim={offererIsWinner}
-        />
-      )}
+    <View className="mt-3 flex-row items-stretch gap-2">
+      {options.map((option, idx) => {
+        const list = stakesByPick[option] ?? [];
+        const tone = idx === 0 ? 'primary' : 'error';
+        const isWinner =
+          !!winningPick && option.trim().toLowerCase() === winningPick.trim().toLowerCase();
+        const youOnThisSide = !!currentUserId && list.some((s) => s.user_id === currentUserId);
+        return (
+          <PoolSide
+            key={option}
+            label={option}
+            count={list.length}
+            stakes={list}
+            tone={tone}
+            isWinner={isWinner}
+            youOnThisSide={youOnThisSide}
+          />
+        );
+      })}
     </View>
   );
 }
 
-function PlayerSide({
-  name,
-  avatarUri,
-  pick,
-  pickVariant,
+function PoolSide({
+  label,
+  count,
+  stakes,
+  tone,
   isWinner,
-  dim,
-  ghost,
+  youOnThisSide,
 }: {
-  name: string;
-  avatarUri?: string | null;
-  pick: string;
-  pickVariant: 'primary' | 'error' | 'ghost';
+  label: string;
+  count: number;
+  stakes: BetStakeWithProfile[];
+  tone: 'primary' | 'error';
   isWinner: boolean;
-  dim: boolean;
-  ghost?: boolean;
+  youOnThisSide: boolean;
 }) {
+  const borderClass = isWinner
+    ? 'border-primary'
+    : tone === 'primary'
+      ? 'border-border'
+      : 'border-border';
+  const labelClass = tone === 'primary' ? 'text-primary' : 'text-error';
+  const bgClass = isWinner ? 'bg-primary/10' : 'bg-surface-light';
   return (
-    <View className={`flex-1 items-center gap-2 ${dim ? 'opacity-50' : ''}`}>
-      <View className="relative">
-        <Avatar
-          uri={avatarUri}
-          fallback={ghost ? '?' : name}
-          size="lg"
-          className={ghost ? 'opacity-40' : ''}
-        />
-        {isWinner ? (
-          <View className="absolute -right-1.5 -top-1.5 h-7 w-7 items-center justify-center rounded-full border-2 border-surface bg-primary">
-            <Trophy size={14} color="#ffffff" weight="fill" />
-          </View>
-        ) : null}
+    <View className={`min-w-0 flex-1 rounded-xl border-2 ${borderClass} ${bgClass} px-3 py-2.5`}>
+      <View className="flex-row items-center justify-between">
+        <Text
+          className={`text-sm font-bold uppercase tracking-wide ${labelClass}`}
+          numberOfLines={1}
+        >
+          {label}
+        </Text>
+        {isWinner ? <Trophy size={14} color={colors.primary} weight="fill" /> : null}
       </View>
-      <Text className="text-center text-xs font-semibold text-text-secondary" numberOfLines={1}>
-        {name}
+      <Text className="mt-1 text-xs text-text-secondary">
+        {count === 0 ? 'no backers' : count === 1 ? '1 backer' : `${count} backers`}
+        {youOnThisSide ? ' · you' : ''}
       </Text>
-      <PickPill label={pick} variant={pickVariant} />
+      {count > 0 ? <StakeAvatars stakes={stakes} /> : null}
     </View>
   );
 }
 
-function SubmissionAvatar({
-  uri,
-  fallback,
-  submitted,
-}: {
-  uri?: string | null;
-  fallback: string;
-  submitted: boolean;
-}) {
+function StakeAvatars({ stakes }: { stakes: BetStakeWithProfile[] }) {
+  const shown = stakes.slice(0, 3);
+  const overflow = stakes.length - shown.length;
   return (
-    <View className="relative">
-      <Avatar uri={uri} fallback={fallback} size="sm" className={submitted ? '' : 'opacity-40'} />
-      {submitted ? (
-        <View className="absolute -bottom-0.5 -right-0.5 h-4 w-4 items-center justify-center rounded-full border-2 border-surface-light bg-primary">
-          <Check size={8} color="#ffffff" weight="bold" />
+    <View className="mt-2 flex-row items-center">
+      {shown.map((stake, idx) => (
+        <View
+          key={stake.id}
+          className={`rounded-full border-2 border-surface ${idx > 0 ? '-ml-2' : ''}`}
+          style={{ zIndex: 10 - idx }}
+        >
+          <Avatar
+            uri={stake.user?.avatar_url}
+            fallback={stake.user?.display_name ?? '?'}
+            size="sm"
+          />
+        </View>
+      ))}
+      {overflow > 0 ? (
+        <View className="-ml-2 h-8 w-8 items-center justify-center rounded-full border-2 border-surface bg-surface-light">
+          <Text className="text-[10px] font-semibold text-text-secondary">+{overflow}</Text>
         </View>
       ) : null}
     </View>
@@ -415,13 +407,13 @@ function SubmissionAvatar({
 
 interface ActivityFeedItemProps {
   item: ActivityItem;
-  /** Current user's id — used to gate the Accept swipe so users can't accept their own offers. */
+  /** Current user's id — used to gate joining (can't join own bet, can't join twice). */
   currentUserId?: string | null;
   /** Current user's room role — gates the attestor "Resolve dispute" action. */
   currentUserRole?: 'PLAYER' | 'ATTESTOR' | 'ADMIN' | string | null;
-  /** When false, accept affordance is hidden (e.g., session ended). */
+  /** When false, join affordance is hidden (e.g., session ended). */
   roomActive?: boolean;
-  /** Room id, required by the accept mutation for cache invalidation. */
+  /** Room id, required by the join mutation for cache invalidation. */
   roomId?: string;
 }
 
@@ -433,19 +425,29 @@ export function ActivityFeedItem({
   roomId,
 }: ActivityFeedItemProps) {
   if (item.type === 'bet') {
-    const canAccept =
+    const stakes = item.bet.stakes ?? [];
+    const alreadyStaked = !!currentUserId && stakes.some((s) => s.user_id === currentUserId);
+    const subjectDisallowed =
+      !!currentUserId &&
+      item.bet.subject_user_id === currentUserId &&
+      !!item.bet.subject_positive_option;
+    // We still show the swipe gate for subjects — the accept screen will lock
+    // the disallowed tile. Only hide it if they literally can't join at all,
+    // which never happens since the allowed side is always open.
+    void subjectDisallowed;
+    const canJoin =
       roomActive &&
       !!roomId &&
       !!currentUserId &&
       item.bet.status === 'OPEN' &&
-      item.bet.offered_by !== currentUserId &&
+      !alreadyStaked &&
       getEffectiveBetStatus(item.bet) !== 'EXPIRED';
 
     const card = (
       <BetActivityCard
         bet={item.bet}
         timestamp={item.timestamp}
-        showAcceptHint={canAccept}
+        showAcceptHint={canJoin}
         currentUserId={currentUserId}
         currentUserRole={currentUserRole}
         roomActive={roomActive}
@@ -453,7 +455,7 @@ export function ActivityFeedItem({
       />
     );
 
-    if (canAccept) {
+    if (canJoin) {
       return <SwipeToAcceptRow bet={item.bet}>{card}</SwipeToAcceptRow>;
     }
     return card;

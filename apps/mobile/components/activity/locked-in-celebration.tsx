@@ -14,24 +14,37 @@ import type { BetWithProfiles } from '@/hooks/use-activity-feed';
 
 type Props = {
   bet: BetWithProfiles | null;
+  currentUserId: string | null;
   onDismiss: () => void;
 };
 
 const AUTO_DISMISS_MS = 3500;
 
-export function LockedInCelebration({ bet, onDismiss }: Props) {
+export function LockedInCelebration({ bet, currentUserId, onDismiss }: Props) {
   const visible = bet !== null;
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onDismiss}>
-      {bet ? <LockedInContent bet={bet} onDismiss={onDismiss} /> : null}
+      {bet ? (
+        <LockedInContent bet={bet} currentUserId={currentUserId} onDismiss={onDismiss} />
+      ) : null}
     </Modal>
   );
 }
 
-function LockedInContent({ bet, onDismiss }: { bet: BetWithProfiles; onDismiss: () => void }) {
-  const offererName = bet.offered_by_profile?.display_name ?? 'Someone';
-  const acceptorName = bet.accepted_by_profile?.display_name ?? 'Someone';
+function LockedInContent({
+  bet,
+  currentUserId,
+  onDismiss,
+}: {
+  bet: BetWithProfiles;
+  currentUserId: string | null;
+  onDismiss: () => void;
+}) {
+  const subjectName = bet.subject_profile?.display_name ?? null;
+  const myStake = currentUserId
+    ? ((bet.stakes ?? []).find((s) => s.user_id === currentUserId) ?? null)
+    : null;
 
   const iconOpacity = useSharedValue(0);
   const iconScale = useSharedValue(0.6);
@@ -117,9 +130,11 @@ function LockedInContent({ bet, onDismiss }: { bet: BetWithProfiles; onDismiss: 
         <Text className="mt-6 text-3xl font-black uppercase tracking-wider text-white">
           You&apos;re locked in
         </Text>
-        <Text className="mt-2 text-base text-text-secondary">
-          {offererName} vs {acceptorName}
-        </Text>
+        {subjectName ? (
+          <Text className="mt-2 text-base text-text-secondary" numberOfLines={1}>
+            About {subjectName}
+          </Text>
+        ) : null}
 
         <View className="mt-4 flex-row items-center gap-2 rounded-full bg-warning/15 px-4 py-2">
           <Coins size={20} color={colors.chipsIcon} weight="fill" />
@@ -127,6 +142,14 @@ function LockedInContent({ bet, onDismiss }: { bet: BetWithProfiles; onDismiss: 
             {bet.stake.toLocaleString('en-US')} chips
           </Text>
         </View>
+
+        {myStake ? (
+          <View className="mt-2 rounded-full border-2 border-primary bg-primary/10 px-4 py-1">
+            <Text className="text-sm font-bold text-primary">
+              Backing &ldquo;{myStake.pick}&rdquo;
+            </Text>
+          </View>
+        ) : null}
 
         <Text
           className="mt-4 max-w-[300px] text-center text-sm text-text-secondary"

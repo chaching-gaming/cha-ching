@@ -19,6 +19,7 @@ import { Avatar } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { KeyboardAwareScrollView } from '@/components/form/keyboard-aware-scroll-view';
 import { ScreenHeader } from '@/components/ui/screen-header';
+import { useAuth } from '@/providers/auth';
 import { useForm } from '@/hooks/use-form';
 import { useCreateBet } from '@/hooks/use-create-bet';
 import { useQuestionTemplates } from '@/hooks/use-question-templates';
@@ -49,6 +50,7 @@ const createBetSchema = z
       .refine((v) => parseInt(v, 10) > 0, 'Enter a positive stake (whole chips)'),
     expiryIndex: z.number(),
     offeredPick: z.string().min(1, 'Pick your side'),
+    subjectPositiveOption: z.string(),
   })
   .refine(
     (data) => data.templateId !== null || (data.writeInOpen && data.writeInBody.trim().length > 0),
@@ -74,6 +76,7 @@ export default function CreateBetScreen() {
   const { id: roomId } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const safeInsets = useSafeAreaInsets();
+  const { session: authSession } = useAuth();
   const { data: room, isLoading: roomLoading } = useRoomDetail(roomId);
   const { data: members, isLoading: membersLoading } = useRoomMembers(roomId);
   const { data: templates, isLoading: templatesLoading } = useQuestionTemplates('golf');
@@ -88,9 +91,12 @@ export default function CreateBetScreen() {
       templateId: null as string | null,
       writeInOpen: false,
       writeInBody: '',
-      stake: '10',
-      expiryIndex: 0,
+      stake: '200',
+      // Default to 5m — matches a single hole playing out, the most common
+      // casual-bet timescale.
+      expiryIndex: 1,
       offeredPick: '',
+      subjectPositiveOption: '',
     },
     validators: {
       onChange: createBetSchema,
@@ -120,12 +126,21 @@ export default function CreateBetScreen() {
           p_stake: stakeNum,
           p_expires_at: expiresAt,
           p_offered_pick: value.offeredPick,
+          p_subject_user_id: member.user_id!,
+          p_subject_positive_option: value.subjectPositiveOption || null,
           p_template_id: tpl?.id ?? null,
           p_subject_display_name: tpl ? name : null,
         });
         setReviewOpen(false);
         setReviewPayload(null);
-        router.replace(`/(tabs)/rooms/${roomId}`);
+        // Pop back to the room screen that was already on the stack. Using
+        // replace() here would leave the original [id] frame underneath and
+        // duplicate it, so back-nav would loop between two [id] entries.
+        if (router.canGoBack()) {
+          router.back();
+        } else {
+          router.replace(`/(tabs)/rooms/${roomId}`);
+        }
       } catch (err) {
         formApi.setErrorMap({
           onSubmit: { fields: {}, form: getRpcErrorMessage(err) },
@@ -378,7 +393,7 @@ export default function CreateBetScreen() {
           <View className="mb-5">
             <Text className="mb-2 text-base font-semibold text-white">Your pick</Text>
             <Text className="mb-2 text-sm text-text-secondary">
-              Pick the side you think will happen. The other player will be assigned the opposite.
+              Pick the side you&rsquo;re backing. Anyone in the room can join either side.
             </Text>
             <form.AppField name="offeredPick">
               {(field) => (
@@ -396,6 +411,45 @@ export default function CreateBetScreen() {
               )}
             </form.AppField>
           </View>
+
+          {/* Subject's allowed side — only needed for write-in bets where the
+              creator isn't the subject; template bets derive this server-side. */}
+          <form.Subscribe
+            selector={(state) => [state.values.templateId, state.values.memberId] as const}
+          >
+            {([templateId, memberId]) => {
+              const isWriteIn = templateId === null;
+              const subjectIsSelf = !!memberId && memberId === authSession?.user.id;
+              if (!isWriteIn || subjectIsSelf || !memberId) return null;
+              const subjectMember = members?.find((m) => m.user_id === memberId) ?? null;
+              const subjectName = subjectMember ? memberDisplayName(subjectMember) : 'this player';
+              return (
+                <View className="mb-5">
+                  <Text className="mb-2 text-base font-semibold text-white">
+                    If {subjectName} joins
+                  </Text>
+                  <Text className="mb-2 text-sm text-text-secondary">
+                    They can only back one side — the one they&rsquo;d want to be true regardless of
+                    the bet.
+                  </Text>
+                  <form.AppField name="subjectPositiveOption">
+                    {(field) => (
+                      <field.OptionField
+                        layout="wrap"
+                        className="mb-0"
+                        disabled={!sessionActive}
+                        options={BINARY_OPTIONS.map((opt) => ({
+                          id: `subject-${opt}`,
+                          label: opt,
+                          value: opt,
+                        }))}
+                      />
+                    )}
+                  </form.AppField>
+                </View>
+              );
+            }}
+          </form.Subscribe>
 
           {/* Stake */}
           <View className="mb-5">

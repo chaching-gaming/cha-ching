@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, Text, TouchableOpacity, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -8,8 +8,8 @@ import { colors } from '@/constants/colors';
 import { Avatar } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { ScreenHeader } from '@/components/ui/screen-header';
-import { useAcceptBet } from '@/hooks/use-accept-bet';
 import { useBetDetail } from '@/hooks/use-activity-feed';
+import { useJoinBet } from '@/hooks/use-join-bet';
 import { useQuestionTemplates } from '@/hooks/use-question-templates';
 import { useAuth } from '@/providers/auth';
 import { getRpcErrorMessage } from '@/hooks/use-rooms';
@@ -22,7 +22,7 @@ export default function AcceptBetScreen() {
   const { session } = useAuth();
   const { data: bet, isLoading } = useBetDetail(betId ?? '');
   const { data: templates } = useQuestionTemplates('golf');
-  const acceptBet = useAcceptBet();
+  const joinBet = useJoinBet();
 
   const options = useMemo(() => {
     if (!bet) return [] as string[];
@@ -30,23 +30,31 @@ export default function AcceptBetScreen() {
     return raw.filter((o): o is string => typeof o === 'string' && o.trim().length > 0);
   }, [bet]);
 
-  const oppositePick = useMemo(() => {
-    if (!bet?.offered_pick) return null;
-    const offered = bet.offered_pick.trim().toLowerCase();
-    const candidate = options.find((o) => o.trim().toLowerCase() !== offered);
-    return candidate ?? null;
-  }, [bet?.offered_pick, options]);
+  const tally = useMemo(() => {
+    const out: Record<string, number> = {};
+    if (!bet) return out;
+    for (const stake of bet.stakes ?? []) {
+      const key = stake.pick;
+      out[key] = (out[key] ?? 0) + 1;
+    }
+    return out;
+  }, [bet]);
+
+  const currentUserStake = useMemo(() => {
+    if (!bet || !session?.user.id) return null;
+    return bet.stakes?.find((s) => s.user_id === session.user.id) ?? null;
+  }, [bet, session?.user.id]);
+
+  const isSubject =
+    !!bet?.subject_user_id && !!session?.user.id && bet.subject_user_id === session.user.id;
+  const subjectAllowedOption = bet?.subject_positive_option ?? null;
 
   const [selected, setSelected] = useState<string | null>(null);
 
-  // Pre-select the opposite pick once the bet loads.
-  useEffect(() => {
-    if (!selected && oppositePick) setSelected(oppositePick);
-  }, [oppositePick, selected]);
-
+  const subjectName = bet?.subject_profile?.display_name ?? 'the subject';
   const offererName = bet?.offered_by_profile?.display_name ?? 'Someone';
-  const isOwnBet = !!session?.user.id && bet?.offered_by === session.user.id;
   const isNotOpen = !!bet && bet.status !== 'OPEN';
+  const alreadyJoined = !!currentUserStake;
 
   const template = useMemo(() => {
     if (!bet?.template_id || !templates) return null;
@@ -57,7 +65,7 @@ export default function AcceptBetScreen() {
     if (!bet || !selected) return;
     Alert.alert(
       'Lock in bet?',
-      `You'll take "${selected}" for ${bet.stake.toLocaleString('en-US')} chips.`,
+      `You'll back "${selected}" for ${bet.stake.toLocaleString('en-US')} chips.`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -65,7 +73,7 @@ export default function AcceptBetScreen() {
           style: 'default',
           onPress: async () => {
             try {
-              await acceptBet.mutateAsync({
+              await joinBet.mutateAsync({
                 p_bet_id: bet.id,
                 p_pick: selected,
                 roomId: bet.room_id,
@@ -78,7 +86,7 @@ export default function AcceptBetScreen() {
         },
       ],
     );
-  }, [acceptBet, bet, router, selected]);
+  }, [joinBet, bet, router, selected]);
 
   if (isLoading) {
     return (
@@ -96,23 +104,29 @@ export default function AcceptBetScreen() {
     );
   }
 
-  const blockingMessage = isOwnBet
-    ? 'You posted this bet — you can\u2019t accept your own wager.'
+  const blockingMessage = alreadyJoined
+    ? `You already backed "${currentUserStake?.pick}" on this bet.`
     : isNotOpen
       ? 'This bet is no longer open.'
       : null;
 
   return (
     <View className="flex-1 bg-background">
-      <ScreenHeader title="Accept Bet" showBack />
+      <ScreenHeader title="Join Bet" showBack />
 
       <View className="flex-1 items-center px-6 pt-6">
-        {/* Player (bet subject) */}
-        <Avatar uri={bet.offered_by_profile?.avatar_url} fallback={offererName} size="xl" />
+        {/* Subject is the hero — the player the bet is about. */}
+        <Avatar
+          uri={bet.subject_profile?.avatar_url ?? bet.offered_by_profile?.avatar_url}
+          fallback={subjectName}
+          size="xl"
+        />
         <Text className="mt-3 text-lg font-bold text-white" numberOfLines={1}>
-          {offererName}
+          {subjectName}
         </Text>
-        <Text className="text-sm text-text-secondary">posted this bet</Text>
+        <Text className="text-sm text-text-secondary" numberOfLines={1}>
+          posted by {offererName}
+        </Text>
 
         {/* Bet card — template icon for template bets, quote box for write-ins */}
         <View className="mt-6 w-full items-center rounded-3xl border border-border bg-surface px-6 py-5">
@@ -156,13 +170,15 @@ export default function AcceptBetScreen() {
 
         {/* Pick */}
         <Text className="mt-8 mb-3 text-xs font-bold uppercase tracking-widest text-text-muted">
-          Pick your answer
+          Pick your side
         </Text>
         <View className="w-full flex-row gap-3">
           {options.map((option) => {
-            const isOfferer = option === bet.offered_pick;
+            const count = tally[option] ?? 0;
+            const subjectDisallowed =
+              isSubject && subjectAllowedOption !== null && option !== subjectAllowedOption;
             const isSelected = option === selected;
-            const disabled = isOfferer || !!blockingMessage;
+            const disabled = subjectDisallowed || !!blockingMessage;
             return (
               <TouchableOpacity
                 key={option}
@@ -170,41 +186,42 @@ export default function AcceptBetScreen() {
                 disabled={disabled}
                 activeOpacity={0.75}
                 className={`flex-1 items-center justify-center rounded-2xl border-2 py-6 ${
-                  isOfferer
+                  subjectDisallowed
                     ? 'border-border bg-surface opacity-40'
                     : isSelected
                       ? 'border-primary bg-primary/15'
                       : 'border-border bg-surface'
                 }`}
               >
-                {isOfferer ? (
+                {subjectDisallowed ? (
                   <Lock size={18} color={colors.textMuted} weight="bold" />
                 ) : isSelected ? (
                   <Check size={18} color={colors.primary} weight="bold" />
                 ) : null}
                 <Text
                   className={`mt-1 text-xl font-bold ${
-                    isOfferer ? 'text-text-muted' : isSelected ? 'text-primary' : 'text-white'
+                    subjectDisallowed
+                      ? 'text-text-muted'
+                      : isSelected
+                        ? 'text-primary'
+                        : 'text-white'
                   }`}
                 >
                   {option}
                 </Text>
-                {isSelected && !isOfferer ? (
-                  <Text className="mt-0.5 text-[11px] font-semibold text-primary">Your pick</Text>
-                ) : null}
-                {isOfferer ? (
-                  <Text className="mt-0.5 text-[11px] font-semibold text-text-muted">
-                    {offererName}&rsquo;s pick
-                  </Text>
-                ) : null}
+                <Text className="mt-0.5 text-[11px] font-semibold text-text-muted">
+                  {count === 0 ? 'no backers' : count === 1 ? '1 backer' : `${count} backers`}
+                </Text>
               </TouchableOpacity>
             );
           })}
         </View>
 
-        <Text className="mt-3 text-center text-xs text-text-muted">
-          {offererName} picked &ldquo;{bet.offered_pick ?? '—'}&rdquo;. You take the other side.
-        </Text>
+        {isSubject && subjectAllowedOption ? (
+          <Text className="mt-3 max-w-[300px] text-center text-xs text-text-muted">
+            This bet is about you. You can only back &ldquo;{subjectAllowedOption}&rdquo;.
+          </Text>
+        ) : null}
 
         {blockingMessage ? (
           <View className="mt-4 rounded-xl bg-error/10 px-4 py-3">
@@ -220,7 +237,7 @@ export default function AcceptBetScreen() {
       >
         <Button
           onPress={handleLockIn}
-          loading={acceptBet.isPending}
+          loading={joinBet.isPending}
           disabled={!selected || !!blockingMessage}
           size="lg"
         >

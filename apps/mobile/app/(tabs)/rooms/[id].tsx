@@ -159,7 +159,11 @@ export default function RoomDetailScreen() {
         onDismiss={dismissCelebration}
       />
 
-      <LockedInCelebration bet={lockedInBet} onDismiss={dismissLockedIn} />
+      <LockedInCelebration
+        bet={lockedInBet}
+        currentUserId={authSession?.user.id ?? null}
+        onDismiss={dismissLockedIn}
+      />
 
       {isActive ? (
         <TouchableOpacity

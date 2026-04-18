@@ -42,11 +42,21 @@ function WinnerContent({
   currentUserId: string | null;
   onDismiss: () => void;
 }) {
-  const isMe = bet.winner != null && bet.winner === currentUserId;
-  const winnerProfile =
-    bet.winner === bet.offered_by ? bet.offered_by_profile : bet.accepted_by_profile;
-  const winnerName = winnerProfile?.display_name ?? 'Someone';
-  const payout = 2 * bet.stake;
+  // Derive winners from stakes that matched the outcome; compute per-winner
+  // payout as floor(total_pool / n_winners) — mirrors the server math.
+  const stakes = bet.stakes ?? [];
+  const outcomeKey = bet.outcome?.trim().toLowerCase() ?? '';
+  const winningStakes = stakes.filter((s) => s.pick.trim().toLowerCase() === outcomeKey);
+  const totalPool = stakes.length * (bet.stake ?? 0);
+  const payout = winningStakes.length > 0 ? Math.floor(totalPool / winningStakes.length) : 0;
+  const meWon = !!currentUserId && winningStakes.some((s) => s.user_id === currentUserId);
+  const myStake = currentUserId ? (stakes.find((s) => s.user_id === currentUserId) ?? null) : null;
+  const winnerLabel =
+    winningStakes.length === 0
+      ? 'No winners'
+      : winningStakes.length === 1
+        ? `${winningStakes[0].user?.display_name ?? 'Someone'} won!`
+        : `${winningStakes.length} winners · ${bet.outcome ?? ''}`;
 
   return (
     <Pressable className="flex-1 items-center justify-center bg-black/85" onPress={onDismiss}>
@@ -60,25 +70,32 @@ function WinnerContent({
         <Text className="text-sm font-bold tracking-[4px] text-primary">WINNER</Text>
 
         <View className="relative">
-          <Avatar uri={winnerProfile?.avatar_url} fallback={winnerName} size="xl" />
+          <Avatar
+            uri={myStake?.user?.avatar_url ?? winningStakes[0]?.user?.avatar_url}
+            fallback={myStake?.user?.display_name ?? winningStakes[0]?.user?.display_name ?? '?'}
+            size="xl"
+          />
           <View className="absolute -right-2 -top-2 h-8 w-8 items-center justify-center rounded-full border-2 border-background bg-primary">
             <Trophy size={16} color="#ffffff" weight="fill" />
           </View>
         </View>
 
         <Text className="text-center text-3xl font-bold text-white">
-          {isMe ? 'You won!' : `${winnerName} won!`}
+          {meWon ? 'You won!' : winnerLabel}
         </Text>
 
-        <View className="rounded-full bg-primary/15 px-5 py-2">
-          <Text className="text-xl font-bold text-primary">
-            +{payout.toLocaleString('en-US')} chips
-          </Text>
-        </View>
+        {payout > 0 ? (
+          <View className="rounded-full bg-primary/15 px-5 py-2">
+            <Text className="text-xl font-bold text-primary">
+              +{payout.toLocaleString('en-US')} chips
+              {winningStakes.length > 1 ? ' each' : ''}
+            </Text>
+          </View>
+        ) : null}
 
         <Text
           className="mt-1 max-w-[280px] text-center text-sm text-text-secondary"
-          numberOfLines={2}
+          numberOfLines={3}
         >
           {bet.question}
         </Text>

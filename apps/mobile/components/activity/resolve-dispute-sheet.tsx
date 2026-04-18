@@ -26,17 +26,21 @@ export function ResolveDisputeSheet({ visible, onClose, bet, roomId }: Props) {
     return raw.filter((o): o is string => typeof o === 'string' && o.trim().length > 0);
   }, [bet.options]);
 
-  const offererName = bet.offered_by_profile?.display_name ?? 'Offerer';
-  const acceptorName = bet.accepted_by_profile?.display_name ?? 'Acceptor';
+  // Group submissions by the option they chose, so the attestor sees "4 said
+  // Yes · 2 said No" rather than the old fixed two-row offerer/acceptor view.
+  const submissionsByOption = useMemo(() => {
+    const out: Record<string, number> = {};
+    for (const option of options) out[option] = 0;
+    for (const sub of bet.outcome_submissions ?? []) {
+      const key = options.find(
+        (o) => o.trim().toLowerCase() === sub.selected_option.trim().toLowerCase(),
+      );
+      if (key) out[key] = (out[key] ?? 0) + 1;
+    }
+    return out;
+  }, [bet.outcome_submissions, options]);
 
-  const offererSubmission = useMemo(
-    () => bet.outcome_submissions.find((s) => s.user_id === bet.offered_by),
-    [bet.outcome_submissions, bet.offered_by],
-  );
-  const acceptorSubmission = useMemo(
-    () => bet.outcome_submissions.find((s) => s.user_id === bet.accepted_by),
-    [bet.outcome_submissions, bet.accepted_by],
-  );
+  const totalSubmissions = bet.outcome_submissions?.length ?? 0;
 
   const handleClose = useCallback(() => {
     if (resolveDispute.isPending) return;
@@ -104,24 +108,27 @@ export function ResolveDisputeSheet({ visible, onClose, bet, roomId }: Props) {
           <Text className="mb-1 text-sm font-medium text-text-secondary">Question</Text>
           <Text className="mb-4 text-base leading-6 text-white">{bet.question}</Text>
 
-          <Text className="mb-2 text-sm font-medium text-text-secondary">What they reported</Text>
+          <Text className="mb-2 text-sm font-medium text-text-secondary">
+            Participants reported ({totalSubmissions})
+          </Text>
           <View className="mb-5 gap-2">
-            <View className="flex-row items-center justify-between rounded-xl border border-border bg-surface-light px-3 py-2.5">
-              <Text className="text-sm font-semibold text-white" numberOfLines={1}>
-                {offererName}
-              </Text>
-              <Text className="text-sm font-bold text-primary" numberOfLines={1}>
-                {offererSubmission?.selected_option ?? '—'}
-              </Text>
-            </View>
-            <View className="flex-row items-center justify-between rounded-xl border border-border bg-surface-light px-3 py-2.5">
-              <Text className="text-sm font-semibold text-white" numberOfLines={1}>
-                {acceptorName}
-              </Text>
-              <Text className="text-sm font-bold text-error" numberOfLines={1}>
-                {acceptorSubmission?.selected_option ?? '—'}
-              </Text>
-            </View>
+            {options.map((option, idx) => {
+              const count = submissionsByOption[option] ?? 0;
+              const tone = idx === 0 ? 'text-primary' : 'text-error';
+              return (
+                <View
+                  key={option}
+                  className="flex-row items-center justify-between rounded-xl border border-border bg-surface-light px-3 py-2.5"
+                >
+                  <Text className="text-sm font-semibold text-white" numberOfLines={1}>
+                    {option}
+                  </Text>
+                  <Text className={`text-sm font-bold ${tone}`} numberOfLines={1}>
+                    {count === 0 ? 'no votes' : count === 1 ? '1 vote' : `${count} votes`}
+                  </Text>
+                </View>
+              );
+            })}
           </View>
 
           <Text className="mb-2 text-sm font-medium text-text-secondary">Your verdict</Text>

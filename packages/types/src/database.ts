@@ -28,6 +28,48 @@ export type Database = {
   };
   public: {
     Tables: {
+      bet_stakes: {
+        Row: {
+          bet_id: string;
+          created_at: string | null;
+          id: string;
+          pick: string;
+          stake: number;
+          user_id: string;
+        };
+        Insert: {
+          bet_id: string;
+          created_at?: string | null;
+          id?: string;
+          pick: string;
+          stake: number;
+          user_id: string;
+        };
+        Update: {
+          bet_id?: string;
+          created_at?: string | null;
+          id?: string;
+          pick?: string;
+          stake?: number;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'bet_stakes_bet_id_fkey';
+            columns: ['bet_id'];
+            isOneToOne: false;
+            referencedRelation: 'bets';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'bet_stakes_user_id_fkey';
+            columns: ['user_id'];
+            isOneToOne: false;
+            referencedRelation: 'profiles';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
       bets: {
         Row: {
           accepted_by: string | null;
@@ -45,6 +87,8 @@ export type Database = {
           settlement_method: string | null;
           stake: number;
           status: string | null;
+          subject_positive_option: string | null;
+          subject_user_id: string | null;
           template_id: string | null;
           winner: string | null;
         };
@@ -64,6 +108,8 @@ export type Database = {
           settlement_method?: string | null;
           stake: number;
           status?: string | null;
+          subject_positive_option?: string | null;
+          subject_user_id?: string | null;
           template_id?: string | null;
           winner?: string | null;
         };
@@ -83,6 +129,8 @@ export type Database = {
           settlement_method?: string | null;
           stake?: number;
           status?: string | null;
+          subject_positive_option?: string | null;
+          subject_user_id?: string | null;
           template_id?: string | null;
           winner?: string | null;
         };
@@ -106,6 +154,13 @@ export type Database = {
             columns: ['room_id'];
             isOneToOne: false;
             referencedRelation: 'rooms';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'bets_subject_user_id_fkey';
+            columns: ['subject_user_id'];
+            isOneToOne: false;
+            referencedRelation: 'profiles';
             referencedColumns: ['id'];
           },
           {
@@ -283,6 +338,7 @@ export type Database = {
           question_text: string;
           short_label: string;
           slug: string;
+          subject_positive_option: string | null;
         };
         Insert: {
           category?: string;
@@ -292,6 +348,7 @@ export type Database = {
           question_text: string;
           short_label: string;
           slug: string;
+          subject_positive_option?: string | null;
         };
         Update: {
           category?: string;
@@ -301,6 +358,7 @@ export type Database = {
           question_text?: string;
           short_label?: string;
           slug?: string;
+          subject_positive_option?: string | null;
         };
         Relationships: [];
       };
@@ -410,6 +468,8 @@ export type Database = {
           settlement_method: string | null;
           stake: number;
           status: string | null;
+          subject_positive_option: string | null;
+          subject_user_id: string | null;
           template_id: string | null;
           winner: string | null;
         };
@@ -429,6 +489,8 @@ export type Database = {
           p_room_id: string;
           p_stake: number;
           p_subject_display_name?: string;
+          p_subject_positive_option?: string;
+          p_subject_user_id: string;
           p_template_id?: string;
         };
         Returns: {
@@ -447,6 +509,8 @@ export type Database = {
           settlement_method: string | null;
           stake: number;
           status: string | null;
+          subject_positive_option: string | null;
+          subject_user_id: string | null;
           template_id: string | null;
           winner: string | null;
         };
@@ -501,6 +565,36 @@ export type Database = {
       get_my_room_balance: { Args: { p_room_id: string }; Returns: number };
       is_room_attestor: { Args: { p_room_id: string }; Returns: boolean };
       is_room_member: { Args: { p_room_id: string }; Returns: boolean };
+      join_bet: {
+        Args: { p_bet_id: string; p_pick: string };
+        Returns: {
+          accepted_by: string | null;
+          accepted_pick: string | null;
+          created_at: string | null;
+          expires_at: string | null;
+          id: string;
+          offered_by: string | null;
+          offered_pick: string | null;
+          options: Json;
+          outcome: string | null;
+          question: string;
+          room_id: string;
+          settled_at: string | null;
+          settlement_method: string | null;
+          stake: number;
+          status: string | null;
+          subject_positive_option: string | null;
+          subject_user_id: string | null;
+          template_id: string | null;
+          winner: string | null;
+        };
+        SetofOptions: {
+          from: '*';
+          to: 'bets';
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
       join_room_via_invite: {
         Args: { p_invite_code: string };
         Returns: {
@@ -531,6 +625,7 @@ export type Database = {
           question_text: string;
           short_label: string;
           slug: string;
+          subject_positive_option: string | null;
         }[];
         SetofOptions: {
           from: '*';
@@ -565,6 +660,8 @@ export type Database = {
           settlement_method: string | null;
           stake: number;
           status: string | null;
+          subject_positive_option: string | null;
+          subject_user_id: string | null;
           template_id: string | null;
           winner: string | null;
         };
@@ -593,6 +690,8 @@ export type Database = {
           settlement_method: string | null;
           stake: number;
           status: string | null;
+          subject_positive_option: string | null;
+          subject_user_id: string | null;
           template_id: string | null;
           winner: string | null;
         };

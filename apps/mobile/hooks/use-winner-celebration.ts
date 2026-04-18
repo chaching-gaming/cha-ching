@@ -36,7 +36,15 @@ export function useWinnerCelebration(
     for (const bet of settledBets) {
       if (seenSettled.current.has(bet.id)) continue;
       seenSettled.current.add(bet.id);
-      if (bet.winner && bet.winner === currentUserId) {
+      // Multi-player: current user wins if any of their stakes matched the outcome.
+      const outcomeKey = bet.outcome?.trim().toLowerCase() ?? '';
+      const iWon =
+        !!currentUserId &&
+        !!outcomeKey &&
+        (bet.stakes ?? []).some(
+          (s) => s.user_id === currentUserId && s.pick.trim().toLowerCase() === outcomeKey,
+        );
+      if (iWon) {
         setCelebratingBet(bet);
         return; // Celebrate one at a time; rest sit queued in the seen set.
       }

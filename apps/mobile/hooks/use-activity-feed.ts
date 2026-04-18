@@ -12,14 +12,20 @@ function realtimeTopicToken(): string {
 }
 
 type Bet = Database['public']['Tables']['bets']['Row'];
+type BetStake = Database['public']['Tables']['bet_stakes']['Row'];
 type ChipRequest = Database['public']['Tables']['chip_requests']['Row'];
 type Profile = Database['public']['Tables']['profiles']['Row'];
 export type OutcomeSubmission = Database['public']['Tables']['outcome_submissions']['Row'];
 
+export type BetStakeWithProfile = BetStake & {
+  user: Profile | null;
+};
+
 export type BetWithProfiles = Bet & {
   offered_by_profile: Profile | null;
-  accepted_by_profile: Profile | null;
+  subject_profile: Profile | null;
   outcome_submissions: OutcomeSubmission[];
+  stakes: BetStakeWithProfile[];
 };
 
 export type ChipRequestWithProfile = ChipRequest & {
@@ -43,7 +49,7 @@ export function useRoomBets(roomId: string) {
       const { data, error } = await supabase
         .from('bets')
         .select(
-          '*, offered_by_profile:profiles!bets_offered_by_fkey(*), accepted_by_profile:profiles!bets_accepted_by_fkey(*), outcome_submissions(*)',
+          '*, offered_by_profile:profiles!bets_offered_by_fkey(*), subject_profile:profiles!bets_subject_user_id_fkey(*), outcome_submissions(*), stakes:bet_stakes(*, user:profiles!bet_stakes_user_id_fkey(*))',
         )
         .eq('room_id', roomId)
         .order('created_at', { ascending: false });
@@ -66,7 +72,7 @@ export function useBetDetail(betId: string) {
       const { data, error } = await supabase
         .from('bets')
         .select(
-          '*, offered_by_profile:profiles!bets_offered_by_fkey(*), accepted_by_profile:profiles!bets_accepted_by_fkey(*), outcome_submissions(*)',
+          '*, offered_by_profile:profiles!bets_offered_by_fkey(*), subject_profile:profiles!bets_subject_user_id_fkey(*), outcome_submissions(*), stakes:bet_stakes(*, user:profiles!bet_stakes_user_id_fkey(*))',
         )
         .eq('id', betId)
         .single();
@@ -199,11 +205,22 @@ export function useRealtimeActivityFeed(roomId: string) {
       )
       .subscribe();
 
+    // bet_stakes also has no room_id column; same client-side invalidation.
+    // Drives per-side tallies, subject-rule UI, and "you joined" celebration.
+    const betStakesChannel = supabase
+      .channel(`cc-feed:${roomId}:stakes:${token}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'bet_stakes' }, () => {
+        queryClient.invalidateQueries({ queryKey: roomBetsKey(roomId) });
+        queryClient.invalidateQueries({ queryKey: roomBalanceKey(roomId) });
+      })
+      .subscribe();
+
     return () => {
       void (async () => {
         await supabase.removeChannel(betsChannel);
         await supabase.removeChannel(chipRequestsChannel);
         await supabase.removeChannel(outcomeSubmissionsChannel);
+        await supabase.removeChannel(betStakesChannel);
       })();
     };
   }, [roomId, queryClient]);

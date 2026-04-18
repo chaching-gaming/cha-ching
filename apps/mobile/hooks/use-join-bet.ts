@@ -7,12 +7,12 @@ import { roomBalanceKey, roomBetsKey } from '@/hooks/use-activity-feed';
 
 type Bet = Database['public']['Tables']['bets']['Row'];
 
-export function useAcceptBet() {
+export function useJoinBet() {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async (params: { p_bet_id: string; p_pick: string; roomId: string }) => {
-      const { data, error } = await supabase.rpc('accept_bet', {
+      const { data, error } = await supabase.rpc('join_bet', {
         p_bet_id: params.p_bet_id,
         p_pick: params.p_pick,
       });
@@ -22,7 +22,7 @@ export function useAcceptBet() {
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: roomBetsKey(variables.roomId) });
       queryClient.invalidateQueries({ queryKey: roomBalanceKey(variables.roomId) });
-      // Rooms list + room detail both read balances derived from ledger_entries, which changed.
+      // Rooms list balance derives from ledger_entries, which changed.
       queryClient.invalidateQueries({ queryKey: ['rooms'] });
     },
   });

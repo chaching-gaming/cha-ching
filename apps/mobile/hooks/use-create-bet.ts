@@ -18,6 +18,8 @@ export function useCreateBet() {
       p_stake: number;
       p_expires_at: string;
       p_offered_pick: string;
+      p_subject_user_id: string;
+      p_subject_positive_option?: string | null;
       p_template_id?: string | null;
       p_subject_display_name?: string | null;
     }) => {
@@ -28,6 +30,8 @@ export function useCreateBet() {
         p_stake: number;
         p_expires_at: string;
         p_offered_pick: string;
+        p_subject_user_id: string;
+        p_subject_positive_option?: string;
         p_template_id?: string;
         p_subject_display_name?: string;
       } = {
@@ -37,7 +41,11 @@ export function useCreateBet() {
         p_stake: params.p_stake,
         p_expires_at: params.p_expires_at,
         p_offered_pick: params.p_offered_pick,
+        p_subject_user_id: params.p_subject_user_id,
       };
+      if (params.p_subject_positive_option) {
+        args.p_subject_positive_option = params.p_subject_positive_option;
+      }
       if (params.p_template_id) {
         args.p_template_id = params.p_template_id;
         args.p_subject_display_name = params.p_subject_display_name?.trim() ?? '';
@@ -49,6 +57,9 @@ export function useCreateBet() {
     },
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: roomBetsKey(variables.p_room_id) });
+      // Creator now immediately has a BET ledger entry locking their stake.
+      queryClient.invalidateQueries({ queryKey: ['rooms', variables.p_room_id, 'balance'] });
+      queryClient.invalidateQueries({ queryKey: ['rooms'] });
     },
   });
 }
