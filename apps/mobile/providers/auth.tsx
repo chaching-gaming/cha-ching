@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
+import { queryClient } from '@/lib/query-client';
 
 interface AuthContextType {
   session: Session | null;
@@ -24,7 +25,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      // Drop cached data tied to the previous auth context so queries from
+      // another user (or anonymous) can't bleed into the next session.
+      // INITIAL_SESSION fires on app start with an already-empty cache, so skip it.
+      if (event === 'SIGNED_OUT' || event === 'SIGNED_IN') {
+        queryClient.clear();
+      }
       setSession(session);
     });
 

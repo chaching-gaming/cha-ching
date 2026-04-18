@@ -13,6 +13,7 @@ import { Gear, Plus } from 'phosphor-react-native';
 import { colors } from '@/constants/colors';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { ActivityFeedItem } from '@/components/activity/activity-feed-item';
+import { LockedInCelebration } from '@/components/activity/locked-in-celebration';
 import { RoomHeaderBar } from '@/components/activity/room-header-bar';
 import { WinnerCelebration } from '@/components/activity/winner-celebration';
 import { useQueryClient } from '@tanstack/react-query';
@@ -23,6 +24,7 @@ import {
   useMyRoomBalance,
   useRealtimeActivityFeed,
 } from '@/hooks/use-activity-feed';
+import { useLockedInCelebration } from '@/hooks/use-locked-in-celebration';
 import { useWinnerCelebration } from '@/hooks/use-winner-celebration';
 
 export default function RoomDetailScreen() {
@@ -53,6 +55,12 @@ export default function RoomDetailScreen() {
   // Detects live bet.status → SETTLED transitions and queues a celebration
   // for the current user if they were a participant.
   const { celebratingBet, dismissCelebration } = useWinnerCelebration(
+    feedItems,
+    authSession?.user.id ?? null,
+  );
+
+  // Detects OPEN → MATCHED transitions and queues a "You're locked in" flash.
+  const { lockedInBet, dismissLockedIn } = useLockedInCelebration(
     feedItems,
     authSession?.user.id ?? null,
   );
@@ -147,6 +155,8 @@ export default function RoomDetailScreen() {
         currentUserId={authSession?.user.id ?? null}
         onDismiss={dismissCelebration}
       />
+
+      <LockedInCelebration bet={lockedInBet} onDismiss={dismissLockedIn} />
 
       {isActive ? (
         <TouchableOpacity
