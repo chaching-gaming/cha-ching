@@ -1,9 +1,9 @@
 import { useState, useCallback, useRef } from 'react';
 import { ActivityIndicator, Share, Text, TouchableOpacity, View } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 import * as Clipboard from 'expo-clipboard';
 import QRCode from 'react-native-qrcode-svg';
-import { Check, Copy, Users, X } from 'phosphor-react-native';
+import { Check, Copy, Users } from 'phosphor-react-native';
 
 import { colors } from '@/constants/colors';
 import { Button } from '@/components/ui/button';
@@ -13,7 +13,6 @@ import { useRoomDetail, useRoomMembers } from '@/hooks/use-rooms';
 
 export default function InviteScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const router = useRouter();
   const { data: room, isLoading: roomLoading } = useRoomDetail(id);
   const { data: members } = useRoomMembers(id);
 
@@ -39,10 +38,6 @@ export default function InviteScreen() {
     await Share.share({ message: shareMessage });
   }
 
-  function handleClose() {
-    router.replace(`/(tabs)/rooms/${id}`);
-  }
-
   if (roomLoading) {
     return (
       <View className="flex-1 items-center justify-center bg-background">
@@ -61,19 +56,17 @@ export default function InviteScreen() {
 
   return (
     <View className="flex-1 bg-background">
-      <ScreenHeader
-        title="Invite Friends"
-        showBack
-        right={
-          <TouchableOpacity onPress={handleClose}>
-            <X size={24} color={colors.textSecondary} />
-          </TouchableOpacity>
-        }
-      />
+      <ScreenHeader title="Invite Friends" showBack />
 
       <View className="flex-1 items-center px-5 pt-4">
         {/* Room name & member count */}
-        <Text className="text-lg font-semibold text-white">{room.name}</Text>
+        <Text
+          className="text-center text-lg font-semibold text-white"
+          numberOfLines={1}
+          style={{ maxWidth: '100%' }}
+        >
+          {room.name}
+        </Text>
         <View className="mt-1 mb-8 flex-row items-center gap-1">
           <Users size={14} color={colors.textMuted} />
           <Text className="text-sm text-text-muted">

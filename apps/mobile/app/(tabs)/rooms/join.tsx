@@ -93,8 +93,10 @@ function RoomPreviewCard({ preview }: { preview: RoomPreview }) {
             {preview.name.charAt(0).toUpperCase()}
           </Text>
         </View>
-        <View className="flex-1">
-          <Text className="text-base font-semibold text-white">{preview.name}</Text>
+        <View className="min-w-0 flex-1">
+          <Text className="text-base font-semibold text-white" numberOfLines={1}>
+            {preview.name}
+          </Text>
           <View className="mt-0.5 flex-row items-center gap-1">
             <Users size={12} color={colors.textMuted} />
             <Text className="text-xs text-text-muted">
