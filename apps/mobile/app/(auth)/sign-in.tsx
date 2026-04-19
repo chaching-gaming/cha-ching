@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Alert, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, Image, Text, TouchableOpacity, View } from 'react-native';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { Link } from 'expo-router';
 import { z } from 'zod';
@@ -58,6 +58,12 @@ export default function SignInScreen() {
       contentContainerClassName="flex-grow justify-center px-5 py-8"
     >
       <View className="mb-8 items-center">
+        <Image
+          // eslint-disable-next-line @typescript-eslint/no-require-imports
+          source={require('../../assets/images/cha-ching-logo.png')}
+          className="mb-4 h-24 w-24"
+          resizeMode="contain"
+        />
         <Text className="text-3xl font-bold text-white">Cha-Ching</Text>
         <Text className="mt-2 text-base text-text-secondary">Social Prop Bets with Friends</Text>
       </View>
