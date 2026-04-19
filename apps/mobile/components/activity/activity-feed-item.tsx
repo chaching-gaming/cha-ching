@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
-import { ArrowRight, Check, Coins, Timer, Trophy, Warning } from 'phosphor-react-native';
+import { ArrowRight, Check, Coins, Prohibit, Timer, Trophy, Warning } from 'phosphor-react-native';
 
 import { colors } from '@/constants/colors';
 import { Avatar } from '@/components/ui/avatar';
@@ -8,7 +8,13 @@ import { Badge } from '@/components/ui/badge';
 import { ResolveDisputeSheet } from '@/components/activity/resolve-dispute-sheet';
 import { SubmitOutcomeSheet } from '@/components/activity/submit-outcome-sheet';
 import { SwipeToAcceptRow } from '@/components/activity/swipe-to-accept-row';
-import type { ActivityItem, BetStakeWithProfile, BetWithProfiles } from '@/hooks/use-activity-feed';
+import { VoidBetSheet } from '@/components/activity/void-bet-sheet';
+import type {
+  ActivityItem,
+  BetStakeWithProfile,
+  BetVoidLogWithProfile,
+  BetWithProfiles,
+} from '@/hooks/use-activity-feed';
 import { formatBetCountdown, formatRelativeActivityTime } from '@/lib/date-format';
 import { getEffectiveBetStatus } from '@/lib/effective-bet-status';
 
@@ -60,6 +66,7 @@ function BetActivityCard({
   const [tick, setTick] = useState(0);
   const [submitSheetOpen, setSubmitSheetOpen] = useState(false);
   const [disputeSheetOpen, setDisputeSheetOpen] = useState(false);
+  const [voidSheetOpen, setVoidSheetOpen] = useState(false);
   const dbStatus = bet.status ?? '';
 
   useEffect(() => {
@@ -134,6 +141,8 @@ function BetActivityCard({
     dbStatus === 'DISPUTED' &&
     !!roomId &&
     (currentUserRole === 'ATTESTOR' || currentUserRole === 'ADMIN');
+
+  const canVoid = !!roomId && currentUserRole === 'ADMIN' && dbStatus !== 'VOID';
 
   // Header subtitle: for SETTLED/VOID we lean on the badge; otherwise show
   // "about <subject>" if the bet has a subject distinct from the creator.
@@ -220,12 +229,7 @@ function BetActivityCard({
           </View>
         ) : null}
 
-        {dbStatus === 'VOID' ? (
-          <View className="flex-row items-center gap-1.5">
-            <Warning size={18} color={colors.textMuted} weight="fill" />
-            <Text className="text-sm font-semibold text-text-muted">Voided · stakes refunded</Text>
-          </View>
-        ) : null}
+        {dbStatus === 'VOID' ? <VoidFooter voidLog={bet.void_logs?.[0] ?? null} /> : null}
 
         {dbStatus === 'DISPUTED' ? (
           <View className="flex-row items-center gap-1.5">
@@ -283,6 +287,49 @@ function BetActivityCard({
           roomId={roomId}
         />
       ) : null}
+
+      {canVoid ? (
+        <TouchableOpacity
+          onPress={() => setVoidSheetOpen(true)}
+          activeOpacity={0.8}
+          accessibilityLabel="Void this bet (admin only)"
+          className="mt-3 flex-row items-center justify-center gap-2 rounded-xl border border-border bg-surface-light py-3"
+        >
+          <Prohibit size={18} color={colors.textMuted} weight="bold" />
+          <Text className="text-sm font-bold text-text-muted">Void bet</Text>
+        </TouchableOpacity>
+      ) : null}
+
+      {canVoid && roomId ? (
+        <VoidBetSheet
+          visible={voidSheetOpen}
+          onClose={() => setVoidSheetOpen(false)}
+          bet={bet}
+          roomId={roomId}
+        />
+      ) : null}
+    </View>
+  );
+}
+
+function VoidFooter({ voidLog }: { voidLog: BetVoidLogWithProfile | null }) {
+  // Non-admin clients get void_logs = [] from RLS, so voidLog is null — we show
+  // the generic message. Admins see the actor + (optional) reason.
+  const voidedByName = voidLog?.voided_by_profile?.display_name?.trim();
+  const reason = voidLog?.reason?.trim();
+  const primary = voidedByName
+    ? `Voided by ${voidedByName} · stakes refunded`
+    : 'Voided · stakes refunded';
+
+  return (
+    <View className="min-w-0 shrink flex-row items-start gap-1.5">
+      <Warning size={18} color={colors.textMuted} weight="fill" style={{ marginTop: 2 }} />
+      <View className="min-w-0 shrink">
+        <Text className="text-sm font-semibold text-text-muted">{primary}</Text>
+        {reason ? (
+          <Text className="text-xs text-text-muted" numberOfLines={2}>{`“${reason}”`}</Text>
+        ) : null}
+      </View>
     </View>
   );
 }

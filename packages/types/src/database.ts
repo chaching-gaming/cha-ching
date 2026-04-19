@@ -70,6 +70,64 @@ export type Database = {
           },
         ];
       };
+      bet_void_logs: {
+        Row: {
+          affected_user_count: number;
+          bet_id: string;
+          created_at: string;
+          id: string;
+          previous_status: string;
+          reason: string | null;
+          refund_total: number;
+          room_id: string;
+          voided_by: string;
+        };
+        Insert: {
+          affected_user_count?: number;
+          bet_id: string;
+          created_at?: string;
+          id?: string;
+          previous_status: string;
+          reason?: string | null;
+          refund_total?: number;
+          room_id: string;
+          voided_by: string;
+        };
+        Update: {
+          affected_user_count?: number;
+          bet_id?: string;
+          created_at?: string;
+          id?: string;
+          previous_status?: string;
+          reason?: string | null;
+          refund_total?: number;
+          room_id?: string;
+          voided_by?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'bet_void_logs_bet_id_fkey';
+            columns: ['bet_id'];
+            isOneToOne: false;
+            referencedRelation: 'bets';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'bet_void_logs_room_id_fkey';
+            columns: ['room_id'];
+            isOneToOne: false;
+            referencedRelation: 'rooms';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'bet_void_logs_voided_by_fkey';
+            columns: ['voided_by'];
+            isOneToOne: false;
+            referencedRelation: 'profiles';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
       bets: {
         Row: {
           accepted_by: string | null;
@@ -563,6 +621,7 @@ export type Database = {
       };
       expire_open_bets: { Args: never; Returns: number };
       get_my_room_balance: { Args: { p_room_id: string }; Returns: number };
+      is_room_admin: { Args: { p_room_id: string }; Returns: boolean };
       is_room_attestor: { Args: { p_room_id: string }; Returns: boolean };
       is_room_member: { Args: { p_room_id: string }; Returns: boolean };
       join_bet: {
@@ -738,6 +797,36 @@ export type Database = {
         SetofOptions: {
           from: '*';
           to: 'profiles';
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
+      void_bet: {
+        Args: { p_bet_id: string; p_reason?: string };
+        Returns: {
+          accepted_by: string | null;
+          accepted_pick: string | null;
+          created_at: string | null;
+          expires_at: string | null;
+          id: string;
+          offered_by: string | null;
+          offered_pick: string | null;
+          options: Json;
+          outcome: string | null;
+          question: string;
+          room_id: string;
+          settled_at: string | null;
+          settlement_method: string | null;
+          stake: number;
+          status: string | null;
+          subject_positive_option: string | null;
+          subject_user_id: string | null;
+          template_id: string | null;
+          winner: string | null;
+        };
+        SetofOptions: {
+          from: '*';
+          to: 'bets';
           isOneToOne: true;
           isSetofReturn: false;
         };
