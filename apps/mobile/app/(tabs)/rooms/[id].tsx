@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -13,6 +13,12 @@ import { Gear, Plus } from 'phosphor-react-native';
 import { colors } from '@/constants/colors';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { ActivityFeedItem } from '@/components/activity/activity-feed-item';
+import {
+  BetFeedStatusFilter,
+  betMatchesFilter,
+  type BetFilter,
+} from '@/components/activity/bet-feed-status-filter';
+import { ChipStandingsSheet } from '@/components/activity/chip-standings-sheet';
 import { LockedInCelebration } from '@/components/activity/locked-in-celebration';
 import { RoomHeaderBar } from '@/components/activity/room-header-bar';
 import { WinnerCelebration } from '@/components/activity/winner-celebration';
@@ -20,12 +26,20 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/providers/auth';
 import { useRoomDetail, useRoomMembers } from '@/hooks/use-rooms';
 import {
-  useRoomActivityFeed,
   useMyRoomBalance,
   useRealtimeActivityFeed,
+  useRoomActivityFeed,
+  useRoomMemberBalances,
 } from '@/hooks/use-activity-feed';
 import { useLockedInCelebration } from '@/hooks/use-locked-in-celebration';
 import { useWinnerCelebration } from '@/hooks/use-winner-celebration';
+
+const EMPTY_STATE_COPY: Record<BetFilter, { title: string; subtitle: string }> = {
+  all: { title: 'No bets yet', subtitle: 'Tap Create Bet to start the action.' },
+  open: { title: 'No open bets', subtitle: 'Create a new bet or wait for one to open.' },
+  matched: { title: 'No matched bets', subtitle: 'Bets show up here once both sides are staked.' },
+  settled: { title: 'No settled bets', subtitle: 'Finished bets will appear here.' },
+};
 
 export default function RoomDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -36,10 +50,13 @@ export default function RoomDetailScreen() {
   const { data: room, isLoading: roomLoading } = useRoomDetail(id);
   const { data: members } = useRoomMembers(id);
   const { data: balance } = useMyRoomBalance(id);
+  const { data: memberBalances } = useRoomMemberBalances(id);
   const { data: activityItems, isLoading: feedLoading } = useRoomActivityFeed(id);
   useRealtimeActivityFeed(id);
 
   const [refreshing, setRefreshing] = useState(false);
+  const [filter, setFilter] = useState<BetFilter>('all');
+  const [standingsOpen, setStandingsOpen] = useState(false);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -50,7 +67,17 @@ export default function RoomDetailScreen() {
   const currentMember = members?.find((m) => m.user_id === authSession?.user.id);
   const isActive = room?.is_active ?? false;
 
-  const feedItems = activityItems ?? [];
+  const feedItems = useMemo(() => activityItems ?? [], [activityItems]);
+
+  // Bet filter applies to bet items only — chip requests always stay visible.
+  const visibleItems = useMemo(
+    () =>
+      feedItems.filter((item) => {
+        if (item.type === 'chip_request') return true;
+        return betMatchesFilter(item.bet, filter);
+      }),
+    [feedItems, filter],
+  );
 
   // Detects live bet.status → SETTLED transitions and queues a celebration
   // for the current user if they were a participant. `feedLoading` gates the
@@ -107,7 +134,7 @@ export default function RoomDetailScreen() {
       />
 
       <FlatList
-        data={feedItems}
+        data={visibleItems}
         keyExtractor={(item) =>
           item.type === 'bet' ? `bet-${item.bet.id}` : `cr-${item.chipRequest.id}`
         }
@@ -129,11 +156,14 @@ export default function RoomDetailScreen() {
           />
         }
         ListHeaderComponent={
-          <RoomHeaderBar
-            members={members ?? []}
-            balance={balance ?? 0}
-            onViewMembers={openSettings}
-          />
+          <View>
+            <RoomHeaderBar
+              members={members ?? []}
+              balance={balance ?? 0}
+              onOpenStandings={() => setStandingsOpen(true)}
+            />
+            <BetFeedStatusFilter value={filter} onChange={setFilter} />
+          </View>
         }
         ListEmptyComponent={
           feedLoading ? (
@@ -143,14 +173,21 @@ export default function RoomDetailScreen() {
           ) : (
             <View className="items-center px-2 py-12">
               <Text className="text-center text-xl font-semibold text-text-secondary">
-                No bets yet
+                {EMPTY_STATE_COPY[filter].title}
               </Text>
               <Text className="mt-2 max-w-sm text-center text-base leading-6 text-text-secondary">
-                Tap Create Bet to start the action.
+                {EMPTY_STATE_COPY[filter].subtitle}
               </Text>
             </View>
           )
         }
+      />
+
+      <ChipStandingsSheet
+        visible={standingsOpen}
+        onClose={() => setStandingsOpen(false)}
+        members={memberBalances ?? []}
+        currentUserId={authSession?.user.id ?? null}
       />
 
       <WinnerCelebration

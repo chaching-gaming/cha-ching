@@ -46,6 +46,15 @@ export type ActivityItem =
 export const roomBetsKey = (roomId: string) => ['rooms', roomId, 'bets'] as const;
 const roomChipRequestsKey = (roomId: string) => ['rooms', roomId, 'chip_requests'] as const;
 export const roomBalanceKey = (roomId: string) => ['rooms', roomId, 'balance'] as const;
+export const roomMemberBalancesKey = (roomId: string) =>
+  ['rooms', roomId, 'member-balances'] as const;
+
+export type RoomMemberBalance = {
+  user_id: string;
+  display_name: string | null;
+  avatar_url: string | null;
+  balance: number;
+};
 
 export function useRoomBets(roomId: string) {
   const { session } = useAuth();
@@ -124,6 +133,22 @@ export function useMyRoomBalance(roomId: string) {
   });
 }
 
+export function useRoomMemberBalances(roomId: string) {
+  const { session } = useAuth();
+
+  return useQuery({
+    queryKey: roomMemberBalancesKey(roomId),
+    queryFn: async (): Promise<RoomMemberBalance[]> => {
+      const { data, error } = await supabase.rpc('get_room_member_balances', {
+        p_room_id: roomId,
+      });
+      if (error) throw error;
+      return (data as RoomMemberBalance[] | null) ?? [];
+    },
+    enabled: !!session?.user.id && !!roomId,
+  });
+}
+
 export function useRoomActivityFeed(roomId: string) {
   const { data: bets, isLoading: betsLoading } = useRoomBets(roomId);
   const { data: chipRequests, isLoading: chipRequestsLoading } = useRoomChipRequests(roomId);
@@ -178,6 +203,7 @@ export function useRealtimeActivityFeed(roomId: string) {
         () => {
           queryClient.invalidateQueries({ queryKey: roomBetsKey(roomId) });
           queryClient.invalidateQueries({ queryKey: roomBalanceKey(roomId) });
+          queryClient.invalidateQueries({ queryKey: roomMemberBalancesKey(roomId) });
         },
       )
       .subscribe();
@@ -195,6 +221,7 @@ export function useRealtimeActivityFeed(roomId: string) {
         () => {
           queryClient.invalidateQueries({ queryKey: roomChipRequestsKey(roomId) });
           queryClient.invalidateQueries({ queryKey: roomBalanceKey(roomId) });
+          queryClient.invalidateQueries({ queryKey: roomMemberBalancesKey(roomId) });
         },
       )
       .subscribe();
@@ -219,6 +246,7 @@ export function useRealtimeActivityFeed(roomId: string) {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'bet_stakes' }, () => {
         queryClient.invalidateQueries({ queryKey: roomBetsKey(roomId) });
         queryClient.invalidateQueries({ queryKey: roomBalanceKey(roomId) });
+        queryClient.invalidateQueries({ queryKey: roomMemberBalancesKey(roomId) });
       })
       .subscribe();
 

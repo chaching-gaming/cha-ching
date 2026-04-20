@@ -9,41 +9,48 @@ import { balanceColorClass, formatBalance } from '@/lib/format-balance';
 interface RoomHeaderBarProps {
   members: RoomMemberWithProfile[];
   balance: number;
-  onViewMembers: () => void;
+  onOpenStandings: () => void;
 }
 
 const MAX_AVATARS = 5;
 
-export function RoomHeaderBar({ members, balance, onViewMembers }: RoomHeaderBarProps) {
+export function RoomHeaderBar({ members, balance, onOpenStandings }: RoomHeaderBarProps) {
   const visible = members.slice(0, MAX_AVATARS);
   const overflow = members.length - MAX_AVATARS;
 
   return (
     <View className="flex-row items-center justify-between py-4">
-      {/* Member avatars */}
+      {/* Member avatars — tap to open chip standings */}
       <TouchableOpacity
-        onPress={onViewMembers}
+        onPress={onOpenStandings}
         activeOpacity={0.7}
-        className="flex-row items-center"
+        accessibilityRole="button"
+        accessibilityLabel="Open chip standings"
+        className="items-start"
       >
-        {visible.map((member, index) => (
-          <View
-            key={member.id}
-            className={`rounded-full border-2 border-background ${index > 0 ? '-ml-2.5' : ''}`}
-            style={{ zIndex: MAX_AVATARS - index }}
-          >
-            <Avatar
-              uri={member.profiles?.avatar_url}
-              fallback={member.profiles?.display_name ?? '?'}
-              size="md"
-            />
-          </View>
-        ))}
-        {overflow > 0 && (
-          <View className="-ml-2.5 h-12 w-12 items-center justify-center rounded-full border-2 border-background bg-surface-light">
-            <Text className="text-sm font-semibold text-text-secondary">+{overflow}</Text>
-          </View>
-        )}
+        <View className="flex-row items-center">
+          {visible.map((member, index) => (
+            <View
+              key={member.id}
+              className={`rounded-full border-2 border-background ${index > 0 ? '-ml-2.5' : ''}`}
+              style={{ zIndex: MAX_AVATARS - index }}
+            >
+              <Avatar
+                uri={member.profiles?.avatar_url}
+                fallback={member.profiles?.display_name ?? '?'}
+                size="md"
+              />
+            </View>
+          ))}
+          {overflow > 0 && (
+            <View className="-ml-2.5 h-12 w-12 items-center justify-center rounded-full border-2 border-background bg-surface-light">
+              <Text className="text-sm font-semibold text-text-secondary">+{overflow}</Text>
+            </View>
+          )}
+        </View>
+        <Text className="mt-1 text-xs font-semibold uppercase tracking-wide text-text-muted">
+          Standings
+        </Text>
       </TouchableOpacity>
 
       {/* Balance */}

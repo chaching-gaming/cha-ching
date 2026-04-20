@@ -621,6 +621,15 @@ export type Database = {
       };
       expire_open_bets: { Args: never; Returns: number };
       get_my_room_balance: { Args: { p_room_id: string }; Returns: number };
+      get_room_member_balances: {
+        Args: { p_room_id: string };
+        Returns: {
+          avatar_url: string;
+          balance: number;
+          display_name: string;
+          user_id: string;
+        }[];
+      };
       is_room_admin: { Args: { p_room_id: string }; Returns: boolean };
       is_room_attestor: { Args: { p_room_id: string }; Returns: boolean };
       is_room_member: { Args: { p_room_id: string }; Returns: boolean };
