@@ -686,7 +686,9 @@ export type Database = {
           avatar_url: string;
           balance: number;
           display_name: string;
+          losses: number;
           user_id: string;
+          wins: number;
         }[];
       };
       is_room_admin: { Args: { p_room_id: string }; Returns: boolean };

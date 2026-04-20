@@ -18,7 +18,6 @@ import {
   betMatchesFilter,
   type BetFilter,
 } from '@/components/activity/bet-feed-status-filter';
-import { ChipStandingsSheet } from '@/components/activity/chip-standings-sheet';
 import { LockedInCelebration } from '@/components/activity/locked-in-celebration';
 import { RoomHeaderBar } from '@/components/activity/room-header-bar';
 import { WinnerCelebration } from '@/components/activity/winner-celebration';
@@ -29,7 +28,6 @@ import {
   useMyRoomBalance,
   useRealtimeActivityFeed,
   useRoomActivityFeed,
-  useRoomMemberBalances,
 } from '@/hooks/use-activity-feed';
 import { useLockedInCelebration } from '@/hooks/use-locked-in-celebration';
 import { useWinnerCelebration } from '@/hooks/use-winner-celebration';
@@ -50,7 +48,6 @@ export default function RoomDetailScreen() {
   const { data: room, isLoading: roomLoading } = useRoomDetail(id);
   const { data: members } = useRoomMembers(id);
   const { data: balance } = useMyRoomBalance(id);
-  const { data: memberBalances } = useRoomMemberBalances(id);
   const { data: activityItems, isLoading: feedLoading } = useRoomActivityFeed(id);
   useRealtimeActivityFeed(id);
 
@@ -71,7 +68,6 @@ export default function RoomDetailScreen() {
 
   const [refreshing, setRefreshing] = useState(false);
   const [filter, setFilter] = useState<BetFilter>('all');
-  const [standingsOpen, setStandingsOpen] = useState(false);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -177,7 +173,7 @@ export default function RoomDetailScreen() {
             <RoomHeaderBar
               members={members ?? []}
               balance={myBalance}
-              onOpenStandings={() => setStandingsOpen(true)}
+              onOpenStandings={() => router.push(`/(tabs)/rooms/standings?id=${id}`)}
               roomId={id}
               roomActive={isActive}
               chipLimit={chipLimit}
@@ -202,14 +198,6 @@ export default function RoomDetailScreen() {
             </View>
           )
         }
-      />
-
-      <ChipStandingsSheet
-        visible={standingsOpen}
-        onClose={() => setStandingsOpen(false)}
-        members={memberBalances ?? []}
-        currentUserId={authSession?.user.id ?? null}
-        chipLimit={chipLimit}
       />
 
       <WinnerCelebration

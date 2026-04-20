@@ -54,6 +54,8 @@ export type RoomMemberBalance = {
   display_name: string | null;
   avatar_url: string | null;
   balance: number;
+  wins: number;
+  losses: number;
 };
 
 export function useRoomBets(roomId: string) {
