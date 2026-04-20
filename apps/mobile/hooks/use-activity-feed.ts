@@ -44,7 +44,7 @@ export type ActivityItem =
   | { type: 'chip_request'; timestamp: string; chipRequest: ChipRequestWithProfile };
 
 export const roomBetsKey = (roomId: string) => ['rooms', roomId, 'bets'] as const;
-const roomChipRequestsKey = (roomId: string) => ['rooms', roomId, 'chip_requests'] as const;
+export const roomChipRequestsKey = (roomId: string) => ['rooms', roomId, 'chip_requests'] as const;
 export const roomBalanceKey = (roomId: string) => ['rooms', roomId, 'balance'] as const;
 export const roomMemberBalancesKey = (roomId: string) =>
   ['rooms', roomId, 'member-balances'] as const;

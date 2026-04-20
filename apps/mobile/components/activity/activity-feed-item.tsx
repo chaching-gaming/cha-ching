@@ -1,19 +1,33 @@
-import { useEffect, useMemo, useState } from 'react';
-import { Text, TouchableOpacity, View } from 'react-native';
-import { ArrowRight, Check, Coins, Prohibit, Timer, Trophy, Warning } from 'phosphor-react-native';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Alert, Text, TouchableOpacity, View } from 'react-native';
+import {
+  ArrowRight,
+  Check,
+  Coins,
+  HandCoins,
+  HandHeart,
+  Prohibit,
+  Timer,
+  Trophy,
+  Warning,
+} from 'phosphor-react-native';
 
 import { colors } from '@/constants/colors';
 import { Avatar } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
+import { DonateChipsSheet } from '@/components/activity/donate-chips-sheet';
 import { ResolveDisputeSheet } from '@/components/activity/resolve-dispute-sheet';
 import { SubmitOutcomeSheet } from '@/components/activity/submit-outcome-sheet';
 import { SwipeToAcceptRow } from '@/components/activity/swipe-to-accept-row';
 import { VoidBetSheet } from '@/components/activity/void-bet-sheet';
+import { useCancelChipRequest } from '@/hooks/use-chip-requests';
+import { getRpcErrorMessage } from '@/hooks/use-rooms';
 import type {
   ActivityItem,
   BetStakeWithProfile,
   BetVoidLogWithProfile,
   BetWithProfiles,
+  ChipRequestWithProfile,
 } from '@/hooks/use-activity-feed';
 import { formatBetCountdown, formatRelativeActivityTime } from '@/lib/date-format';
 import { getEffectiveBetStatus } from '@/lib/effective-bet-status';
@@ -458,10 +472,14 @@ interface ActivityFeedItemProps {
   currentUserId?: string | null;
   /** Current user's room role — gates the attestor "Resolve dispute" action. */
   currentUserRole?: 'PLAYER' | 'ATTESTOR' | 'ADMIN' | string | null;
-  /** When false, join affordance is hidden (e.g., session ended). */
+  /** When false, join/donate affordances are hidden (e.g., session ended). */
   roomActive?: boolean;
   /** Room id, required by the join mutation for cache invalidation. */
   roomId?: string;
+  /** Current user's balance — forwarded to the donate sheet for floor clamping. */
+  currentUserBalance?: number;
+  /** Room's loss floor — forwarded to the donate sheet for floor clamping. */
+  roomChipLimit?: number | null;
 }
 
 export function ActivityFeedItem({
@@ -470,6 +488,8 @@ export function ActivityFeedItem({
   currentUserRole,
   roomActive,
   roomId,
+  currentUserBalance,
+  roomChipLimit,
 }: ActivityFeedItemProps) {
   if (item.type === 'bet') {
     const stakes = item.bet.stakes ?? [];
@@ -508,17 +528,94 @@ export function ActivityFeedItem({
     return card;
   }
 
-  const { chipRequest } = item;
+  return (
+    <ChipRequestActivityCard
+      chipRequest={item.chipRequest}
+      timestamp={item.timestamp}
+      currentUserId={currentUserId}
+      roomActive={roomActive}
+      roomId={roomId}
+      currentUserBalance={currentUserBalance}
+      roomChipLimit={roomChipLimit}
+    />
+  );
+}
+
+function ChipRequestActivityCard({
+  chipRequest,
+  timestamp,
+  currentUserId,
+  roomActive,
+  roomId,
+  currentUserBalance,
+  roomChipLimit,
+}: {
+  chipRequest: ChipRequestWithProfile;
+  timestamp: string;
+  currentUserId?: string | null;
+  roomActive?: boolean;
+  roomId?: string;
+  currentUserBalance?: number;
+  roomChipLimit?: number | null;
+}) {
+  const [donateOpen, setDonateOpen] = useState(false);
+  const cancelRequest = useCancelChipRequest();
+
   const requesterName = chipRequest.requested_by_profile?.display_name ?? 'Someone';
+  const status = chipRequest.status ?? 'OPEN';
+
   const statusBadge =
-    chipRequest.status === 'FULFILLED'
+    status === 'FULFILLED'
       ? { variant: 'success' as const, label: 'Fulfilled' }
-      : chipRequest.status === 'EXPIRED'
-        ? { variant: 'default' as const, label: 'Expired' }
-        : { variant: 'default' as const, label: 'Open' };
+      : status === 'EXPIRED'
+        ? { variant: 'default' as const, label: 'Cancelled' }
+        : { variant: 'matched' as const, label: 'Open' };
+
+  const requested = chipRequest.requested_amount;
+  const fulfilled = chipRequest.fulfilled_amount;
+  const remaining = Math.max(0, requested - fulfilled);
+  const progressPercent =
+    requested > 0 ? Math.min(100, Math.round((fulfilled / requested) * 100)) : 0;
+
+  const isRequester = !!currentUserId && chipRequest.requested_by === currentUserId;
+  const canDonate =
+    !!roomActive &&
+    !!roomId &&
+    !!currentUserId &&
+    !isRequester &&
+    status === 'OPEN' &&
+    remaining > 0 &&
+    currentUserBalance != null;
+
+  const canCancel = !!roomActive && isRequester && status === 'OPEN' && fulfilled === 0 && !!roomId;
+
+  const dimmed = status !== 'OPEN';
+
+  const handleCancel = useCallback(() => {
+    if (!roomId) return;
+    Alert.alert('Cancel this request?', 'The chip request will be removed from the feed.', [
+      { text: 'Keep it', style: 'cancel' },
+      {
+        text: 'Cancel request',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await cancelRequest.mutateAsync({
+              p_chip_request_id: chipRequest.id,
+              roomId,
+            });
+          } catch (err) {
+            Alert.alert('Could not cancel', getRpcErrorMessage(err, 'Please try again.'));
+          }
+        },
+      },
+    ]);
+  }, [cancelRequest, chipRequest.id, roomId]);
 
   return (
-    <View className="mb-3 rounded-2xl border border-border bg-surface px-4 py-3.5">
+    <View
+      className={`mb-3 rounded-2xl border border-border bg-surface px-4 py-3.5 ${dimmed ? 'opacity-70' : ''}`}
+    >
       <View className="flex-row items-center justify-between gap-2">
         <View className="min-w-0 flex-1 flex-row items-center gap-2.5">
           <Avatar
@@ -526,10 +623,17 @@ export function ActivityFeedItem({
             fallback={requesterName.charAt(0)}
             size="md"
           />
-          <Text className="min-w-0 flex-1 text-base text-text-secondary" numberOfLines={2}>
-            <Text className="font-semibold text-white">{requesterName}</Text>
-            {' requested chips'}
-          </Text>
+          <View className="min-w-0 flex-1">
+            <Text className="text-base font-semibold text-white" numberOfLines={1}>
+              {requesterName}
+            </Text>
+            <View className="mt-0.5 flex-row items-center gap-1">
+              <HandHeart size={14} color={colors.primary} weight="fill" />
+              <Text className="text-xs text-text-secondary" numberOfLines={1}>
+                {isRequester ? 'you need chips' : 'needs chips'}
+              </Text>
+            </View>
+          </View>
         </View>
         <Badge
           variant={statusBadge.variant}
@@ -538,17 +642,78 @@ export function ActivityFeedItem({
           labelClassName="text-[11px] font-bold tracking-wide"
         />
       </View>
-      {chipRequest.current_balance != null && (
-        <View className="mt-3 flex-row items-center gap-1.5">
-          <Coins size={20} color={colors.chipsIcon} weight="fill" />
-          <Text className="text-base text-text-secondary">
-            Balance: {chipRequest.current_balance.toLocaleString('en-US')}
+
+      {chipRequest.message ? (
+        <Text className="mt-3 text-sm leading-5 text-text-secondary" numberOfLines={4}>
+          &ldquo;{chipRequest.message}&rdquo;
+        </Text>
+      ) : null}
+
+      <View className="mt-3">
+        <View className="mb-1.5 flex-row items-center justify-between">
+          <View className="flex-row items-center gap-1.5">
+            <Coins size={18} color={colors.chipsIcon} weight="fill" />
+            <Text className="text-sm font-semibold text-white">
+              {fulfilled.toLocaleString('en-US')}{' '}
+              <Text className="text-text-secondary">of {requested.toLocaleString('en-US')}</Text>
+            </Text>
+          </View>
+          <Text className="text-xs font-bold uppercase tracking-wide text-primary">
+            {progressPercent}%
           </Text>
         </View>
-      )}
-      <Text className="mt-2 text-xs text-text-muted">
-        {formatRelativeActivityTime(item.timestamp)}
-      </Text>
+        <View className="h-2 overflow-hidden rounded-full bg-surface-light">
+          <View
+            className="h-full rounded-full bg-primary"
+            style={{ width: `${progressPercent}%` }}
+          />
+        </View>
+      </View>
+
+      {chipRequest.current_balance != null ? (
+        <Text className="mt-3 text-xs text-text-muted">
+          Starting balance: {chipRequest.current_balance.toLocaleString('en-US')}
+        </Text>
+      ) : null}
+
+      <Text className="mt-1 text-xs text-text-muted">{formatRelativeActivityTime(timestamp)}</Text>
+
+      {canDonate ? (
+        <TouchableOpacity
+          onPress={() => setDonateOpen(true)}
+          activeOpacity={0.8}
+          accessibilityLabel={`Donate chips to ${requesterName}`}
+          className="mt-3 flex-row items-center justify-center gap-2 rounded-xl bg-primary py-3"
+        >
+          <HandCoins size={18} color="#ffffff" weight="bold" />
+          <Text className="text-sm font-bold text-white">Donate chips</Text>
+        </TouchableOpacity>
+      ) : null}
+
+      {canCancel ? (
+        <TouchableOpacity
+          onPress={handleCancel}
+          disabled={cancelRequest.isPending}
+          activeOpacity={0.8}
+          accessibilityLabel="Cancel your chip request"
+          className="mt-3 flex-row items-center justify-center gap-2 rounded-xl border border-border bg-surface-light py-3"
+        >
+          <Text className="text-sm font-semibold text-text-muted">
+            {cancelRequest.isPending ? 'Cancelling…' : 'Cancel request'}
+          </Text>
+        </TouchableOpacity>
+      ) : null}
+
+      {canDonate && roomId && currentUserBalance != null ? (
+        <DonateChipsSheet
+          visible={donateOpen}
+          onClose={() => setDonateOpen(false)}
+          chipRequest={chipRequest}
+          roomId={roomId}
+          donorBalance={currentUserBalance}
+          chipLimit={roomChipLimit ?? null}
+        />
+      ) : null}
     </View>
   );
 }

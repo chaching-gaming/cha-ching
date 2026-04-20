@@ -9,7 +9,7 @@ type Profile = Database['public']['Tables']['profiles']['Row'];
 
 const ROOMS_KEY = ['rooms'] as const;
 const roomsKey = (filter: 'active' | 'history') => ['rooms', filter] as const;
-const roomDetailKey = (id: string) => ['rooms', id] as const;
+export const roomDetailKey = (id: string) => ['rooms', id] as const;
 const roomMembersKey = (id: string) => ['rooms', id, 'members'] as const;
 
 export type MemberPreview = {

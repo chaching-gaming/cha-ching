@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import {
   ActionSheetIOS,
   ActivityIndicator,
@@ -15,6 +15,7 @@ import {
   CaretRight,
   Copy,
   DownloadSimple,
+  PencilSimple,
   Plus,
   Prohibit,
   Receipt,
@@ -25,6 +26,7 @@ import { colors } from '@/constants/colors';
 import { Badge } from '@/components/ui/badge';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { MemberRow } from '@/components/activity/member-row';
+import { SetChipLimitSheet } from '@/components/activity/set-chip-limit-sheet';
 import { useAuth } from '@/providers/auth';
 import {
   getRpcErrorMessage,
@@ -176,6 +178,8 @@ export default function RoomSettingsScreen() {
   const isAdmin = currentMember?.role === 'ADMIN';
   const isActive = room?.is_active ?? false;
 
+  const [chipLimitSheetOpen, setChipLimitSheetOpen] = useState(false);
+
   const handleCopyInviteCode = useCallback(async () => {
     if (!room?.invite_code) return;
     await Clipboard.setStringAsync(room.invite_code);
@@ -284,6 +288,12 @@ export default function RoomSettingsScreen() {
                   ? 'text-error'
                   : 'text-text-secondary'
               }
+              rightIcon={
+                isAdmin && isActive ? (
+                  <PencilSimple size={18} color={colors.textMuted} weight="bold" />
+                ) : undefined
+              }
+              onPress={isAdmin && isActive ? () => setChipLimitSheetOpen(true) : undefined}
             />
             <SettingsRow
               label="Invite Code"
@@ -374,6 +384,15 @@ export default function RoomSettingsScreen() {
           </View>
         ) : null}
       </ScrollView>
+
+      {isAdmin && isActive ? (
+        <SetChipLimitSheet
+          visible={chipLimitSheetOpen}
+          onClose={() => setChipLimitSheetOpen(false)}
+          roomId={id}
+          currentLimit={room.per_user_chip_limit}
+        />
+      ) : null}
     </View>
   );
 }

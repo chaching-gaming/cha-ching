@@ -5,55 +5,50 @@ import { Coins, X } from 'phosphor-react-native';
 
 import { colors } from '@/constants/colors';
 import { Avatar } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
 import type { RoomMemberBalance } from '@/hooks/use-activity-feed';
+import { balanceColorClass, formatBalance } from '@/lib/format-balance';
 
 type Props = {
   visible: boolean;
   onClose: () => void;
   members: RoomMemberBalance[];
   currentUserId?: string | null;
+  chipLimit?: number | null;
 };
 
-function roundToNearestHundred(n: number): number {
-  return Math.round(n / 100) * 100;
-}
-
-function formatRoundedBalance(balance: number): string {
-  const rounded = roundToNearestHundred(balance);
-  const abs = Math.abs(rounded).toLocaleString('en-US');
-  if (rounded > 0) return `+${abs}`;
-  if (rounded < 0) return `-${abs}`;
-  return '0';
-}
-
-function balanceToneClass(balance: number): string {
-  const rounded = roundToNearestHundred(balance);
-  if (rounded > 0) return 'text-primary';
-  if (rounded < 0) return 'text-error';
-  return 'text-text-muted';
-}
-
-export function ChipStandingsSheet({ visible, onClose, members, currentUserId }: Props) {
+export function ChipStandingsSheet({ visible, onClose, members, currentUserId, chipLimit }: Props) {
   const safeInsets = useSafeAreaInsets();
 
   const renderRow = useCallback(
     ({ item, index }: { item: RoomMemberBalance; index: number }) => {
       const isSelf = !!currentUserId && item.user_id === currentUserId;
+      const belowLimit = chipLimit != null && item.balance <= chipLimit;
       return (
         <View className="flex-row items-center border-b border-border/40 py-3">
           <Text className="w-6 text-sm font-bold text-text-muted">{index + 1}</Text>
           <Avatar uri={item.avatar_url} fallback={item.display_name ?? '?'} size="sm" />
-          <Text className="ml-3 min-w-0 flex-1 text-base text-white" numberOfLines={1}>
-            {item.display_name ?? 'Unknown'}
-            {isSelf ? <Text className="text-sm text-text-secondary"> (you)</Text> : null}
-          </Text>
-          <Text className={`text-base font-bold ${balanceToneClass(item.balance)}`}>
-            {formatRoundedBalance(item.balance)}
+          <View className="ml-3 min-w-0 flex-1 flex-row items-center gap-2">
+            <Text className="min-w-0 shrink text-base text-white" numberOfLines={1}>
+              {item.display_name ?? 'Unknown'}
+              {isSelf ? <Text className="text-sm text-text-secondary"> (you)</Text> : null}
+            </Text>
+            {belowLimit ? (
+              <Badge
+                variant="error"
+                label="At limit"
+                className="px-2 py-0.5"
+                labelClassName="text-[10px] font-bold tracking-wide"
+              />
+            ) : null}
+          </View>
+          <Text className={`text-base font-bold ${balanceColorClass(item.balance)}`}>
+            {formatBalance(item.balance)}
           </Text>
         </View>
       );
     },
-    [currentUserId],
+    [chipLimit, currentUserId],
   );
 
   return (

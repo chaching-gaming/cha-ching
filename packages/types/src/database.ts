@@ -234,7 +234,10 @@ export type Database = {
         Row: {
           created_at: string | null;
           current_balance: number | null;
+          fulfilled_amount: number;
           id: string;
+          message: string | null;
+          requested_amount: number;
           requested_by: string | null;
           room_id: string | null;
           status: string | null;
@@ -242,7 +245,10 @@ export type Database = {
         Insert: {
           created_at?: string | null;
           current_balance?: number | null;
+          fulfilled_amount?: number;
           id?: string;
+          message?: string | null;
+          requested_amount: number;
           requested_by?: string | null;
           room_id?: string | null;
           status?: string | null;
@@ -250,7 +256,10 @@ export type Database = {
         Update: {
           created_at?: string | null;
           current_balance?: number | null;
+          fulfilled_amount?: number;
           id?: string;
+          message?: string | null;
+          requested_amount?: number;
           requested_by?: string | null;
           room_id?: string | null;
           status?: string | null;
@@ -276,6 +285,7 @@ export type Database = {
         Row: {
           amount: number;
           bet_id: string | null;
+          chip_request_id: string | null;
           created_at: string | null;
           id: string;
           room_id: string | null;
@@ -285,6 +295,7 @@ export type Database = {
         Insert: {
           amount: number;
           bet_id?: string | null;
+          chip_request_id?: string | null;
           created_at?: string | null;
           id?: string;
           room_id?: string | null;
@@ -294,6 +305,7 @@ export type Database = {
         Update: {
           amount?: number;
           bet_id?: string | null;
+          chip_request_id?: string | null;
           created_at?: string | null;
           id?: string;
           room_id?: string | null;
@@ -306,6 +318,13 @@ export type Database = {
             columns: ['bet_id'];
             isOneToOne: false;
             referencedRelation: 'bets';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'ledger_entries_chip_request_id_fkey';
+            columns: ['chip_request_id'];
+            isOneToOne: false;
+            referencedRelation: 'chip_requests';
             referencedColumns: ['id'];
           },
           {
@@ -538,6 +557,26 @@ export type Database = {
           isSetofReturn: false;
         };
       };
+      cancel_chip_request: {
+        Args: { p_chip_request_id: string };
+        Returns: {
+          created_at: string | null;
+          current_balance: number | null;
+          fulfilled_amount: number;
+          id: string;
+          message: string | null;
+          requested_amount: number;
+          requested_by: string | null;
+          room_id: string | null;
+          status: string | null;
+        };
+        SetofOptions: {
+          from: '*';
+          to: 'chip_requests';
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
       create_bet: {
         Args: {
           p_expires_at: string;
@@ -595,6 +634,26 @@ export type Database = {
         SetofOptions: {
           from: '*';
           to: 'rooms';
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
+      donate_chips: {
+        Args: { p_amount: number; p_chip_request_id: string };
+        Returns: {
+          created_at: string | null;
+          current_balance: number | null;
+          fulfilled_amount: number;
+          id: string;
+          message: string | null;
+          requested_amount: number;
+          requested_by: string | null;
+          room_id: string | null;
+          status: string | null;
+        };
+        SetofOptions: {
+          from: '*';
+          to: 'chip_requests';
           isOneToOne: true;
           isSetofReturn: false;
         };
@@ -710,6 +769,26 @@ export type Database = {
         Args: { p_room_id: string; p_target_user_id: string };
         Returns: undefined;
       };
+      request_chips: {
+        Args: { p_amount: number; p_message?: string; p_room_id: string };
+        Returns: {
+          created_at: string | null;
+          current_balance: number | null;
+          fulfilled_amount: number;
+          id: string;
+          message: string | null;
+          requested_amount: number;
+          requested_by: string | null;
+          room_id: string | null;
+          status: string | null;
+        };
+        SetofOptions: {
+          from: '*';
+          to: 'chip_requests';
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
       resolve_dispute: {
         Args: { p_bet_id: string; p_final_option: string };
         Returns: {
@@ -736,6 +815,26 @@ export type Database = {
         SetofOptions: {
           from: '*';
           to: 'bets';
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
+      set_room_chip_limit: {
+        Args: { p_limit: number; p_room_id: string };
+        Returns: {
+          created_at: string | null;
+          created_by: string | null;
+          ended_at: string | null;
+          id: string;
+          invite_code: string;
+          is_active: boolean;
+          name: string;
+          per_user_chip_limit: number | null;
+          session_date: string;
+        };
+        SetofOptions: {
+          from: '*';
+          to: 'rooms';
           isOneToOne: true;
           isSetofReturn: false;
         };

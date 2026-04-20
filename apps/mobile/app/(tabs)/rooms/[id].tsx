@@ -54,6 +54,21 @@ export default function RoomDetailScreen() {
   const { data: activityItems, isLoading: feedLoading } = useRoomActivityFeed(id);
   useRealtimeActivityFeed(id);
 
+  const currentUserId = authSession?.user.id ?? null;
+  const myBalance = balance ?? 0;
+  const chipLimit = room?.per_user_chip_limit ?? null;
+  const hasOpenRequest = useMemo(
+    () =>
+      !!currentUserId &&
+      (activityItems ?? []).some(
+        (i) =>
+          i.type === 'chip_request' &&
+          i.chipRequest.requested_by === currentUserId &&
+          i.chipRequest.status === 'OPEN',
+      ),
+    [activityItems, currentUserId],
+  );
+
   const [refreshing, setRefreshing] = useState(false);
   const [filter, setFilter] = useState<BetFilter>('all');
   const [standingsOpen, setStandingsOpen] = useState(false);
@@ -145,6 +160,8 @@ export default function RoomDetailScreen() {
             currentUserRole={currentMember?.role ?? null}
             roomActive={isActive}
             roomId={id}
+            currentUserBalance={myBalance}
+            roomChipLimit={chipLimit}
           />
         )}
         contentContainerClassName="px-5 pb-24"
@@ -159,8 +176,12 @@ export default function RoomDetailScreen() {
           <View>
             <RoomHeaderBar
               members={members ?? []}
-              balance={balance ?? 0}
+              balance={myBalance}
               onOpenStandings={() => setStandingsOpen(true)}
+              roomId={id}
+              roomActive={isActive}
+              chipLimit={chipLimit}
+              hasOpenRequest={hasOpenRequest}
             />
             <BetFeedStatusFilter value={filter} onChange={setFilter} />
           </View>
@@ -188,6 +209,7 @@ export default function RoomDetailScreen() {
         onClose={() => setStandingsOpen(false)}
         members={memberBalances ?? []}
         currentUserId={authSession?.user.id ?? null}
+        chipLimit={chipLimit}
       />
 
       <WinnerCelebration
