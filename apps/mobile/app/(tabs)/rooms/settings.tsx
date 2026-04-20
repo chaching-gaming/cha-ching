@@ -1,9 +1,7 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import {
-  ActionSheetIOS,
   ActivityIndicator,
   Alert,
-  Platform,
   ScrollView,
   Text,
   TouchableOpacity,
@@ -14,16 +12,18 @@ import * as Clipboard from 'expo-clipboard';
 import {
   CaretRight,
   Copy,
-  DownloadSimple,
+  Crown,
+  Gavel,
   PencilSimple,
   Plus,
-  Prohibit,
   Receipt,
   SignOut,
   Trophy,
+  User,
 } from 'phosphor-react-native';
 
 import { colors } from '@/constants/colors';
+import { ActionSheet, type ActionSheetOption } from '@/components/ui/action-sheet';
 import { Badge } from '@/components/ui/badge';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { MemberRow } from '@/components/activity/member-row';
@@ -38,31 +38,13 @@ import {
   useUpdateMemberRole,
 } from '@/hooks/use-rooms';
 
-function promptMemberRole(
-  displayName: string,
-  onPick: (role: 'PLAYER' | 'ATTESTOR' | 'ADMIN') => void,
-) {
-  if (Platform.OS === 'ios') {
-    ActionSheetIOS.showActionSheetWithOptions(
-      {
-        options: ['Cancel', 'Player', 'Attestor', 'Admin'],
-        cancelButtonIndex: 0,
-      },
-      (buttonIndex) => {
-        if (buttonIndex === 1) onPick('PLAYER');
-        if (buttonIndex === 2) onPick('ATTESTOR');
-        if (buttonIndex === 3) onPick('ADMIN');
-      },
-    );
-  } else {
-    Alert.alert(`Change role: ${displayName}`, undefined, [
-      { text: 'Player', onPress: () => onPick('PLAYER') },
-      { text: 'Attestor', onPress: () => onPick('ATTESTOR') },
-      { text: 'Admin', onPress: () => onPick('ADMIN') },
-      { text: 'Cancel', style: 'cancel' },
-    ]);
-  }
-}
+type MemberRole = 'PLAYER' | 'ATTESTOR' | 'ADMIN';
+
+type RoleSheetTarget = {
+  userId: string;
+  name: string;
+  currentRole: MemberRole | null;
+};
 
 function SectionLabel({ children }: { children: string }) {
   return (
@@ -180,6 +162,7 @@ export default function RoomSettingsScreen() {
   const isActive = room?.is_active ?? false;
 
   const [chipLimitSheetOpen, setChipLimitSheetOpen] = useState(false);
+  const [roleSheetTarget, setRoleSheetTarget] = useState<RoleSheetTarget | null>(null);
 
   const handleCopyInviteCode = useCallback(async () => {
     if (!room?.invite_code) return;
@@ -207,23 +190,60 @@ export default function RoomSettingsScreen() {
   const handleChangeRoleRequest = useCallback(
     (userId: string) => {
       const target = members?.find((m) => m.user_id === userId);
-      const targetName = target?.profiles?.display_name ?? 'Member';
-
-      promptMemberRole(targetName, async (newRole) => {
-        if (target?.role === newRole) return;
-        try {
-          await updateMemberRole.mutateAsync({
-            p_room_id: id,
-            p_target_user_id: userId,
-            p_new_role: newRole,
-          });
-        } catch (err) {
-          Alert.alert('Error', getRpcErrorMessage(err));
-        }
+      setRoleSheetTarget({
+        userId,
+        name: target?.profiles?.display_name ?? 'Member',
+        currentRole: (target?.role as MemberRole | undefined) ?? null,
       });
     },
-    [id, members, updateMemberRole],
+    [members],
   );
+
+  const performChangeRole = useCallback(
+    async (userId: string, newRole: MemberRole) => {
+      try {
+        await updateMemberRole.mutateAsync({
+          p_room_id: id,
+          p_target_user_id: userId,
+          p_new_role: newRole,
+        });
+      } catch (err) {
+        Alert.alert('Error', getRpcErrorMessage(err));
+      }
+    },
+    [id, updateMemberRole],
+  );
+
+  const roleOptions = useMemo<ActionSheetOption[]>(() => {
+    if (!roleSheetTarget) return [];
+    const pick = (role: MemberRole) => {
+      if (roleSheetTarget.currentRole === role) return;
+      void performChangeRole(roleSheetTarget.userId, role);
+    };
+    return [
+      {
+        key: 'PLAYER',
+        label: 'Player',
+        subtitle: 'Places and accepts bets',
+        icon: <User size={22} color={colors.textSecondary} weight="bold" />,
+        onPress: () => pick('PLAYER'),
+      },
+      {
+        key: 'ATTESTOR',
+        label: 'Attestor',
+        subtitle: 'Can settle bets and resolve disputes',
+        icon: <Gavel size={22} color={colors.warning} weight="bold" />,
+        onPress: () => pick('ATTESTOR'),
+      },
+      {
+        key: 'ADMIN',
+        label: 'Admin',
+        subtitle: 'Full control of the room',
+        icon: <Crown size={22} color={colors.primary} weight="bold" />,
+        onPress: () => pick('ADMIN'),
+      },
+    ];
+  }, [roleSheetTarget, performChangeRole]);
 
   const handleRemoveMemberRequest = useCallback(
     (userId: string) => {
@@ -326,25 +346,11 @@ export default function RoomSettingsScreen() {
             <SectionLabel>Admin actions</SectionLabel>
             <View className="overflow-hidden rounded-2xl border border-border bg-surface">
               <AdminActionRow
-                icon={<Prohibit size={20} color={colors.error} weight="bold" />}
-                tint="error"
-                label="Void a Bet"
-                subtitle="Return chips to all parties"
-                comingSoon
-              />
-              <AdminActionRow
                 icon={<Receipt size={20} color={colors.primary} weight="bold" />}
                 tint="primary"
                 label="View Wager Ledger"
-                subtitle="All bets and transactions"
-                comingSoon
-              />
-              <AdminActionRow
-                icon={<DownloadSimple size={20} color={colors.warning} weight="bold" />}
-                tint="warning"
-                label="Export as CSV"
-                subtitle="Download bets and ledger"
-                comingSoon
+                subtitle="All entries, with CSV export"
+                onPress={() => router.push(`/(tabs)/rooms/ledger?id=${id}`)}
               />
             </View>
           </View>
@@ -408,6 +414,14 @@ export default function RoomSettingsScreen() {
           currentLimit={room.per_user_chip_limit}
         />
       ) : null}
+
+      <ActionSheet
+        visible={!!roleSheetTarget}
+        onClose={() => setRoleSheetTarget(null)}
+        title={roleSheetTarget ? `Change role · ${roleSheetTarget.name}` : undefined}
+        options={roleOptions}
+        selectedKey={roleSheetTarget?.currentRole}
+      />
     </View>
   );
 }

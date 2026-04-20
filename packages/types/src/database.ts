@@ -679,6 +679,35 @@ export type Database = {
         };
       };
       expire_open_bets: { Args: never; Returns: number };
+      export_room_bets: {
+        Args: { p_room_id: string };
+        Returns: {
+          accepted_by: string;
+          accepted_by_name: string;
+          accepted_pick: string;
+          created_at: string;
+          id: string;
+          offered_by: string;
+          offered_by_name: string;
+          offered_pick: string;
+          options: Json;
+          outcome: string;
+          question: string;
+          settled_at: string;
+          settlement_method: string;
+          stake: number;
+          status: string;
+          subject_positive_option: string;
+          subject_user_id: string;
+          subject_user_name: string;
+          void_reason: string;
+          voided_at: string;
+          voided_by: string;
+          voided_by_name: string;
+          winner: string;
+          winner_name: string;
+        }[];
+      };
       get_my_room_balance: { Args: { p_room_id: string }; Returns: number };
       get_room_event_stats: {
         Args: { p_room_id: string };
@@ -692,6 +721,21 @@ export type Database = {
           total_donations: number;
           total_members: number;
           voided_bets: number;
+        }[];
+      };
+      get_room_ledger: {
+        Args: { p_limit?: number; p_offset?: number; p_room_id: string };
+        Returns: {
+          amount: number;
+          avatar_url: string;
+          bet_id: string;
+          bet_question: string;
+          chip_request_id: string;
+          created_at: string;
+          display_name: string;
+          id: string;
+          type: string;
+          user_id: string;
         }[];
       };
       get_room_member_balances: {
