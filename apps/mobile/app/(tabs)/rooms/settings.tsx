@@ -20,6 +20,7 @@ import {
   Prohibit,
   Receipt,
   SignOut,
+  Trophy,
 } from 'phosphor-react-native';
 
 import { colors } from '@/constants/colors';
@@ -301,6 +302,20 @@ export default function RoomSettingsScreen() {
               valueClassName="text-primary"
               rightIcon={<Copy size={18} color={colors.primary} weight="bold" />}
               onPress={room.invite_code ? handleCopyInviteCode : undefined}
+            />
+          </View>
+        </View>
+
+        {/* View — per-room read-only surfaces, visible to every member */}
+        <View className="px-5">
+          <SectionLabel>View</SectionLabel>
+          <View className="overflow-hidden rounded-2xl border border-border bg-surface">
+            <AdminActionRow
+              icon={<Trophy size={20} color={colors.primary} weight="fill" />}
+              tint="primary"
+              label="Standings"
+              subtitle="Chip leaderboard"
+              onPress={() => router.push(`/(tabs)/rooms/standings?id=${id}`)}
             />
           </View>
         </View>

@@ -680,11 +680,37 @@ export type Database = {
       };
       expire_open_bets: { Args: never; Returns: number };
       get_my_room_balance: { Args: { p_room_id: string }; Returns: number };
+      get_room_event_stats: {
+        Args: { p_room_id: string };
+        Returns: {
+          matched_bets: number;
+          open_bets: number;
+          popular_templates: Json;
+          settled_bets: number;
+          total_bets: number;
+          total_chips_wagered: number;
+          total_donations: number;
+          total_members: number;
+          voided_bets: number;
+        }[];
+      };
       get_room_member_balances: {
         Args: { p_room_id: string };
         Returns: {
           avatar_url: string;
           balance: number;
+          display_name: string;
+          losses: number;
+          user_id: string;
+          wins: number;
+        }[];
+      };
+      get_room_player_stats: {
+        Args: { p_room_id: string };
+        Returns: {
+          avatar_url: string;
+          balance: number;
+          category_breakdown: Json;
           display_name: string;
           losses: number;
           user_id: string;

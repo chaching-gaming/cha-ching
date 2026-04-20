@@ -285,30 +285,22 @@ function StandingsRow({
   chipLimit: number | null;
 }) {
   const belowLimit = chipLimit != null && member.balance <= chipLimit;
-  const hasRecord = member.wins > 0 || member.losses > 0;
   return (
     <View className="flex-row items-center border-b border-border/40 px-5 py-4">
       <Text className="w-8 text-base font-bold text-text-muted">{rank}</Text>
       <Avatar uri={member.avatar_url} fallback={member.display_name ?? '?'} size="md" />
-      <View className="ml-3 min-w-0 flex-1">
-        <View className="flex-row items-center gap-2">
-          <Text className="min-w-0 shrink text-base text-white" numberOfLines={1}>
-            {member.display_name ?? 'Unknown'}
-            {isSelf ? <Text className="text-sm text-text-secondary"> (you)</Text> : null}
-          </Text>
-          {belowLimit ? (
-            <Badge
-              variant="error"
-              label="At limit"
-              className="px-2 py-0.5"
-              labelClassName="text-[10px] font-bold tracking-wide"
-            />
-          ) : null}
-        </View>
-        {hasRecord ? (
-          <Text className="mt-0.5 text-sm font-medium text-text-muted">
-            {member.wins}W · {member.losses}L
-          </Text>
+      <View className="ml-3 min-w-0 flex-1 flex-row items-center gap-2">
+        <Text className="min-w-0 shrink text-base text-white" numberOfLines={1}>
+          {member.display_name ?? 'Unknown'}
+          {isSelf ? <Text className="text-sm text-text-secondary"> (you)</Text> : null}
+        </Text>
+        {belowLimit ? (
+          <Badge
+            variant="error"
+            label="At limit"
+            className="px-2 py-0.5"
+            labelClassName="text-[10px] font-bold tracking-wide"
+          />
         ) : null}
       </View>
       <Text className={`text-base font-bold ${balanceColorClass(member.balance)}`}>
