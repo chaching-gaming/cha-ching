@@ -1,11 +1,30 @@
 import { useEffect, useRef, useState } from 'react';
 
 import type { ActivityItem, BetWithProfiles } from '@/hooks/use-activity-feed';
+import { useFeedback } from '@/providers/feedback';
+
+function didUserWin(bet: BetWithProfiles, userId: string | null): boolean {
+  const outcomeKey = bet.outcome?.trim().toLowerCase() ?? '';
+  if (!userId || !outcomeKey) return false;
+  // Multi-player: current user wins if any of their stakes matched the outcome.
+  return (bet.stakes ?? []).some(
+    (s) => s.user_id === userId && s.pick.trim().toLowerCase() === outcomeKey,
+  );
+}
+
+function didUserParticipate(bet: BetWithProfiles, userId: string | null): boolean {
+  if (!userId) return false;
+  return (bet.stakes ?? []).some((s) => s.user_id === userId);
+}
 
 /**
- * Detects live bet.status → SETTLED transitions in the activity feed and, if the current user
- * is the winner, queues a celebration. On first data load we seed the "seen" set so we don't
- * fire for historical settlements.
+ * Detects live bet.status → SETTLED transitions in the activity feed. Fires:
+ *   - Overlay + `bet_won` feedback when the current user won.
+ *   - `bet_lost` feedback when the user participated but didn't win (no overlay).
+ *
+ * On first data load we seed the "seen" set so we don't fire for historical
+ * settlements. When multiple bets settle in the same tick, a win takes priority
+ * over a loss for feedback (one sound per transition).
  */
 export function useWinnerCelebration(
   items: ActivityItem[],
@@ -15,6 +34,7 @@ export function useWinnerCelebration(
   const seenSettled = useRef<Set<string>>(new Set());
   const initialized = useRef(false);
   const [celebratingBet, setCelebratingBet] = useState<BetWithProfiles | null>(null);
+  const { trigger } = useFeedback();
 
   useEffect(() => {
     // Wait until the query has actually returned before seeding. Otherwise the empty
@@ -33,23 +53,34 @@ export function useWinnerCelebration(
       return;
     }
 
+    const newlySettled: BetWithProfiles[] = [];
     for (const bet of settledBets) {
       if (seenSettled.current.has(bet.id)) continue;
       seenSettled.current.add(bet.id);
-      // Multi-player: current user wins if any of their stakes matched the outcome.
-      const outcomeKey = bet.outcome?.trim().toLowerCase() ?? '';
-      const iWon =
-        !!currentUserId &&
-        !!outcomeKey &&
-        (bet.stakes ?? []).some(
-          (s) => s.user_id === currentUserId && s.pick.trim().toLowerCase() === outcomeKey,
-        );
-      if (iWon) {
-        setCelebratingBet(bet);
-        return; // Celebrate one at a time; rest sit queued in the seen set.
+      newlySettled.push(bet);
+    }
+    if (newlySettled.length === 0) return;
+
+    // Win takes priority over loss; fall back to a loss if no win was found.
+    let winBet: BetWithProfiles | null = null;
+    let lossBet: BetWithProfiles | null = null;
+    for (const bet of newlySettled) {
+      if (didUserWin(bet, currentUserId)) {
+        winBet = bet;
+        break;
+      }
+      if (!lossBet && didUserParticipate(bet, currentUserId)) {
+        lossBet = bet;
       }
     }
-  }, [items, currentUserId, isLoading]);
+
+    if (winBet) {
+      setCelebratingBet(winBet);
+      trigger('bet_won');
+    } else if (lossBet) {
+      trigger('bet_lost');
+    }
+  }, [items, currentUserId, isLoading, trigger]);
 
   const dismissCelebration = () => setCelebratingBet(null);
 

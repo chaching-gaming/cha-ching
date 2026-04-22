@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 
 import type { ActivityItem, BetWithProfiles } from '@/hooks/use-activity-feed';
+import { useFeedback } from '@/providers/feedback';
 
 /**
  * Fires a "You're locked in" flash the moment the current user's own stake
@@ -18,6 +19,7 @@ export function useLockedInCelebration(
   const seenJoined = useRef<Set<string>>(new Set());
   const initialized = useRef(false);
   const [lockedInBet, setLockedInBet] = useState<BetWithProfiles | null>(null);
+  const { trigger } = useFeedback();
 
   useEffect(() => {
     if (isLoading || !currentUserId) return;
@@ -37,9 +39,10 @@ export function useLockedInCelebration(
       if (seenJoined.current.has(bet.id)) continue;
       seenJoined.current.add(bet.id);
       setLockedInBet(bet);
+      trigger('bet_matched');
       return; // One at a time.
     }
-  }, [items, currentUserId, isLoading]);
+  }, [items, currentUserId, isLoading, trigger]);
 
   const dismissLockedIn = () => setLockedInBet(null);
 

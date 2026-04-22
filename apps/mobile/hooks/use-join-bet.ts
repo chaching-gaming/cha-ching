@@ -4,11 +4,13 @@ import { supabase } from '@/lib/supabase';
 import type { Database } from '@cha-ching/types';
 
 import { roomBalanceKey, roomBetsKey } from '@/hooks/use-activity-feed';
+import { useFeedback } from '@/providers/feedback';
 
 type Bet = Database['public']['Tables']['bets']['Row'];
 
 export function useJoinBet() {
   const queryClient = useQueryClient();
+  const { trigger } = useFeedback();
 
   return useMutation({
     mutationFn: async (params: { p_bet_id: string; p_pick: string; roomId: string }) => {
@@ -24,6 +26,7 @@ export function useJoinBet() {
       queryClient.invalidateQueries({ queryKey: roomBalanceKey(variables.roomId) });
       // Rooms list balance derives from ledger_entries, which changed.
       queryClient.invalidateQueries({ queryKey: ['rooms'] });
+      trigger('bet_accepted');
     },
   });
 }

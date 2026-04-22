@@ -15,6 +15,7 @@ import * as ImagePicker from 'expo-image-picker';
 
 import { useProfile, useUpdateProfile } from '@/hooks/use-profile';
 import { useAuth } from '@/providers/auth';
+import { usePreferences } from '@/providers/preferences';
 import { useRooms, type RoomWithMembership } from '@/hooks/use-rooms';
 import { uploadAvatar } from '@/lib/storage';
 import { supabase } from '@/lib/supabase';
@@ -148,8 +149,10 @@ export default function ProfileScreen() {
   const [isEditing, setIsEditing] = useState(false);
   const [uploading, setUploading] = useState(false);
 
-  // Local-only settings stubs; persistence wires up in a future task.
-  const [soundEffects, setSoundEffects] = useState(true);
+  const { soundEnabled, hapticsEnabled, setSoundEnabled, setHapticsEnabled, isHydrated } =
+    usePreferences();
+
+  // Still local stubs — push notifications and theme wiring are separate tasks.
   const [notifications, setNotifications] = useState(true);
   const [theme, setTheme] = useState<ThemePreference>('dark');
 
@@ -265,15 +268,28 @@ export default function ProfileScreen() {
               label="Sound Effects"
               trailing={
                 <Switch
-                  value={soundEffects}
-                  onValueChange={setSoundEffects}
+                  value={soundEnabled}
+                  onValueChange={setSoundEnabled}
+                  disabled={!isHydrated}
                   trackColor={{ true: colors.primary, false: colors.border }}
                   thumbColor="#ffffff"
                   ios_backgroundColor={colors.border}
                 />
               }
             />
-            <SettingsCardRow label="Haptics" subtitle="Follows system settings" />
+            <SettingsCardRow
+              label="Haptics"
+              trailing={
+                <Switch
+                  value={hapticsEnabled}
+                  onValueChange={setHapticsEnabled}
+                  disabled={!isHydrated}
+                  trackColor={{ true: colors.primary, false: colors.border }}
+                  thumbColor="#ffffff"
+                  ios_backgroundColor={colors.border}
+                />
+              }
+            />
             <SettingsCardRow
               label="Notifications"
               trailing={

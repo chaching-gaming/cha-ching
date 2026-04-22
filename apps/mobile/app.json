@@ -36,7 +36,8 @@
         {
           "photosPermission": "Allow Cha-Ching to access your photos to set a profile picture."
         }
-      ]
+      ],
+      "expo-audio"
     ],
     "experiments": {
       "typedRoutes": true
