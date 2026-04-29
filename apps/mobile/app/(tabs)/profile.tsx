@@ -149,11 +149,17 @@ export default function ProfileScreen() {
   const [isEditing, setIsEditing] = useState(false);
   const [uploading, setUploading] = useState(false);
 
-  const { soundEnabled, hapticsEnabled, setSoundEnabled, setHapticsEnabled, isHydrated } =
-    usePreferences();
+  const {
+    soundEnabled,
+    hapticsEnabled,
+    notificationsEnabled,
+    setSoundEnabled,
+    setHapticsEnabled,
+    setNotificationsEnabled,
+    isHydrated,
+  } = usePreferences();
 
-  // Still local stubs — push notifications and theme wiring are separate tasks.
-  const [notifications, setNotifications] = useState(true);
+  // Still local stub — theme wiring is a separate task.
   const [theme, setTheme] = useState<ThemePreference>('dark');
 
   function startEditing() {
@@ -294,8 +300,9 @@ export default function ProfileScreen() {
               label="Notifications"
               trailing={
                 <Switch
-                  value={notifications}
-                  onValueChange={setNotifications}
+                  value={notificationsEnabled}
+                  onValueChange={setNotificationsEnabled}
+                  disabled={!isHydrated}
                   trackColor={{ true: colors.primary, false: colors.border }}
                   thumbColor="#ffffff"
                   ios_backgroundColor={colors.border}
