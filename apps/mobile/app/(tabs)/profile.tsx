@@ -24,14 +24,6 @@ import { Badge } from '@/components/ui/badge';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { colors } from '@/constants/colors';
 
-type ThemePreference = 'dark' | 'light' | 'system';
-
-const THEME_OPTIONS: { key: ThemePreference; label: string }[] = [
-  { key: 'dark', label: 'Dark' },
-  { key: 'light', label: 'Light' },
-  { key: 'system', label: 'System' },
-];
-
 type RoleBadge = { variant: 'admin' | 'player' | 'attestor'; label: string };
 
 const ROLE_BADGES: Record<string, RoleBadge> = {
@@ -72,36 +64,6 @@ function SettingsCardRow({
         ) : null}
       </View>
       {trailing ? <View>{trailing}</View> : null}
-    </View>
-  );
-}
-
-function ThemeSegmented({
-  value,
-  onChange,
-}: {
-  value: ThemePreference;
-  onChange: (v: ThemePreference) => void;
-}) {
-  return (
-    <View className="flex-row gap-1 rounded-xl bg-surface-light p-1">
-      {THEME_OPTIONS.map((opt) => {
-        const active = opt.key === value;
-        return (
-          <TouchableOpacity
-            key={opt.key}
-            onPress={() => onChange(opt.key)}
-            activeOpacity={0.8}
-            accessibilityRole="button"
-            accessibilityState={{ selected: active }}
-            className={`items-center justify-center rounded-lg px-3 py-1.5 ${active ? 'bg-primary' : ''}`}
-          >
-            <Text className={`text-xs font-bold ${active ? 'text-white' : 'text-text-secondary'}`}>
-              {opt.label}
-            </Text>
-          </TouchableOpacity>
-        );
-      })}
     </View>
   );
 }
@@ -158,9 +120,6 @@ export default function ProfileScreen() {
     setNotificationsEnabled,
     isHydrated,
   } = usePreferences();
-
-  // Still local stub — theme wiring is a separate task.
-  const [theme, setTheme] = useState<ThemePreference>('dark');
 
   function startEditing() {
     setDisplayName(profile?.display_name ?? '');
@@ -308,10 +267,6 @@ export default function ProfileScreen() {
                   ios_backgroundColor={colors.border}
                 />
               }
-            />
-            <SettingsCardRow
-              label="Theme"
-              trailing={<ThemeSegmented value={theme} onChange={setTheme} />}
               isLast
             />
           </View>
