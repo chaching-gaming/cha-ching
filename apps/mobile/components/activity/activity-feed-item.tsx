@@ -268,7 +268,7 @@ function BetActivityCard({
           activeOpacity={0.8}
           className="mt-3 flex-row items-center justify-center gap-2 rounded-xl bg-primary py-3"
         >
-          <Check size={18} color="#ffffff" weight="bold" />
+          <Check size={18} color={colors.textPrimary} weight="bold" />
           <Text className="text-sm font-bold text-white">Submit outcome</Text>
         </TouchableOpacity>
       ) : null}
@@ -288,7 +288,7 @@ function BetActivityCard({
           activeOpacity={0.8}
           className="mt-3 flex-row items-center justify-center gap-2 rounded-xl bg-warning py-3"
         >
-          <Warning size={18} color="#ffffff" weight="bold" />
+          <Warning size={18} color={colors.textPrimary} weight="bold" />
           <Text className="text-sm font-bold text-white">Resolve dispute</Text>
         </TouchableOpacity>
       ) : null}
@@ -685,7 +685,7 @@ function ChipRequestActivityCard({
           accessibilityLabel={`Donate chips to ${requesterName}`}
           className="mt-3 flex-row items-center justify-center gap-2 rounded-xl bg-primary py-3"
         >
-          <HandCoins size={18} color="#ffffff" weight="bold" />
+          <HandCoins size={18} color={colors.textPrimary} weight="bold" />
           <Text className="text-sm font-bold text-white">Donate chips</Text>
         </TouchableOpacity>
       ) : null}

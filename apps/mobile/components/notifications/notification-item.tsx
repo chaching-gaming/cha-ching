@@ -6,6 +6,7 @@ import {
   Timer,
   HandCoins,
   Coins,
+  UserPlus,
 } from 'phosphor-react-native';
 
 import { colors } from '@/constants/colors';
@@ -18,6 +19,7 @@ const NOTIFICATION_ICONS: Record<NotificationType, React.ComponentType<any>> = {
   bet_expiring: Timer,
   chip_request_created: HandCoins,
   chip_donated: Coins,
+  bet_accepted: UserPlus,
 };
 
 const ICON_COLORS: Record<NotificationType, string> = {
@@ -27,6 +29,7 @@ const ICON_COLORS: Record<NotificationType, string> = {
   bet_expiring: colors.warning,
   chip_request_created: colors.chipsIcon,
   chip_donated: colors.chipsIcon,
+  bet_accepted: colors.primary,
 };
 
 interface NotificationItemProps {

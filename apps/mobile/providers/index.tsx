@@ -4,6 +4,7 @@ import { AuthProvider } from './auth';
 import { FeedbackProvider } from './feedback';
 import { NotificationProvider } from './notifications';
 import { PreferencesProvider } from './preferences';
+import { ToastProvider } from './toast';
 
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
@@ -11,7 +12,9 @@ export function Providers({ children }: { children: React.ReactNode }) {
       <AuthProvider>
         <PreferencesProvider>
           <NotificationProvider>
-            <FeedbackProvider>{children}</FeedbackProvider>
+            <FeedbackProvider>
+              <ToastProvider>{children}</ToastProvider>
+            </FeedbackProvider>
           </NotificationProvider>
         </PreferencesProvider>
       </AuthProvider>

@@ -10,7 +10,7 @@ import { useRouter } from 'expo-router';
 import { Bell } from 'phosphor-react-native';
 
 import { colors } from '@/constants/colors';
-import { ScreenHeader } from '@/components/ui/screen-header';
+import { EmptyState, ScreenHeader, SkeletonNotificationItem } from '@/components/ui';
 import { NotificationItem } from '@/components/notifications/notification-item';
 import {
   useNotificationsFeed,
@@ -111,8 +111,10 @@ export default function NotificationsScreen() {
     return (
       <View className="flex-1 bg-background">
         <ScreenHeader title="Notifications" />
-        <View className="flex-1 items-center justify-center">
-          <ActivityIndicator size="large" color={colors.primary} />
+        <View>
+          {Array.from({ length: 5 }).map((_, i) => (
+            <SkeletonNotificationItem key={i} />
+          ))}
         </View>
       </View>
     );
@@ -122,17 +124,11 @@ export default function NotificationsScreen() {
     return (
       <View className="flex-1 bg-background">
         <ScreenHeader title="Notifications" />
-        <View className="flex-1 items-center justify-center px-5">
-          <View className="mb-4 h-16 w-16 items-center justify-center rounded-full bg-surface">
-            <Bell size={32} color={colors.textMuted} weight="regular" />
-          </View>
-          <Text className="text-center text-xl font-semibold text-white">
-            No notifications yet
-          </Text>
-          <Text className="mt-2 max-w-sm text-center text-base leading-6 text-textSecondary">
-            You'll be notified when someone matches your bet, disputes an outcome, or donates chips.
-          </Text>
-        </View>
+        <EmptyState
+          icon={Bell}
+          title="No notifications yet"
+          subtitle="You'll be notified when someone matches your bet, disputes an outcome, or donates chips."
+        />
       </View>
     );
   }

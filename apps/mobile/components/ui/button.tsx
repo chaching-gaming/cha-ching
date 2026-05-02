@@ -1,5 +1,7 @@
 import { ActivityIndicator, Text, TouchableOpacity } from 'react-native';
 
+import { colors } from '@/constants/colors';
+
 const variants = {
   primary: 'bg-primary active:bg-primary-dark',
   secondary: 'bg-surface-light border border-border',
@@ -47,7 +49,7 @@ export function Button({
       activeOpacity={0.7}
     >
       {loading ? (
-        <ActivityIndicator color={variant === 'primary' ? '#fff' : '#94A3B8'} />
+        <ActivityIndicator color={variant === 'primary' ? colors.textPrimary : colors.textSecondary} />
       ) : (
         <Text className={`${s.label} ${textVariants[variant]}`}>{children}</Text>
       )}

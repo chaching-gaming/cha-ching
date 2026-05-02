@@ -1,6 +1,8 @@
 import { Image, Text, TouchableOpacity, View } from 'react-native';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 
+import { colors } from '@/constants/colors';
+
 const sizes = {
   sm: { container: 'h-8 w-8', text: 'text-sm', icon: 14 },
   md: { container: 'h-12 w-12', text: 'text-lg', icon: 20 },
@@ -43,7 +45,7 @@ export function Avatar({
       )}
       {showEditBadge && (
         <View className="absolute bottom-0 right-0 h-5 w-5 items-center justify-center rounded-full border-2 border-background bg-primary">
-          <FontAwesome name="pencil" size={10} color="#fff" />
+          <FontAwesome name="pencil" size={10} color={colors.textPrimary} />
         </View>
       )}
     </View>

@@ -1,6 +1,5 @@
 import { useCallback, useRef } from 'react';
 import {
-  ActivityIndicator,
   Alert,
   FlatList,
   Pressable,
@@ -12,12 +11,10 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Swipeable } from 'react-native-gesture-handler';
-import { Plus, QrCode } from 'phosphor-react-native';
+import { Plus, QrCode, Users } from 'phosphor-react-native';
 
 import { colors } from '@/constants/colors';
-import { Avatar } from '@/components/ui/avatar';
-import { Button } from '@/components/ui/button';
-import { ScreenHeader } from '@/components/ui/screen-header';
+import { Avatar, EmptyState, ScreenHeader, SkeletonListItem } from '@/components/ui';
 import {
   useRooms,
   useEndSession,
@@ -153,22 +150,23 @@ function RoomSwipeRow({ item }: { item: RoomWithMembership }) {
   );
 }
 
-function EmptyState() {
+function RoomsEmptyState() {
   const router = useRouter();
 
   return (
-    <View className="flex-1 items-center justify-center px-5">
-      <Text className="text-xl font-semibold text-white">No rooms yet</Text>
-      <Text className="mb-6 mt-2 text-center text-base leading-6 text-text-secondary">
-        Create a room to start betting with friends, or join one with an invite code.
-      </Text>
-      <View className="w-full gap-3">
-        <Button onPress={() => router.push('/(tabs)/rooms/create')}>Create a Room</Button>
-        <Button variant="outline" onPress={() => router.push('/(tabs)/rooms/join')}>
-          Join with Code
-        </Button>
-      </View>
-    </View>
+    <EmptyState
+      icon={Users}
+      title="No rooms yet"
+      subtitle="Create a room to start betting with friends, or join one with an invite code."
+      action={{
+        label: 'Create a Room',
+        onPress: () => router.push('/(tabs)/rooms/create'),
+      }}
+      secondaryAction={{
+        label: 'Join with Code',
+        onPress: () => router.push('/(tabs)/rooms/join'),
+      }}
+    />
   );
 }
 
@@ -203,11 +201,13 @@ export default function RoomsListScreen() {
       />
 
       {isLoading ? (
-        <View className="flex-1 items-center justify-center">
-          <ActivityIndicator color={colors.primary} size="large" />
+        <View>
+          {Array.from({ length: 5 }).map((_, i) => (
+            <SkeletonListItem key={i} />
+          ))}
         </View>
       ) : !rooms?.length ? (
-        <EmptyState />
+        <RoomsEmptyState />
       ) : (
         <FlatList
           data={rooms}

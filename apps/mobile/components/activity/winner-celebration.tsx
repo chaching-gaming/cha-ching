@@ -11,6 +11,7 @@ import { Trophy } from 'phosphor-react-native';
 
 import { Avatar } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
+import { colors } from '@/constants/colors';
 import type { BetWithProfiles } from '@/hooks/use-activity-feed';
 
 type Props = {
@@ -21,7 +22,6 @@ type Props = {
 
 const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('window');
 const CONFETTI_COUNT = 28;
-const CONFETTI_COLORS = ['#FFD166', '#06D6A0', '#EF476F', '#118AB2', '#F78C6B', '#9B5DE5'];
 
 export function WinnerCelebration({ bet, currentUserId, onDismiss }: Props) {
   const visible = bet !== null;
@@ -76,7 +76,7 @@ function WinnerContent({
             size="xl"
           />
           <View className="absolute -right-2 -top-2 h-8 w-8 items-center justify-center rounded-full border-2 border-background bg-primary">
-            <Trophy size={16} color="#ffffff" weight="fill" />
+            <Trophy size={16} color={colors.textPrimary} weight="fill" />
           </View>
         </View>
 
@@ -109,7 +109,7 @@ function WinnerContent({
 }
 
 function ConfettiPiece({ index }: { index: number }) {
-  const color = CONFETTI_COLORS[index % CONFETTI_COLORS.length];
+  const color = colors.confetti[index % colors.confetti.length];
   const startX = useMemo(() => Math.random() * SCREEN_W, []);
   const driftX = useMemo(() => (Math.random() - 0.5) * 120, []);
   const size = useMemo(() => 8 + Math.random() * 6, []);

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Alert, Image, Text, TouchableOpacity, View } from 'react-native';
+import { Image, Text, TouchableOpacity, View } from 'react-native';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { Link } from 'expo-router';
 import { z } from 'zod';
@@ -7,6 +7,7 @@ import { supabase } from '@/lib/supabase';
 import { signInWithOAuth } from '@/lib/oauth';
 import { KeyboardAwareScrollView } from '@/components/form/keyboard-aware-scroll-view';
 import { useForm } from '@/hooks/use-form';
+import { useToast } from '@/providers/toast';
 
 const signUpSchema = z.object({
   displayName: z.string().min(1, 'Display name is required'),
@@ -19,6 +20,7 @@ const signUpSchema = z.object({
 
 export default function SignUpScreen() {
   const [oauthLoading, setOauthLoading] = useState(false);
+  const toast = useToast();
 
   const form = useForm({
     defaultValues: {
@@ -45,7 +47,7 @@ export default function SignUpScreen() {
           },
         });
       } else {
-        Alert.alert('Success', 'Check your email for a confirmation link.');
+        toast.show({ type: 'success', message: 'Check your email for a confirmation link.' });
       }
     },
   });
@@ -56,7 +58,7 @@ export default function SignUpScreen() {
       await signInWithOAuth(provider);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'OAuth sign-up failed';
-      Alert.alert('Error', message);
+      toast.show({ type: 'error', message });
     } finally {
       setOauthLoading(false);
     }

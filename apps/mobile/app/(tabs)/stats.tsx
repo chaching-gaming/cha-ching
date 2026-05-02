@@ -1,18 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import {
-  ActivityIndicator,
-  RefreshControl,
-  ScrollView,
-  Text,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { RefreshControl, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { useQueryClient } from '@tanstack/react-query';
-import { CaretDown } from 'phosphor-react-native';
+import { CaretDown, ChartBar } from 'phosphor-react-native';
 
 import { colors } from '@/constants/colors';
-import { Avatar } from '@/components/ui/avatar';
-import { ScreenHeader } from '@/components/ui/screen-header';
+import { Avatar, EmptyState, ScreenHeader, SkeletonStatsCard } from '@/components/ui';
 import { RoomSelectionSheet } from '@/components/activity/room-selection-sheet';
 import { StatCard } from '@/components/stats/stat-card';
 import { useRooms } from '@/hooks/use-rooms';
@@ -52,8 +44,10 @@ export default function StatsScreen() {
     return (
       <View className="flex-1 bg-background">
         <ScreenHeader title="Stats" />
-        <View className="flex-1 items-center justify-center">
-          <ActivityIndicator color={colors.primary} size="large" />
+        <View className="px-5 pt-4 gap-3">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <SkeletonStatsCard key={i} />
+          ))}
         </View>
       </View>
     );
@@ -63,12 +57,11 @@ export default function StatsScreen() {
     return (
       <View className="flex-1 bg-background">
         <ScreenHeader title="Stats" />
-        <View className="flex-1 items-center justify-center px-5">
-          <Text className="text-center text-xl font-semibold text-white">No active rooms</Text>
-          <Text className="mt-2 max-w-sm text-center text-base leading-6 text-text-secondary">
-            Join or create a room to start tracking stats.
-          </Text>
-        </View>
+        <EmptyState
+          icon={ChartBar}
+          title="No active rooms"
+          subtitle="Join or create a room to start tracking stats."
+        />
       </View>
     );
   }
@@ -136,8 +129,10 @@ function RoomStats({ roomId }: { roomId: string }) {
 
   if (loading && !event) {
     return (
-      <View className="flex-1 items-center justify-center py-12">
-        <ActivityIndicator color={colors.primary} />
+      <View className="px-5 pt-4 gap-3">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <SkeletonStatsCard key={i} />
+        ))}
       </View>
     );
   }

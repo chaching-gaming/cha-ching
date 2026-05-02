@@ -9,7 +9,8 @@ export type NotificationType =
   | 'bet_disputed'
   | 'bet_expiring'
   | 'chip_request_created'
-  | 'chip_donated';
+  | 'chip_donated'
+  | 'bet_accepted';
 
 export type NotificationRow = {
   id: string;

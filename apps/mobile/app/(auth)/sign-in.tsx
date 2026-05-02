@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Alert, Image, Text, TouchableOpacity, View } from 'react-native';
+import { Image, Text, TouchableOpacity, View } from 'react-native';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { Link } from 'expo-router';
 import { z } from 'zod';
@@ -7,6 +7,7 @@ import { supabase } from '@/lib/supabase';
 import { signInWithOAuth } from '@/lib/oauth';
 import { KeyboardAwareScrollView } from '@/components/form/keyboard-aware-scroll-view';
 import { useForm } from '@/hooks/use-form';
+import { useToast } from '@/providers/toast';
 
 const signInSchema = z.object({
   email: z.string().min(1, 'Email is required').email('Invalid email address'),
@@ -15,6 +16,7 @@ const signInSchema = z.object({
 
 export default function SignInScreen() {
   const [oauthLoading, setOauthLoading] = useState(false);
+  const toast = useToast();
 
   const form = useForm({
     defaultValues: {
@@ -46,7 +48,7 @@ export default function SignInScreen() {
       await signInWithOAuth(provider);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'OAuth sign-in failed';
-      Alert.alert('Error', message);
+      toast.show({ type: 'error', message });
     } finally {
       setOauthLoading(false);
     }

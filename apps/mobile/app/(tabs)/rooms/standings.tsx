@@ -1,23 +1,21 @@
 import { useCallback, useMemo, useState } from 'react';
-import { ActivityIndicator, FlatList, RefreshControl, Text, View } from 'react-native';
+import { FlatList, RefreshControl, Text, View } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import { useQueryClient } from '@tanstack/react-query';
+import { Crown } from 'phosphor-react-native';
 
 import { colors } from '@/constants/colors';
-import { Avatar } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
-import { ScreenHeader } from '@/components/ui/screen-header';
+import { Avatar, Badge, EmptyState, ScreenHeader, SkeletonListItem } from '@/components/ui';
 import { useAuth } from '@/providers/auth';
 import { useRoomDetail } from '@/hooks/use-rooms';
 import { useRoomMemberBalances, type RoomMemberBalance } from '@/hooks/use-activity-feed';
 import { balanceColorClass, formatBalance } from '@/lib/format-balance';
 
-// Podium medal colors. Gold/silver aren't in our palette; bronze is an inline
-// hex since it's only used here.
+// Podium medal colors from design tokens
 const RANK_BADGE_COLORS: Record<1 | 2 | 3, { bg: string; text: string }> = {
-  1: { bg: '#F59E0B', text: '#ffffff' }, // amber / gold
-  2: { bg: '#94A3B8', text: '#ffffff' }, // slate / silver
-  3: { bg: '#B97F4C', text: '#ffffff' }, // bronze
+  1: { bg: colors.medal.gold, text: colors.textPrimary },
+  2: { bg: colors.medal.silver, text: colors.textPrimary },
+  3: { bg: colors.medal.bronze, text: colors.textPrimary },
 };
 
 export default function StandingsScreen() {
@@ -49,8 +47,13 @@ export default function StandingsScreen() {
 
   if (roomLoading) {
     return (
-      <View className="flex-1 items-center justify-center bg-background">
-        <ActivityIndicator color={colors.primary} size="large" />
+      <View className="flex-1 bg-background">
+        <ScreenHeader title="Standings" showBack titleClassName="text-xl font-bold text-white" backIconSize={28} />
+        <View>
+          {Array.from({ length: 8 }).map((_, i) => (
+            <SkeletonListItem key={i} />
+          ))}
+        </View>
       </View>
     );
   }
@@ -75,18 +78,17 @@ export default function StandingsScreen() {
 
       {members.length === 0 ? (
         balancesLoading ? (
-          <View className="flex-1 items-center justify-center py-12">
-            <ActivityIndicator color={colors.primary} />
+          <View>
+            {Array.from({ length: 8 }).map((_, i) => (
+              <SkeletonListItem key={i} />
+            ))}
           </View>
         ) : (
-          <View className="flex-1 items-center justify-center px-5 py-12">
-            <Text className="text-center text-xl font-semibold text-text-secondary">
-              No standings yet
-            </Text>
-            <Text className="mt-2 max-w-sm text-center text-base leading-6 text-text-secondary">
-              Standings appear once chips start moving.
-            </Text>
-          </View>
+          <EmptyState
+            icon={Crown}
+            title="No standings yet"
+            subtitle="Standings appear once chips start moving."
+          />
         )
       ) : (
         <FlatList

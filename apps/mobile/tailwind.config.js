@@ -18,6 +18,17 @@ module.exports = {
         'text-primary': '#FFFFFF',
         'text-secondary': '#94A3B8',
         'text-muted': '#64748B',
+        // Medal colors for standings
+        'medal-gold': '#F59E0B',
+        'medal-silver': '#94A3B8',
+        'medal-bronze': '#B97F4C',
+        // Confetti colors for celebrations
+        'confetti-1': '#FFD166',
+        'confetti-2': '#06D6A0',
+        'confetti-3': '#EF476F',
+        'confetti-4': '#118AB2',
+        'confetti-5': '#F78C6B',
+        'confetti-6': '#9B5DE5',
       },
       fontFamily: {
         mono: ['SpaceMono'],

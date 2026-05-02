@@ -4,6 +4,7 @@ import { Swipeable } from 'react-native-gesture-handler';
 import { useRouter } from 'expo-router';
 import { CaretRight } from 'phosphor-react-native';
 
+import { colors } from '@/constants/colors';
 import type { BetWithProfiles } from '@/hooks/use-activity-feed';
 
 type Props = {
@@ -40,7 +41,7 @@ export function SwipeToAcceptRow({ bet, children }: Props) {
             activeOpacity={0.85}
             className="min-w-[110px] items-center justify-center rounded-2xl bg-primary px-4"
           >
-            <CaretRight size={22} color="#ffffff" weight="bold" />
+            <CaretRight size={22} color={colors.textPrimary} weight="bold" />
             <Text className="mt-1 text-center text-sm font-bold text-white">Accept</Text>
           </TouchableOpacity>
         </View>

@@ -123,7 +123,7 @@ function LockedInContent({
               },
             ]}
           >
-            <ChatCircleDots size={44} color="#ffffff" weight="fill" />
+            <ChatCircleDots size={44} color={colors.textPrimary} weight="fill" />
           </Animated.View>
         </View>
 

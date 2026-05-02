@@ -14,6 +14,14 @@ export const colors = {
   textPrimary: '#FFFFFF',
   textSecondary: '#94A3B8',
   textMuted: '#64748B',
+  /** Medal colors for standings podium */
+  medal: {
+    gold: '#F59E0B',
+    silver: '#94A3B8',
+    bronze: '#B97F4C',
+  },
+  /** Confetti colors for celebration animations */
+  confetti: ['#FFD166', '#06D6A0', '#EF476F', '#118AB2', '#F78C6B', '#9B5DE5'],
 } as const;
 
 export default {

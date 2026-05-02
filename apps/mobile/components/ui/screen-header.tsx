@@ -2,6 +2,8 @@ import { Text, TouchableOpacity, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { CaretLeft } from 'phosphor-react-native';
 
+import { colors } from '@/constants/colors';
+
 interface ScreenHeaderProps {
   title: string;
   /** Optional line under title (e.g. room name on sub-pages) */
@@ -39,7 +41,7 @@ export function ScreenHeader({
       {/* Left slot */}
       <View className="w-12 items-start">
         <TouchableOpacity onPress={() => router.back()} activeOpacity={0.7}>
-          <CaretLeft size={backIconSize} color="#fff" weight="bold" />
+          <CaretLeft size={backIconSize} color={colors.textPrimary} weight="bold" />
         </TouchableOpacity>
       </View>
 
