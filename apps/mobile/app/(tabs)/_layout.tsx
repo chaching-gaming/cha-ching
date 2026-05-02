@@ -2,10 +2,12 @@ import { useCallback, useState } from 'react';
 import { View } from 'react-native';
 import { getFocusedRouteNameFromRoute } from '@react-navigation/native';
 import { Tabs, useRouter } from 'expo-router';
-import { House, Newspaper, Plus, ChartBar, UserCircle } from 'phosphor-react-native';
+import { House, Plus, ChartBar, Bell, UserCircle } from 'phosphor-react-native';
 
 import { colors } from '@/constants/colors';
 import { RoomSelectionSheet } from '@/components/activity/room-selection-sheet';
+import { NotificationBadge } from '@/components/notifications/notification-badge';
+import { useNotifications } from '@/providers/notifications';
 
 const TAB_BAR_STYLE = {
   backgroundColor: colors.surface,
@@ -21,6 +23,7 @@ const ROOMS_TAB_LIST_ROUTE = 'index';
 export default function TabLayout() {
   const router = useRouter();
   const [sheetOpen, setSheetOpen] = useState(false);
+  const { unreadCount } = useNotifications();
 
   const handleSelectRoom = useCallback(
     (roomId: string) => {
@@ -55,11 +58,11 @@ export default function TabLayout() {
           }}
         />
         <Tabs.Screen
-          name="feed"
+          name="stats"
           options={{
-            title: 'Feed',
+            title: 'Stats',
             tabBarIcon: ({ color, focused }) => (
-              <Newspaper size={24} color={color} weight={focused ? 'fill' : 'regular'} />
+              <ChartBar size={24} color={color} weight={focused ? 'fill' : 'regular'} />
             ),
           }}
         />
@@ -82,11 +85,14 @@ export default function TabLayout() {
           }}
         />
         <Tabs.Screen
-          name="stats"
+          name="notifications"
           options={{
-            title: 'Stats',
+            title: 'Notifications',
             tabBarIcon: ({ color, focused }) => (
-              <ChartBar size={24} color={color} weight={focused ? 'fill' : 'regular'} />
+              <View>
+                <Bell size={24} color={color} weight={focused ? 'fill' : 'regular'} />
+                <NotificationBadge count={unreadCount} />
+              </View>
             ),
           }}
         />

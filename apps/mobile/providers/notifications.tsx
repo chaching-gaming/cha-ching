@@ -3,10 +3,12 @@ import { AppState, Platform } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
 import { useRouter } from 'expo-router';
+import { useQueryClient } from '@tanstack/react-query';
 
 import { useAuth } from './auth';
 import { env } from '@/lib/env';
 import { supabase } from '@/lib/supabase';
+import { notificationsKey } from '@/hooks/use-notifications-feed';
 
 // Configure notification handler
 Notifications.setNotificationHandler({
@@ -38,6 +40,7 @@ const NotificationContext = createContext<NotificationContextType | null>(null);
 
 export function NotificationProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const { session } = useAuth();
   const [expoPushToken, setExpoPushToken] = useState<string | null>(null);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -225,6 +228,34 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
 
     return () => subscription.remove();
   }, [session?.user.id, refreshUnreadCount]);
+
+  // Subscribe to realtime notifications for badge updates
+  useEffect(() => {
+    if (!session?.user.id) return;
+
+    const channel = supabase
+      .channel(`user-notifications:${session.user.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'notifications',
+          filter: `user_id=eq.${session.user.id}`,
+        },
+        () => {
+          // Refresh unread count when new notification arrives
+          void refreshUnreadCount();
+          // Invalidate notifications list if user is viewing
+          queryClient.invalidateQueries({ queryKey: notificationsKey() });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [session?.user.id, refreshUnreadCount, queryClient]);
 
   // Unregister device on sign out
   useEffect(() => {
