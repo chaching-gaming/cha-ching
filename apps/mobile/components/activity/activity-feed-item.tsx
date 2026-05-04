@@ -126,17 +126,18 @@ function BetActivityCard({
   const perWinnerPayout = winningStakes.length > 0 ? Math.floor(pool / winningStakes.length) : 0;
   const currentUserWon = !!currentUserId && winningStakes.some((s) => s.user_id === currentUserId);
 
-  // A bet is "live for submissions" once both sides are staked — whether or
-  // not the expiry cron has flipped it to PENDING_RESULT yet. Server mirrors
-  // this rule inside submit_outcome (see 20260423 migration).
+  // Check if both sides are staked (for "waiting" message when OPEN)
   const distinctPicksStaked = useMemo(() => {
     const set = new Set(stakes.map((s) => s.pick.trim().toLowerCase()));
     return set.size;
   }, [stakes]);
   const bothSidesStaked = distinctPicksStaked >= 2;
 
-  const showSubmissionStatus =
-    dbStatus === 'PENDING_RESULT' || (dbStatus === 'OPEN' && bothSidesStaked);
+  // Show submission status only when bet is PENDING_RESULT (after expiry)
+  const showSubmissionStatus = dbStatus === 'PENDING_RESULT';
+
+  // Show "waiting" message when bet is OPEN with both sides staked
+  const showWaitingForClose = dbStatus === 'OPEN' && bothSidesStaked;
   const totalParticipants = stakes.length;
   const submittedCount = bet.outcome_submissions.length;
   const mySubmission = useMemo(
@@ -148,11 +149,14 @@ function BetActivityCard({
   );
 
   const isParticipant = !!currentUserId && stakes.some((s) => s.user_id === currentUserId);
-  const canSubmitOutcome =
-    !!roomActive && !!roomId && isParticipant && !mySubmission && showSubmissionStatus;
 
+  // Only allow outcome submission when PENDING_RESULT (after expiry)
+  const canSubmitOutcome =
+    !!roomActive && !!roomId && isParticipant && !mySubmission && dbStatus === 'PENDING_RESULT';
+
+  // Allow resolve for both DISPUTED and PENDING_RESULT bets
   const canResolveDispute =
-    dbStatus === 'DISPUTED' &&
+    (dbStatus === 'DISPUTED' || dbStatus === 'PENDING_RESULT') &&
     !!roomId &&
     (currentUserRole === 'ATTESTOR' || currentUserRole === 'ADMIN');
 
@@ -210,6 +214,15 @@ function BetActivityCard({
               </Text>
             ) : null}
           </View>
+        </View>
+      ) : null}
+
+      {showWaitingForClose && isParticipant ? (
+        <View className="mt-3 flex-row items-center gap-3 rounded-xl border border-border bg-surface-light px-3 py-2.5">
+          <Timer size={20} color={colors.warning} weight="bold" />
+          <Text className="flex-1 text-sm font-medium text-text-secondary">
+            Waiting for bet to close before outcomes can be submitted
+          </Text>
         </View>
       ) : null}
 
@@ -286,10 +299,18 @@ function BetActivityCard({
         <TouchableOpacity
           onPress={() => setDisputeSheetOpen(true)}
           activeOpacity={0.8}
-          className="mt-3 flex-row items-center justify-center gap-2 rounded-xl bg-warning py-3"
+          className={`mt-3 flex-row items-center justify-center gap-2 rounded-xl py-3 ${
+            dbStatus === 'DISPUTED' ? 'bg-warning' : 'bg-primary'
+          }`}
         >
-          <Warning size={18} color={colors.textPrimary} weight="bold" />
-          <Text className="text-sm font-bold text-white">Resolve dispute</Text>
+          {dbStatus === 'DISPUTED' ? (
+            <Warning size={18} color={colors.textPrimary} weight="bold" />
+          ) : (
+            <Check size={18} color={colors.textPrimary} weight="bold" />
+          )}
+          <Text className="text-sm font-bold text-white">
+            {dbStatus === 'DISPUTED' ? 'Resolve dispute' : 'Settle bet'}
+          </Text>
         </TouchableOpacity>
       ) : null}
 

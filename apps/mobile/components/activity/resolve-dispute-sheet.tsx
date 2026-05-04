@@ -20,6 +20,7 @@ export function ResolveDisputeSheet({ visible, onClose, bet, roomId }: Props) {
   const safeInsets = useSafeAreaInsets();
   const resolveDispute = useResolveDispute();
   const [selected, setSelected] = useState<string | null>(null);
+  const isDispute = bet.status === 'DISPUTED';
 
   const options = useMemo(() => {
     const raw = Array.isArray(bet.options) ? (bet.options as unknown[]) : [];
@@ -51,7 +52,7 @@ export function ResolveDisputeSheet({ visible, onClose, bet, roomId }: Props) {
   const handleSubmit = useCallback(() => {
     if (!selected) return;
     Alert.alert(
-      'Resolve this dispute?',
+      isDispute ? 'Resolve this dispute?' : 'Settle this bet?',
       `You're setting the final outcome to "${selected}". This settles the bet and cannot be undone.`,
       [
         { text: 'Cancel', style: 'cancel' },
@@ -77,7 +78,7 @@ export function ResolveDisputeSheet({ visible, onClose, bet, roomId }: Props) {
         },
       ],
     );
-  }, [bet.id, onClose, roomId, selected, resolveDispute]);
+  }, [bet.id, onClose, roomId, selected, resolveDispute, isDispute]);
 
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={handleClose}>
@@ -93,8 +94,14 @@ export function ResolveDisputeSheet({ visible, onClose, bet, roomId }: Props) {
         >
           <View className="mb-4 flex-row items-center justify-between">
             <View className="flex-row items-center gap-2">
-              <Warning size={22} color={colors.warning} weight="fill" />
-              <Text className="text-xl font-bold text-white">Resolve dispute</Text>
+              {isDispute ? (
+                <Warning size={22} color={colors.warning} weight="fill" />
+              ) : (
+                <Check size={22} color={colors.primary} weight="fill" />
+              )}
+              <Text className="text-xl font-bold text-white">
+                {isDispute ? 'Resolve dispute' : 'Settle bet'}
+              </Text>
             </View>
             <TouchableOpacity
               onPress={handleClose}
@@ -157,7 +164,7 @@ export function ResolveDisputeSheet({ visible, onClose, bet, roomId }: Props) {
           </View>
 
           <Button onPress={handleSubmit} disabled={!selected} loading={resolveDispute.isPending}>
-            Resolve and settle
+            {isDispute ? 'Resolve and settle' : 'Settle bet'}
           </Button>
         </Pressable>
       </Pressable>
