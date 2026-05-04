@@ -262,3 +262,18 @@ export function useRemoveMember() {
     },
   });
 }
+
+export function useLeaveRoom() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (params: { p_room_id: string }) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error } = await (supabase.rpc as any)('leave_room', params);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ROOMS_KEY });
+    },
+  });
+}

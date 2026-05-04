@@ -32,6 +32,7 @@ import { useAuth } from '@/providers/auth';
 import {
   getRpcErrorMessage,
   useEndSession,
+  useLeaveRoom,
   useRemoveMember,
   useRoomDetail,
   useRoomMembers,
@@ -156,6 +157,7 @@ export default function RoomSettingsScreen() {
   const endSession = useEndSession();
   const updateMemberRole = useUpdateMemberRole();
   const removeMember = useRemoveMember();
+  const leaveRoom = useLeaveRoom();
 
   const currentMember = members?.find((m) => m.user_id === authSession?.user.id);
   const isAdmin = currentMember?.role === 'ADMIN';
@@ -271,6 +273,28 @@ export default function RoomSettingsScreen() {
     },
     [id, members, removeMember],
   );
+
+  const handleLeaveRoom = useCallback(() => {
+    Alert.alert(
+      'Leave Room',
+      'Are you sure you want to leave this room? You will lose access to it.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Leave',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await leaveRoom.mutateAsync({ p_room_id: id });
+              router.replace('/(tabs)/rooms');
+            } catch (err) {
+              Alert.alert('Error', getRpcErrorMessage(err));
+            }
+          },
+        },
+      ],
+    );
+  }, [id, leaveRoom, router]);
 
   if (roomLoading) {
     return (
@@ -388,7 +412,7 @@ export default function RoomSettingsScreen() {
           </View>
         </View>
 
-        {/* Danger zone: end session */}
+        {/* Danger zone: end session (admin) or leave room (non-admin) */}
         {isAdmin && isActive ? (
           <View className="px-5">
             <SectionLabel>Danger zone</SectionLabel>
@@ -400,6 +424,23 @@ export default function RoomSettingsScreen() {
                 subtitle="Lock the room from new bets"
                 destructive
                 onPress={handleEndSession}
+              />
+            </View>
+          </View>
+        ) : null}
+
+        {/* Leave room (non-admin only) */}
+        {!isAdmin ? (
+          <View className="px-5">
+            <SectionLabel>Danger zone</SectionLabel>
+            <View className="overflow-hidden rounded-2xl border border-border bg-surface">
+              <AdminActionRow
+                icon={<SignOut size={20} color={colors.error} weight="bold" />}
+                tint="error"
+                label="Leave Room"
+                subtitle="Remove yourself from this room"
+                destructive
+                onPress={handleLeaveRoom}
               />
             </View>
           </View>
