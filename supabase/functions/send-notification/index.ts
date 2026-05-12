@@ -9,6 +9,7 @@ import {
 
 type NotificationType =
   | 'bet_matched'
+  | 'bet_accepted'
   | 'bet_settled'
   | 'bet_disputed'
   | 'bet_expiring'
@@ -94,8 +95,8 @@ Deno.serve(async (req) => {
         continue;
       }
 
-      // Insert notification record for history/badge
-      const { error: insertError } = await supabaseAdmin
+      // Insert notification record for history/badge and get the ID
+      const { data: insertedNotification, error: insertError } = await supabaseAdmin
         .from('notifications')
         .insert({
           user_id: userId,
@@ -103,11 +104,15 @@ Deno.serve(async (req) => {
           title,
           body,
           data,
-        });
+        })
+        .select('id')
+        .single();
 
       if (insertError) {
         console.error(`Failed to insert notification for user ${userId}:`, insertError);
       }
+
+      const notificationId = insertedNotification?.id ?? null;
 
       // Queue push messages for valid tokens
       for (const token of userSettings.expo_push_tokens) {
@@ -122,6 +127,7 @@ Deno.serve(async (req) => {
           body,
           data: {
             type,
+            notification_id: notificationId,
             ...data,
           },
           sound: 'default',

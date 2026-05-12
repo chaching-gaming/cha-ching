@@ -33,6 +33,7 @@ if (Platform.OS === 'android') {
 
 type NotificationData = {
   type?: string;
+  notification_id?: string;
   room_id?: string;
   bet_id?: string;
   chip_request_id?: string;
@@ -169,12 +170,21 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     }
   }, [registerDevice]);
 
-  // Handle navigation based on notification data
+  // Handle navigation based on notification data (and mark as read)
   const handleNotificationNavigation = useCallback(
-    (data: NotificationData) => {
+    async (data: NotificationData) => {
       if (!data) return;
 
-      const { type, room_id } = data;
+      const { type, notification_id, room_id } = data;
+
+      // Mark notification as read if we have the ID
+      if (notification_id) {
+        try {
+          await markAsRead([notification_id]);
+        } catch (err) {
+          console.error('Failed to mark notification as read:', err);
+        }
+      }
 
       // Navigate based on notification type
       switch (type) {
@@ -183,6 +193,13 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
         case 'bet_disputed':
         case 'bet_expiring':
         case 'bet_accepted':
+          // Navigate to bet detail page if bet_id present, otherwise room
+          if (data.bet_id) {
+            router.push(`/(tabs)/rooms/bet/${data.bet_id}`);
+          } else if (room_id) {
+            router.push(`/(tabs)/rooms/${room_id}`);
+          }
+          break;
         case 'chip_request_created':
         case 'chip_donated':
           if (room_id) {
@@ -194,7 +211,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
           break;
       }
     },
-    [router]
+    [router, markAsRead]
   );
 
   // Set up notification listeners
@@ -216,7 +233,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     // Handle notification tap
     responseListener.current = Notifications.addNotificationResponseReceivedListener((response) => {
       const data = response.notification.request.content.data as NotificationData;
-      handleNotificationNavigation(data);
+      void handleNotificationNavigation(data);
     });
 
     return () => {

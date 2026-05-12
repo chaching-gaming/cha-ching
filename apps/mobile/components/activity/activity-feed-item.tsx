@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Alert, Text, TouchableOpacity, View } from 'react-native';
+import { useRouter } from 'expo-router';
 import {
   ArrowRight,
   Check,
@@ -154,11 +155,12 @@ function BetActivityCard({
   const canSubmitOutcome =
     !!roomActive && !!roomId && isParticipant && !mySubmission && dbStatus === 'PENDING_RESULT';
 
-  // Allow resolve for both DISPUTED and PENDING_RESULT bets
-  const canResolveDispute =
-    (dbStatus === 'DISPUTED' || dbStatus === 'PENDING_RESULT') &&
+  // Allow resolve for DISPUTED bets always, or PENDING_RESULT when ALL participants have submitted
+  const allSubmitted = totalParticipants > 0 && submittedCount === totalParticipants;
+  const canResolve =
     !!roomId &&
-    (currentUserRole === 'ATTESTOR' || currentUserRole === 'ADMIN');
+    (currentUserRole === 'ATTESTOR' || currentUserRole === 'ADMIN') &&
+    (dbStatus === 'DISPUTED' || (dbStatus === 'PENDING_RESULT' && allSubmitted));
 
   const canVoid = !!roomId && currentUserRole === 'ADMIN' && dbStatus !== 'VOID';
 
@@ -295,26 +297,33 @@ function BetActivityCard({
         />
       ) : null}
 
-      {canResolveDispute ? (
-        <TouchableOpacity
-          onPress={() => setDisputeSheetOpen(true)}
-          activeOpacity={0.8}
-          className={`mt-3 flex-row items-center justify-center gap-2 rounded-xl py-3 ${
-            dbStatus === 'DISPUTED' ? 'bg-warning' : 'bg-primary'
-          }`}
-        >
-          {dbStatus === 'DISPUTED' ? (
-            <Warning size={18} color={colors.textPrimary} weight="bold" />
-          ) : (
-            <Check size={18} color={colors.textPrimary} weight="bold" />
-          )}
-          <Text className="text-sm font-bold text-white">
-            {dbStatus === 'DISPUTED' ? 'Resolve dispute' : 'Settle bet'}
+      {canResolve ? (
+        <View className="mt-3">
+          <TouchableOpacity
+            onPress={() => setDisputeSheetOpen(true)}
+            activeOpacity={0.8}
+            className={`flex-row items-center justify-center gap-2 rounded-xl py-3 ${
+              dbStatus === 'DISPUTED' ? 'bg-warning' : 'bg-primary'
+            }`}
+          >
+            {dbStatus === 'DISPUTED' ? (
+              <Warning size={18} color={colors.textPrimary} weight="bold" />
+            ) : (
+              <Check size={18} color={colors.textPrimary} weight="bold" />
+            )}
+            <Text className="text-sm font-bold text-white">
+              {dbStatus === 'DISPUTED' ? 'Resolve dispute' : 'Resolve'}
+            </Text>
+          </TouchableOpacity>
+          <Text className="mt-1.5 text-center text-[11px] text-text-muted">
+            {dbStatus === 'DISPUTED'
+              ? 'Conflicting outcomes submitted'
+              : 'All participants submitted'}
           </Text>
-        </TouchableOpacity>
+        </View>
       ) : null}
 
-      {canResolveDispute && roomId ? (
+      {canResolve && roomId ? (
         <ResolveDisputeSheet
           visible={disputeSheetOpen}
           onClose={() => setDisputeSheetOpen(false)}
@@ -510,40 +519,15 @@ export function ActivityFeedItem({
   currentUserBalance,
 }: ActivityFeedItemProps) {
   if (item.type === 'bet') {
-    const stakes = item.bet.stakes ?? [];
-    const alreadyStaked = !!currentUserId && stakes.some((s) => s.user_id === currentUserId);
-    const subjectDisallowed =
-      !!currentUserId &&
-      item.bet.subject_user_id === currentUserId &&
-      !!item.bet.subject_positive_option;
-    // We still show the swipe gate for subjects — the accept screen will lock
-    // the disallowed tile. Only hide it if they literally can't join at all,
-    // which never happens since the allowed side is always open.
-    void subjectDisallowed;
-    const canJoin =
-      roomActive &&
-      !!roomId &&
-      !!currentUserId &&
-      item.bet.status === 'OPEN' &&
-      !alreadyStaked &&
-      getEffectiveBetStatus(item.bet) !== 'EXPIRED';
-
-    const card = (
-      <BetActivityCard
-        bet={item.bet}
-        timestamp={item.timestamp}
-        showAcceptHint={canJoin}
+    return (
+      <BetActivityFeedItem
+        item={item}
         currentUserId={currentUserId}
         currentUserRole={currentUserRole}
         roomActive={roomActive}
         roomId={roomId}
       />
     );
-
-    if (canJoin) {
-      return <SwipeToAcceptRow bet={item.bet}>{card}</SwipeToAcceptRow>;
-    }
-    return card;
   }
 
   return (
@@ -556,6 +540,63 @@ export function ActivityFeedItem({
       currentUserBalance={currentUserBalance}
     />
   );
+}
+
+function BetActivityFeedItem({
+  item,
+  currentUserId,
+  currentUserRole,
+  roomActive,
+  roomId,
+}: {
+  item: Extract<ActivityItem, { type: 'bet' }>;
+  currentUserId?: string | null;
+  currentUserRole?: 'PLAYER' | 'ATTESTOR' | 'ADMIN' | string | null;
+  roomActive?: boolean;
+  roomId?: string;
+}) {
+  const router = useRouter();
+
+  const stakes = item.bet.stakes ?? [];
+  const alreadyStaked = !!currentUserId && stakes.some((s) => s.user_id === currentUserId);
+  const subjectDisallowed =
+    !!currentUserId &&
+    item.bet.subject_user_id === currentUserId &&
+    !!item.bet.subject_positive_option;
+  // We still show the swipe gate for subjects — the accept screen will lock
+  // the disallowed tile. Only hide it if they literally can't join at all,
+  // which never happens since the allowed side is always open.
+  void subjectDisallowed;
+  const canJoin =
+    roomActive &&
+    !!roomId &&
+    !!currentUserId &&
+    item.bet.status === 'OPEN' &&
+    !alreadyStaked &&
+    getEffectiveBetStatus(item.bet) !== 'EXPIRED';
+
+  const handleBetPress = useCallback(() => {
+    router.push(`/(tabs)/rooms/bet/${item.bet.id}`);
+  }, [router, item.bet.id]);
+
+  const card = (
+    <TouchableOpacity activeOpacity={0.85} onPress={handleBetPress}>
+      <BetActivityCard
+        bet={item.bet}
+        timestamp={item.timestamp}
+        showAcceptHint={canJoin}
+        currentUserId={currentUserId}
+        currentUserRole={currentUserRole}
+        roomActive={roomActive}
+        roomId={roomId}
+      />
+    </TouchableOpacity>
+  );
+
+  if (canJoin) {
+    return <SwipeToAcceptRow bet={item.bet}>{card}</SwipeToAcceptRow>;
+  }
+  return card;
 }
 
 function ChipRequestActivityCard({

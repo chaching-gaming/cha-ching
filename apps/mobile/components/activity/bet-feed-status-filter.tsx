@@ -45,16 +45,22 @@ export function BetFeedStatusFilter({ value, onChange }: BetFeedStatusFilterProp
 
 export function betMatchesFilter(bet: BetWithProfiles, filter: BetFilter): boolean {
   if (filter === 'all') return true;
-  const dbStatus = bet.status;
-  if (filter === 'open') return getEffectiveBetStatus(bet) === 'OPEN';
+  const effectiveStatus = getEffectiveBetStatus(bet);
+  if (filter === 'open') return effectiveStatus === 'OPEN';
   if (filter === 'matched') {
-    return dbStatus === 'MATCHED' || dbStatus === 'PENDING_RESULT' || dbStatus === 'DISPUTED';
+    // Includes bets that are matched/pending/disputed in DB,
+    // or OPEN in DB but effectively PENDING_RESULT (matched + expired)
+    return (
+      effectiveStatus === 'PENDING_RESULT' ||
+      effectiveStatus === 'DISPUTED' ||
+      bet.status === 'MATCHED'
+    );
   }
-  // 'settled' — all final states plus db-OPEN-but-effectively-EXPIRED
+  // 'settled' — all final states plus unmatched expired bets
   return (
-    dbStatus === 'SETTLED' ||
-    dbStatus === 'VOID' ||
-    dbStatus === 'EXPIRED' ||
-    getEffectiveBetStatus(bet) === 'EXPIRED'
+    bet.status === 'SETTLED' ||
+    bet.status === 'VOID' ||
+    bet.status === 'EXPIRED' ||
+    effectiveStatus === 'EXPIRED'
   );
 }

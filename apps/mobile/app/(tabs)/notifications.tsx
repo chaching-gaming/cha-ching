@@ -111,15 +111,27 @@ export default function NotificationsScreen() {
       // Mark as read if unread
       if (!notification.read_at) {
         await markAsRead([notification.id]);
+        await queryClient.invalidateQueries({ queryKey: notificationsKey() });
       }
 
-      // Navigate to relevant room if room_id present
-      const roomId = notification.data?.room_id;
-      if (roomId) {
-        router.push(`/(tabs)/rooms/${roomId}`);
+      const { room_id, bet_id } = notification.data ?? {};
+      const type = notification.type;
+
+      // Navigate to bet detail for bet-related notifications
+      if (
+        bet_id &&
+        ['bet_matched', 'bet_settled', 'bet_disputed', 'bet_expiring', 'bet_accepted'].includes(type)
+      ) {
+        router.push(`/(tabs)/rooms/bet/${bet_id}`);
+        return;
+      }
+
+      // Navigate to room for other notifications
+      if (room_id) {
+        router.push(`/(tabs)/rooms/${room_id}`);
       }
     },
-    [markAsRead, router]
+    [markAsRead, router, queryClient]
   );
 
   const handleLoadMore = useCallback(() => {

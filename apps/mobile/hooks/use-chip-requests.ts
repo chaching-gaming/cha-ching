@@ -9,6 +9,8 @@ import {
   roomMemberBalancesKey,
 } from '@/hooks/use-activity-feed';
 
+const ROOMS_KEY = ['rooms'] as const;
+
 type ChipRequest = Database['public']['Tables']['chip_requests']['Row'];
 
 export function useRequestChips() {
@@ -51,6 +53,8 @@ export function useDonateChips() {
       queryClient.invalidateQueries({ queryKey: roomChipRequestsKey(variables.roomId) });
       queryClient.invalidateQueries({ queryKey: roomBalanceKey(variables.roomId) });
       queryClient.invalidateQueries({ queryKey: roomMemberBalancesKey(variables.roomId) });
+      // Update rooms list to reflect new balance
+      queryClient.invalidateQueries({ queryKey: ROOMS_KEY });
     },
   });
 }
