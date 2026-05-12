@@ -30,7 +30,8 @@ export function TextField({
 }: TextFieldProps) {
   const field = useFieldContext<string>();
   const errors = field.state.meta.errors[0];
-  const padH = `${leftIcon ? 'pl-11' : 'pl-4'} ${rightIcon ? 'pr-11' : 'pr-4'}`;
+  const padL = leftIcon ? 'pl-11' : 'pl-4';
+  const padR = rightIcon ? 'pr-16' : 'pr-4';
 
   return (
     <View className={`mb-4 gap-1.5 ${className}`.trim()}>
@@ -42,7 +43,7 @@ export function TextField({
       )}
       <View className="relative">
         <TextInput
-          className={`min-h-[48px] rounded-xl border bg-surface-light py-3.5 text-base text-white ${padH} ${
+          className={`min-h-[48px] rounded-xl border bg-surface-light py-3.5 text-base text-white ${padL} ${padR} ${
             errors ? 'border-error' : 'border-border'
           } ${inputClassName}`}
           placeholderTextColor={colors.textMuted}
@@ -61,7 +62,7 @@ export function TextField({
           </View>
         )}
         {rightIcon && (
-          <View className="absolute top-0 right-0 bottom-0 w-11 items-center justify-center">
+          <View className="pointer-events-none absolute top-0 right-3.5 bottom-0 w-16 items-center justify-center">
             {rightIcon}
           </View>
         )}

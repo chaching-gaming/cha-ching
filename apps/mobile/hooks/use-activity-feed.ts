@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import type { Database } from '@cha-ching/types';
 import { useAuth } from '@/providers/auth';
+import { roomDetailKey, roomMembersKey } from './use-rooms';
 
 /** Supabase reuses `channel(topic)` if that topic is still registered; topics must be unique per subscription. */
 function realtimeTopicToken(): string {
@@ -178,8 +179,18 @@ export function useRoomActivityFeed(roomId: string) {
   return { data: items, isLoading: betsLoading || chipRequestsLoading };
 }
 
-export function useRealtimeActivityFeed(roomId: string) {
+type RealtimeActivityFeedOptions = {
+  /** Called when the current user is removed from the room */
+  onCurrentUserRemoved?: () => void;
+};
+
+export function useRealtimeActivityFeed(
+  roomId: string,
+  options?: RealtimeActivityFeedOptions,
+) {
   const queryClient = useQueryClient();
+  const { session } = useAuth();
+  const currentUserId = session?.user.id;
 
   useEffect(() => {
     if (!roomId) return;
@@ -252,13 +263,42 @@ export function useRealtimeActivityFeed(roomId: string) {
       })
       .subscribe();
 
+    // room_members: see when someone joins/leaves the room in real-time.
+    const roomMembersChannel = supabase
+      .channel(`cc-feed:${roomId}:members:${token}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'room_members',
+          filter: `room_id=eq.${roomId}`,
+        },
+        (payload) => {
+          queryClient.invalidateQueries({ queryKey: roomMembersKey(roomId) });
+          queryClient.invalidateQueries({ queryKey: roomDetailKey(roomId) });
+          queryClient.invalidateQueries({ queryKey: roomMemberBalancesKey(roomId) });
+
+          // If the current user was removed, notify via callback
+          if (
+            payload.eventType === 'DELETE' &&
+            payload.old &&
+            (payload.old as { user_id?: string }).user_id === currentUserId
+          ) {
+            options?.onCurrentUserRemoved?.();
+          }
+        },
+      )
+      .subscribe();
+
     return () => {
       void (async () => {
         await supabase.removeChannel(betsChannel);
         await supabase.removeChannel(chipRequestsChannel);
         await supabase.removeChannel(outcomeSubmissionsChannel);
         await supabase.removeChannel(betStakesChannel);
+        await supabase.removeChannel(roomMembersChannel);
       })();
     };
-  }, [roomId, queryClient]);
+  }, [roomId, queryClient, currentUserId, options]);
 }

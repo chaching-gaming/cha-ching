@@ -16,8 +16,6 @@ interface RoomHeaderBarProps {
   roomId?: string;
   /** Active session — request button is hidden when the session has ended. */
   roomActive?: boolean;
-  /** Room loss floor. Request affordance only shows when balance <= this value. */
-  chipLimit?: number | null;
   /** Whether the current user already has an OPEN chip request in this room. */
   hasOpenRequest?: boolean;
 }
@@ -30,16 +28,16 @@ export function RoomHeaderBar({
   onOpenStandings,
   roomId,
   roomActive,
-  chipLimit,
   hasOpenRequest,
 }: RoomHeaderBarProps) {
   const [requestOpen, setRequestOpen] = useState(false);
   const visible = members.slice(0, MAX_AVATARS);
   const overflow = members.length - MAX_AVATARS;
 
-  const atLimit = chipLimit != null && balance <= chipLimit;
-  const showRequestButton = !!roomActive && atLimit && !hasOpenRequest && !!roomId;
-  const showPendingHint = !!roomActive && atLimit && hasOpenRequest;
+  // Show request button when balance is zero or less (fund me feature)
+  const atZero = balance <= 0;
+  const showRequestButton = !!roomActive && atZero && !hasOpenRequest && !!roomId;
+  const showPendingHint = !!roomActive && atZero && hasOpenRequest;
 
   return (
     <View className="py-4">
@@ -114,7 +112,6 @@ export function RoomHeaderBar({
           onClose={() => setRequestOpen(false)}
           roomId={roomId}
           currentBalance={balance}
-          chipLimit={chipLimit ?? null}
         />
       ) : null}
     </View>

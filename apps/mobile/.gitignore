@@ -32,6 +32,10 @@ yarn-error.*
 
 # local env files
 .env*.local
+.env*.stagging
+
+# Firebase (contains API keys - use EAS secrets for CI/CD)
+GoogleService-Info.plist
 
 # typescript
 *.tsbuildinfo
@@ -39,3 +43,5 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+.env.local

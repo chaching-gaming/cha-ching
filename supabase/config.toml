@@ -303,10 +303,12 @@ url = ""
 skip_nonce_check = true
 email_optional = false
 
+# Native iOS uses signInWithIdToken, not web OAuth redirect.
+# These settings are only needed for web-based Apple Sign-In.
 [auth.external.apple]
-enabled = true
-client_id = "env(SUPABASE_AUTH_EXTERNAL_APPLE_CLIENT_ID)"
-secret = "env(SUPABASE_AUTH_EXTERNAL_APPLE_SECRET)"
+enabled = false
+client_id = ""
+secret = ""
 redirect_uri = ""
 url = ""
 skip_nonce_check = false

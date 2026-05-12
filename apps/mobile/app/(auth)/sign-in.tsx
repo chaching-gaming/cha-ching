@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { Image, Text, TouchableOpacity, View } from 'react-native';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
-import { Link } from 'expo-router';
+import { Link, type Href } from 'expo-router';
 import { z } from 'zod';
 import { supabase } from '@/lib/supabase';
-import { signInWithOAuth } from '@/lib/oauth';
+import { signInWithGoogle, signInWithApple } from '@/lib/oauth';
 import { KeyboardAwareScrollView } from '@/components/form/keyboard-aware-scroll-view';
 import { useForm } from '@/hooks/use-form';
 import { useToast } from '@/providers/toast';
@@ -45,8 +45,15 @@ export default function SignInScreen() {
   async function handleOAuth(provider: 'google' | 'apple') {
     try {
       setOauthLoading(true);
-      await signInWithOAuth(provider);
+      console.log(`[SignIn] Starting ${provider} OAuth...`);
+      if (provider === 'google') {
+        await signInWithGoogle();
+      } else {
+        await signInWithApple();
+      }
+      console.log(`[SignIn] ${provider} OAuth success`);
     } catch (error) {
+      console.error(`[SignIn] ${provider} OAuth error:`, error);
       const message = error instanceof Error ? error.message : 'OAuth sign-in failed';
       toast.show({ type: 'error', message });
     } finally {
@@ -100,6 +107,13 @@ export default function SignInScreen() {
           {(field) => (
             <field.TextField
               label="Password"
+              labelRight={
+                <Link href={'/(auth)/forgot-password' as Href} asChild>
+                  <TouchableOpacity>
+                    <Text className="text-sm font-medium text-primary">Forgot Password?</Text>
+                  </TouchableOpacity>
+                </Link>
+              }
               placeholder="********"
               secureTextEntry
               textContentType="password"

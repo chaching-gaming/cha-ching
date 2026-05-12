@@ -489,6 +489,7 @@ export type Database = {
           name: string;
           per_user_chip_limit: number | null;
           session_date: string;
+          starting_chips: number;
         };
         Insert: {
           created_at?: string | null;
@@ -500,6 +501,7 @@ export type Database = {
           name: string;
           per_user_chip_limit?: number | null;
           session_date: string;
+          starting_chips?: number;
         };
         Update: {
           created_at?: string | null;
@@ -511,6 +513,7 @@ export type Database = {
           name?: string;
           per_user_chip_limit?: number | null;
           session_date?: string;
+          starting_chips?: number;
         };
         Relationships: [
           {
@@ -619,7 +622,7 @@ export type Database = {
         };
       };
       create_room: {
-        Args: { p_chip_limit?: number; p_name: string; p_session_date: string };
+        Args: { p_name: string; p_description?: string | null; p_starting_chips?: number };
         Returns: {
           created_at: string | null;
           created_by: string | null;
@@ -630,6 +633,7 @@ export type Database = {
           name: string;
           per_user_chip_limit: number | null;
           session_date: string;
+          starting_chips: number;
         };
         SetofOptions: {
           from: '*';
@@ -887,26 +891,6 @@ export type Database = {
         SetofOptions: {
           from: '*';
           to: 'bets';
-          isOneToOne: true;
-          isSetofReturn: false;
-        };
-      };
-      set_room_chip_limit: {
-        Args: { p_limit: number; p_room_id: string };
-        Returns: {
-          created_at: string | null;
-          created_by: string | null;
-          ended_at: string | null;
-          id: string;
-          invite_code: string;
-          is_active: boolean;
-          name: string;
-          per_user_chip_limit: number | null;
-          session_date: string;
-        };
-        SetofOptions: {
-          from: '*';
-          to: 'rooms';
           isOneToOne: true;
           isSetofReturn: false;
         };

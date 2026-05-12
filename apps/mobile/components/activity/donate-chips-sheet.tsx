@@ -27,7 +27,6 @@ type Props = {
   chipRequest: ChipRequestWithProfile;
   roomId: string;
   donorBalance: number;
-  chipLimit: number | null;
 };
 
 export function DonateChipsSheet({
@@ -36,25 +35,23 @@ export function DonateChipsSheet({
   chipRequest,
   roomId,
   donorBalance,
-  chipLimit,
 }: Props) {
   const safeInsets = useSafeAreaInsets();
   const donateChips = useDonateChips();
 
   const remaining = Math.max(0, chipRequest.requested_amount - chipRequest.fulfilled_amount);
 
-  // Donor's max donation: the smaller of remaining need and the cushion
-  // above their own floor. With no floor, only remaining bounds the amount.
-  const donorCushion = chipLimit != null ? donorBalance - chipLimit : Infinity;
-  const maxDonation = Math.max(0, Math.min(remaining, donorCushion));
+  // Donor's max donation: the smaller of remaining need and their balance
+  // (floor is always 0 - can't go negative)
+  const maxDonation = Math.max(0, Math.min(remaining, donorBalance));
 
-  // Default: fulfill the remainder when that fits the donor's cushion;
-  // otherwise max out their cushion rounded down to the nearest 100.
+  // Default: fulfill the remainder when that fits the donor's balance;
+  // otherwise max out what they can give rounded down to the nearest 100.
   const suggestedAmount = useMemo(() => {
     if (maxDonation <= 0) return 0;
-    if (remaining <= donorCushion) return remaining;
+    if (remaining <= donorBalance) return remaining;
     return Math.floor(maxDonation / 100) * 100 || Math.min(100, maxDonation);
-  }, [donorCushion, maxDonation, remaining]);
+  }, [donorBalance, maxDonation, remaining]);
 
   const [amountText, setAmountText] = useState<string>(String(suggestedAmount));
 
@@ -68,8 +65,8 @@ export function DonateChipsSheet({
   }, [amountText]);
 
   const exceedsRemaining = parsedAmount > remaining;
-  const exceedsCushion = parsedAmount > donorCushion;
-  const amountValid = parsedAmount > 0 && !exceedsRemaining && !exceedsCushion;
+  const exceedsBalance = parsedAmount > donorBalance;
+  const amountValid = parsedAmount > 0 && !exceedsRemaining && !exceedsBalance;
 
   const balanceAfter = donorBalance - parsedAmount;
 
@@ -180,8 +177,8 @@ export function DonateChipsSheet({
                   {balanceAfter.toLocaleString('en-US')}
                 </Text>
               </Text>
-              {exceedsCushion ? (
-                <Text className="text-xs font-semibold text-error">Past your floor</Text>
+              {exceedsBalance ? (
+                <Text className="text-xs font-semibold text-error">Not enough chips</Text>
               ) : exceedsRemaining ? (
                 <Text className="text-xs font-semibold text-error">Over the goal</Text>
               ) : null}

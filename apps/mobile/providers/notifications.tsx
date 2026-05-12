@@ -21,6 +21,16 @@ Notifications.setNotificationHandler({
   }),
 });
 
+// Set up Android notification channel (required for Android 8.0+)
+if (Platform.OS === 'android') {
+  void Notifications.setNotificationChannelAsync('default', {
+    name: 'Default',
+    importance: Notifications.AndroidImportance.MAX,
+    vibrationPattern: [0, 250, 250, 250],
+    lightColor: '#2EAF7D',
+  });
+}
+
 type NotificationData = {
   type?: string;
   room_id?: string;
@@ -172,6 +182,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
         case 'bet_settled':
         case 'bet_disputed':
         case 'bet_expiring':
+        case 'bet_accepted':
         case 'chip_request_created':
         case 'chip_donated':
           if (room_id) {
@@ -209,12 +220,8 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     });
 
     return () => {
-      if (notificationListener.current) {
-        Notifications.removeNotificationSubscription(notificationListener.current);
-      }
-      if (responseListener.current) {
-        Notifications.removeNotificationSubscription(responseListener.current);
-      }
+      notificationListener.current?.remove();
+      responseListener.current?.remove();
     };
   }, [session?.user.id, requestPermissions, refreshUnreadCount, handleNotificationNavigation]);
 

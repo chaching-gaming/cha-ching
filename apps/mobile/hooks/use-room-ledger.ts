@@ -6,6 +6,7 @@ import { useAuth } from '@/providers/auth';
 export type LedgerType =
   | 'BET_WIN'
   | 'BET_LOSS'
+  | 'STAKE_LOCK'
   | 'VOID_REFUND'
   | 'DONATION_IN'
   | 'DONATION_OUT'

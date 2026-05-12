@@ -1,27 +1,32 @@
 const amber = '#F59E0B' as const;
 
 export const colors = {
-  background: '#0B1120',
-  surface: '#162033',
-  surfaceLight: '#1A2744',
-  border: '#1E3A5F',
-  primary: '#22C55E',
-  primaryDark: '#16A34A',
+  // Green/Teal palette (darker)
+  background: '#011E22',
+  surface: '#02353C',
+  surfaceLight: '#054550',
+  border: '#086568',
+  primary: '#2EAF7D',
+  primaryDark: '#238F66',
+  primaryLight: '#3FD0C9',
+  secondary: '#3FD0C9',
+  accent: '#C1F6ED',
+  success: '#449342',
   error: '#EF4444',
   warning: amber,
   /** Phosphor `Coins` / chip glyphs — use everywhere chips are represented as an icon */
   chipsIcon: amber,
   textPrimary: '#FFFFFF',
-  textSecondary: '#94A3B8',
-  textMuted: '#64748B',
+  textSecondary: '#A8D5D0',
+  textMuted: '#6B9E99',
   /** Medal colors for standings podium */
   medal: {
     gold: '#F59E0B',
-    silver: '#94A3B8',
+    silver: '#A8D5D0',
     bronze: '#B97F4C',
   },
   /** Confetti colors for celebration animations */
-  confetti: ['#FFD166', '#06D6A0', '#EF476F', '#118AB2', '#F78C6B', '#9B5DE5'],
+  confetti: ['#C1F6ED', '#2EAF7D', '#3FD0C9', '#449342', '#F59E0B', '#EF476F'],
 } as const;
 
 export default {

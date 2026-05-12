@@ -25,19 +25,15 @@ import { formatSessionDateShort } from '@/lib/date-format';
 import { balanceColorClass, formatBalance } from '@/lib/format-balance';
 
 function RoomCardContent({ item }: { item: RoomWithMembership }) {
-  const isActive = item.room.is_active;
   const balance = item.balance;
   const balanceColor = balanceColorClass(balance);
   const overflow = item.room.member_count - item.memberPreviews.length;
 
   return (
     <View className="min-h-[56px] border-b border-border bg-background px-5 py-4">
-      {/* Row 1: status dot + name + balance */}
+      {/* Row 1: name + balance */}
       <View className="flex-row items-center justify-between">
-        <View className="mr-3 flex-1 flex-row items-center gap-2">
-          <View
-            className={`h-2.5 w-2.5 rounded-full ${isActive ? 'bg-primary' : 'bg-text-muted'}`}
-          />
+        <View className="mr-3 flex-1">
           <Text className="text-lg font-semibold text-white" numberOfLines={1}>
             {item.room.name}
           </Text>

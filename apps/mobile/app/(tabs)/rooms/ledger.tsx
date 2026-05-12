@@ -38,6 +38,7 @@ type BadgeVariant = Parameters<typeof Badge>[0]['variant'];
 const TYPE_LABELS: Record<LedgerType, string> = {
   BET_WIN: 'Bet win',
   BET_LOSS: 'Bet loss',
+  STAKE_LOCK: 'Stake locked',
   VOID_REFUND: 'Refund',
   DONATION_IN: 'Donation in',
   DONATION_OUT: 'Donation out',
@@ -47,6 +48,7 @@ const TYPE_LABELS: Record<LedgerType, string> = {
 const TYPE_VARIANTS: Record<LedgerType, BadgeVariant> = {
   BET_WIN: 'success',
   BET_LOSS: 'default',
+  STAKE_LOCK: 'warning',
   VOID_REFUND: 'attestor',
   DONATION_IN: 'admin',
   DONATION_OUT: 'default',

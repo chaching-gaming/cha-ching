@@ -4,10 +4,12 @@ import {
   FlatList,
   RefreshControl,
   Text,
+  TouchableOpacity,
   View,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Bell } from 'phosphor-react-native';
+import { Bell, Checks } from 'phosphor-react-native';
+import { useQueryClient } from '@tanstack/react-query';
 
 import { colors } from '@/constants/colors';
 import { EmptyState, ScreenHeader, SkeletonNotificationItem } from '@/components/ui';
@@ -58,6 +60,7 @@ function groupByDate(notifications: NotificationRow[]): GroupedNotifications[] {
 
 export default function NotificationsScreen() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const { markAsRead, refreshUnreadCount } = useNotifications();
   const {
     data,
@@ -69,14 +72,32 @@ export default function NotificationsScreen() {
   } = useNotificationsFeed();
 
   const [refreshing, setRefreshing] = useState(false);
+  const [markingAllRead, setMarkingAllRead] = useState(false);
 
   const allNotifications = useMemo(() => {
     return data?.pages.flat() ?? [];
   }, [data]);
 
+  const unreadNotifications = useMemo(() => {
+    return allNotifications.filter((n) => !n.read_at);
+  }, [allNotifications]);
+
   const groupedData = useMemo(() => {
     return groupByDate(allNotifications);
   }, [allNotifications]);
+
+  const handleMarkAllRead = useCallback(async () => {
+    if (unreadNotifications.length === 0) return;
+
+    setMarkingAllRead(true);
+    try {
+      const unreadIds = unreadNotifications.map((n) => n.id);
+      await markAsRead(unreadIds);
+      await queryClient.invalidateQueries({ queryKey: notificationsKey() });
+    } finally {
+      setMarkingAllRead(false);
+    }
+  }, [unreadNotifications, markAsRead, queryClient]);
 
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -107,6 +128,20 @@ export default function NotificationsScreen() {
     }
   }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
+  const markAllReadButton = unreadNotifications.length > 0 ? (
+    <TouchableOpacity
+      onPress={handleMarkAllRead}
+      disabled={markingAllRead}
+      activeOpacity={0.7}
+      className="flex-row items-center gap-1"
+    >
+      <Checks size={20} color={colors.primary} weight="bold" />
+      <Text className="text-sm font-medium text-primary">
+        {markingAllRead ? 'Marking...' : 'Mark all read'}
+      </Text>
+    </TouchableOpacity>
+  ) : null;
+
   if (isLoading) {
     return (
       <View className="flex-1 bg-background">
@@ -135,13 +170,13 @@ export default function NotificationsScreen() {
 
   return (
     <View className="flex-1 bg-background">
-      <ScreenHeader title="Notifications" />
+      <ScreenHeader title="Notifications" right={markAllReadButton} />
       <FlatList
         data={groupedData}
         keyExtractor={(item) => item.title}
         renderItem={({ item: group }) => (
-          <View>
-            <Text className="bg-background px-5 py-2 text-xs font-semibold uppercase tracking-widest text-textMuted">
+          <View className="mb-2">
+            <Text className="mb-2 px-5 py-2 text-xs font-bold uppercase tracking-widest text-text-muted">
               {group.title}
             </Text>
             {group.data.map((notification, idx) => (

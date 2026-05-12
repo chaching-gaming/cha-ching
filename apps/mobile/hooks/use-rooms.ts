@@ -10,7 +10,7 @@ type Profile = Database['public']['Tables']['profiles']['Row'];
 const ROOMS_KEY = ['rooms'] as const;
 const roomsKey = (filter: 'active' | 'history') => ['rooms', filter] as const;
 export const roomDetailKey = (id: string) => ['rooms', id] as const;
-const roomMembersKey = (id: string) => ['rooms', id, 'members'] as const;
+export const roomMembersKey = (id: string) => ['rooms', id, 'members'] as const;
 
 export type MemberPreview = {
   display_name: string | null;
@@ -151,17 +151,13 @@ export function useCreateRoom() {
     mutationFn: async (params: {
       p_name: string;
       p_session_date: string;
-      p_chip_limit?: number | null;
+      p_starting_chips?: number;
     }) => {
-      const rpcArgs =
-        params.p_chip_limit != null
-          ? {
-              p_name: params.p_name,
-              p_session_date: params.p_session_date,
-              p_chip_limit: params.p_chip_limit,
-            }
-          : { p_name: params.p_name, p_session_date: params.p_session_date };
-      const { data, error } = await supabase.rpc('create_room', rpcArgs);
+      const { data, error } = await supabase.rpc('create_room', {
+        p_name: params.p_name,
+        p_session_date: params.p_session_date,
+        p_starting_chips: params.p_starting_chips ?? 1000,
+      });
       if (error) throw error;
       return data as unknown as Room;
     },

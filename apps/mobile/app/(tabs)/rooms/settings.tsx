@@ -14,7 +14,6 @@ import {
   Copy,
   Crown,
   Gavel,
-  PencilSimple,
   Plus,
   Receipt,
   SignOut,
@@ -27,7 +26,6 @@ import { ActionSheet, type ActionSheetOption } from '@/components/ui/action-shee
 import { Badge } from '@/components/ui/badge';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { MemberRow } from '@/components/activity/member-row';
-import { SetChipLimitSheet } from '@/components/activity/set-chip-limit-sheet';
 import { useAuth } from '@/providers/auth';
 import {
   getRpcErrorMessage,
@@ -163,7 +161,6 @@ export default function RoomSettingsScreen() {
   const isAdmin = currentMember?.role === 'ADMIN';
   const isActive = room?.is_active ?? false;
 
-  const [chipLimitSheetOpen, setChipLimitSheetOpen] = useState(false);
   const [roleSheetTarget, setRoleSheetTarget] = useState<RoleSheetTarget | null>(null);
 
   const handleCopyInviteCode = useCallback(async () => {
@@ -312,8 +309,7 @@ export default function RoomSettingsScreen() {
     );
   }
 
-  const chipLimitValue =
-    room.per_user_chip_limit != null ? room.per_user_chip_limit.toLocaleString('en-US') : 'None';
+  const startingChipsValue = (room.starting_chips ?? 1000).toLocaleString('en-US');
 
   return (
     <View className="flex-1 bg-background">
@@ -325,21 +321,7 @@ export default function RoomSettingsScreen() {
           <SectionLabel>Room settings</SectionLabel>
           <View className="overflow-hidden rounded-2xl border border-border bg-surface">
             <SettingsRow label="Room Name" value={room.name} />
-            <SettingsRow
-              label="Chip Limit"
-              value={chipLimitValue}
-              valueClassName={
-                room.per_user_chip_limit != null && room.per_user_chip_limit < 0
-                  ? 'text-error'
-                  : 'text-text-secondary'
-              }
-              rightIcon={
-                isAdmin && isActive ? (
-                  <PencilSimple size={18} color={colors.textMuted} weight="bold" />
-                ) : undefined
-              }
-              onPress={isAdmin && isActive ? () => setChipLimitSheetOpen(true) : undefined}
-            />
+            <SettingsRow label="Starting Chips" value={startingChipsValue} />
             <SettingsRow
               label="Invite Code"
               value={room.invite_code ?? '—'}
@@ -446,15 +428,6 @@ export default function RoomSettingsScreen() {
           </View>
         ) : null}
       </ScrollView>
-
-      {isAdmin && isActive ? (
-        <SetChipLimitSheet
-          visible={chipLimitSheetOpen}
-          onClose={() => setChipLimitSheetOpen(false)}
-          roomId={id}
-          currentLimit={room.per_user_chip_limit}
-        />
-      ) : null}
 
       <ActionSheet
         visible={!!roleSheetTarget}

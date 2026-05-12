@@ -1,6 +1,6 @@
 import { Text, TouchableOpacity, View } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Info } from 'phosphor-react-native';
+import { Coins, Info } from 'phosphor-react-native';
 import { z } from 'zod';
 
 import { colors } from '@/constants/colors';
@@ -10,15 +10,13 @@ import { useCreateRoom } from '@/hooks/use-rooms';
 import { useForm } from '@/hooks/use-form';
 import { formatSessionDateShort, formatTodayCalendarDate } from '@/lib/date-format';
 
-const CHIP_LIMIT_OPTIONS = [
-  { label: '-1,000', value: -1000 },
-  { label: '-5,000', value: -5000 },
-  { label: 'No Limit', value: null },
-] as const;
-
 const createRoomSchema = z.object({
   name: z.string().min(1, 'Room name is required'),
-  chipLimit: z.number().nullable(),
+  startingChips: z
+    .string()
+    .min(1, 'Starting chips is required')
+    .refine((v) => parseInt(v, 10) >= 1, 'Must be at least 1')
+    .refine((v) => parseInt(v, 10) <= 100000, 'Max 100,000 chips'),
 });
 
 export default function CreateRoomScreen() {
@@ -29,7 +27,7 @@ export default function CreateRoomScreen() {
   const form = useForm({
     defaultValues: {
       name: '',
-      chipLimit: null as number | null,
+      startingChips: '1000',
     },
     validators: {
       onChange: createRoomSchema,
@@ -39,11 +37,12 @@ export default function CreateRoomScreen() {
         const room = await createRoom.mutateAsync({
           p_name: value.name.trim(),
           p_session_date: today,
-          p_chip_limit: value.chipLimit,
+          p_starting_chips: parseInt(value.startingChips, 10),
         });
         router.replace(`/(tabs)/rooms/invite?id=${room.id}`);
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Failed to create room';
+        console.log({ err });
         formApi.setErrorMap({
           onSubmit: {
             fields: {},
@@ -105,15 +104,21 @@ export default function CreateRoomScreen() {
             }}
           </form.Subscribe>
 
-          <form.AppField name="chipLimit">
+          <form.AppField name="startingChips">
             {(field) => (
-              <field.OptionField
-                options={CHIP_LIMIT_OPTIONS}
-                label="Per-user chip limit"
-                description="Max chips a player can lose before being blocked from betting"
+              <field.TextField
+                label="Starting chips per player"
+                placeholder="1000"
+                keyboardType="number-pad"
+                transformValue={(text) => text.replace(/\D/g, '').slice(0, 6)}
+                leftIcon={<Coins size={20} color={colors.chipsIcon} weight="fill" />}
               />
             )}
           </form.AppField>
+
+          <Text className="-mt-2.5 mb-4 text-sm text-text-secondary">
+            Each player gets this many chips when joining the room
+          </Text>
 
           {/* Admin info */}
           <View className="mb-6 flex-row items-center gap-3 rounded-xl border border-border bg-surface px-4 py-4">

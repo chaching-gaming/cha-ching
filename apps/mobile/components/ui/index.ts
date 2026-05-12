@@ -17,3 +17,4 @@ export {
 } from './skeleton';
 export { EmptyState } from './empty-state';
 export { Toast } from './toast';
+export { LoadingScreen } from './loading-screen';

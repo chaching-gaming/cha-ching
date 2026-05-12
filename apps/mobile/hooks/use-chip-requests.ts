@@ -8,10 +8,8 @@ import {
   roomChipRequestsKey,
   roomMemberBalancesKey,
 } from '@/hooks/use-activity-feed';
-import { roomDetailKey } from '@/hooks/use-rooms';
 
 type ChipRequest = Database['public']['Tables']['chip_requests']['Row'];
-type Room = Database['public']['Tables']['rooms']['Row'];
 
 export function useRequestChips() {
   const queryClient = useQueryClient();
@@ -70,24 +68,6 @@ export function useCancelChipRequest() {
     },
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: roomChipRequestsKey(variables.roomId) });
-    },
-  });
-}
-
-export function useSetRoomChipLimit() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async (params: { p_room_id: string; p_limit: number | null }) => {
-      const { data, error } = await supabase.rpc('set_room_chip_limit', {
-        p_room_id: params.p_room_id,
-        p_limit: params.p_limit as number,
-      });
-      if (error) throw error;
-      return data as unknown as Room;
-    },
-    onSuccess: (_data, variables) => {
-      queryClient.invalidateQueries({ queryKey: roomDetailKey(variables.p_room_id) });
     },
   });
 }

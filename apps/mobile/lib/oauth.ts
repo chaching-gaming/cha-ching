@@ -1,36 +1,88 @@
-import * as Linking from 'expo-linking';
-import * as WebBrowser from 'expo-web-browser';
+import { Platform } from 'react-native';
+import { GoogleSignin } from '@react-native-google-signin/google-signin';
+import * as AppleAuthentication from 'expo-apple-authentication';
 import { supabase } from './supabase';
+import { env } from './env';
 
-WebBrowser.maybeCompleteAuthSession();
+// Configure Google Sign-In
+GoogleSignin.configure({
+  webClientId: env.googleWebClientId,
+  iosClientId: Platform.OS === 'ios' ? env.googleIosClientId : undefined,
+});
 
-type OAuthProvider = 'google' | 'apple';
+export async function signInWithGoogle() {
+  try {
+    console.log('[GoogleAuth] Starting sign in...');
+    console.log('[GoogleAuth] Web Client ID:', env.googleWebClientId);
 
-export async function signInWithOAuth(provider: OAuthProvider) {
-  const redirectTo = Linking.createURL('/');
+    await GoogleSignin.hasPlayServices();
+    console.log('[GoogleAuth] Play Services available');
 
-  const { data, error } = await supabase.auth.signInWithOAuth({
-    provider,
-    options: {
-      redirectTo,
-      skipBrowserRedirect: true,
-    },
+    const response = await GoogleSignin.signIn();
+    console.log('[GoogleAuth] Sign in response:', JSON.stringify(response, null, 2));
+
+    if (!response.data?.idToken) {
+      console.error('[GoogleAuth] No ID token in response');
+      throw new Error('No ID token returned from Google');
+    }
+
+    console.log('[GoogleAuth] Got ID token, calling Supabase...');
+    const { data, error } = await supabase.auth.signInWithIdToken({
+      provider: 'google',
+      token: response.data.idToken,
+    });
+
+    if (error) {
+      console.error('[GoogleAuth] Supabase error:', error);
+      throw error;
+    }
+
+    console.log('[GoogleAuth] Success:', data.user?.email);
+    return data;
+  } catch (err) {
+    console.error('[GoogleAuth] Error:', err);
+    console.error('[GoogleAuth] Error details:', JSON.stringify(err, Object.getOwnPropertyNames(err), 2));
+    throw err;
+  }
+}
+
+export async function signInWithApple() {
+  if (Platform.OS !== 'ios') {
+    throw new Error('Apple Sign-In is only available on iOS');
+  }
+
+  const credential = await AppleAuthentication.signInAsync({
+    requestedScopes: [
+      AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+      AppleAuthentication.AppleAuthenticationScope.EMAIL,
+    ],
+  });
+
+  if (!credential.identityToken) {
+    throw new Error('No identity token returned from Apple');
+  }
+
+  const { data, error } = await supabase.auth.signInWithIdToken({
+    provider: 'apple',
+    token: credential.identityToken,
   });
 
   if (error) throw error;
-  if (!data.url) throw new Error('No OAuth URL returned');
+  return data;
+}
 
-  const result = await WebBrowser.openAuthSessionAsync(data.url, redirectTo);
-
-  if (result.type === 'success') {
-    const url = new URL(result.url);
-    // Extract tokens from the URL fragment (hash)
-    const params = new URLSearchParams(url.hash.substring(1));
-    const accessToken = params.get('access_token');
-    const refreshToken = params.get('refresh_token');
-
-    if (accessToken && refreshToken) {
-      await supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
+export async function signOut() {
+  // Sign out from Google if signed in
+  try {
+    const isSignedIn = await GoogleSignin.hasPreviousSignIn();
+    if (isSignedIn) {
+      await GoogleSignin.signOut();
     }
+  } catch {
+    // Ignore Google sign out errors
   }
+
+  // Sign out from Supabase
+  const { error } = await supabase.auth.signOut();
+  if (error) throw error;
 }

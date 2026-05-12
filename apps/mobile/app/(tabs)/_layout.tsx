@@ -3,11 +3,13 @@ import { View } from 'react-native';
 import { getFocusedRouteNameFromRoute } from '@react-navigation/native';
 import { Tabs, useRouter } from 'expo-router';
 import { House, Plus, ChartBar, Bell, UserCircle } from 'phosphor-react-native';
+import { useQueryClient } from '@tanstack/react-query';
 
 import { colors } from '@/constants/colors';
 import { RoomSelectionSheet } from '@/components/activity/room-selection-sheet';
 import { NotificationBadge } from '@/components/notifications/notification-badge';
 import { useNotifications } from '@/providers/notifications';
+import { notificationsKey } from '@/hooks/use-notifications-feed';
 
 const TAB_BAR_STYLE = {
   backgroundColor: colors.surface,
@@ -22,8 +24,23 @@ const ROOMS_TAB_LIST_ROUTE = 'index';
 
 export default function TabLayout() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [sheetOpen, setSheetOpen] = useState(false);
-  const { unreadCount } = useNotifications();
+  const { unreadCount, markAsRead } = useNotifications();
+
+  const handleNotificationsTabFocus = useCallback(async () => {
+    // Get all unread notification IDs from cache and mark them as read
+    const cachedData = queryClient.getQueryData<{ pages: Array<Array<{ id: string; read_at: string | null }>> }>(notificationsKey());
+    if (cachedData?.pages) {
+      const unreadIds = cachedData.pages
+        .flat()
+        .filter((n) => !n.read_at)
+        .map((n) => n.id);
+      if (unreadIds.length > 0) {
+        await markAsRead(unreadIds);
+      }
+    }
+  }, [queryClient, markAsRead]);
 
   const handleSelectRoom = useCallback(
     (roomId: string) => {
@@ -94,6 +111,11 @@ export default function TabLayout() {
                 <NotificationBadge count={unreadCount} />
               </View>
             ),
+          }}
+          listeners={{
+            focus: () => {
+              void handleNotificationsTabFocus();
+            },
           }}
         />
         <Tabs.Screen

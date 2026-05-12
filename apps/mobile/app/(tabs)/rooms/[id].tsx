@@ -1,6 +1,7 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState, useRef } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   FlatList,
   RefreshControl,
   Text,
@@ -49,11 +50,34 @@ export default function RoomDetailScreen() {
   const { data: members } = useRoomMembers(id);
   const { data: balance } = useMyRoomBalance(id);
   const { data: activityItems, isLoading: feedLoading } = useRoomActivityFeed(id);
-  useRealtimeActivityFeed(id);
+
+  // Track if we've already shown the removal alert to prevent duplicates
+  const hasShownRemovalAlert = useRef(false);
+
+  const handleCurrentUserRemoved = useCallback(() => {
+    if (hasShownRemovalAlert.current) return;
+    hasShownRemovalAlert.current = true;
+
+    Alert.alert(
+      'Removed from Room',
+      'You have been removed from this room by an admin.',
+      [
+        {
+          text: 'OK',
+          onPress: () => {
+            queryClient.invalidateQueries({ queryKey: ['rooms'] });
+            router.replace('/(tabs)/rooms');
+          },
+        },
+      ],
+      { cancelable: false },
+    );
+  }, [queryClient, router]);
+
+  useRealtimeActivityFeed(id, { onCurrentUserRemoved: handleCurrentUserRemoved });
 
   const currentUserId = authSession?.user.id ?? null;
   const myBalance = balance ?? 0;
-  const chipLimit = room?.per_user_chip_limit ?? null;
   const hasOpenRequest = useMemo(
     () =>
       !!currentUserId &&
@@ -157,7 +181,6 @@ export default function RoomDetailScreen() {
             roomActive={isActive}
             roomId={id}
             currentUserBalance={myBalance}
-            roomChipLimit={chipLimit}
           />
         )}
         contentContainerClassName="px-5 pb-24"
@@ -176,7 +199,6 @@ export default function RoomDetailScreen() {
               onOpenStandings={() => router.push(`/(tabs)/rooms/standings?id=${id}`)}
               roomId={id}
               roomActive={isActive}
-              chipLimit={chipLimit}
               hasOpenRequest={hasOpenRequest}
             />
             <BetFeedStatusFilter value={filter} onChange={setFilter} />

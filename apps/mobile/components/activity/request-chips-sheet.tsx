@@ -24,23 +24,22 @@ type Props = {
   onClose: () => void;
   roomId: string;
   currentBalance: number;
-  chipLimit: number | null;
 };
 
 const MAX_MESSAGE_LENGTH = 200;
 const MAX_AMOUNT = 100000;
 
-export function RequestChipsSheet({ visible, onClose, roomId, currentBalance, chipLimit }: Props) {
+export function RequestChipsSheet({ visible, onClose, roomId, currentBalance }: Props) {
   const safeInsets = useSafeAreaInsets();
   const requestChips = useRequestChips();
 
-  // Default target: enough to bring balance to +100 above the floor, or to
-  // zero if there's no floor. Rounded to the nearest 100 for UX friendliness.
+  // Default suggestion: enough to bring balance back to a reasonable amount.
+  // Since minimum is 0, suggest 500 chips (or 100 at minimum), rounded to 100.
   const suggestedAmount = useMemo(() => {
-    const target = chipLimit != null ? chipLimit + 100 : 0;
+    const target = 500;
     const delta = Math.max(100, target - currentBalance);
     return Math.ceil(delta / 100) * 100;
-  }, [currentBalance, chipLimit]);
+  }, [currentBalance]);
 
   const [amountText, setAmountText] = useState<string>(String(suggestedAmount));
   const [message, setMessage] = useState('');

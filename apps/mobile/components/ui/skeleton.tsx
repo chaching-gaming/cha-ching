@@ -170,8 +170,8 @@ export function SkeletonStatsCard() {
  */
 export function SkeletonNotificationItem() {
   return (
-    <View className="flex-row items-start gap-3 border-b border-border px-5 py-4">
-      <Skeleton className="h-10 w-10 rounded-full" />
+    <View className="mx-4 mb-3 flex-row items-start gap-3 rounded-xl bg-surface p-4">
+      <Skeleton className="h-12 w-12 rounded-full" />
       <View className="flex-1 gap-2">
         <SkeletonText width="3/4" height="md" />
         <SkeletonText width="full" height="sm" />

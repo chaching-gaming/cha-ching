@@ -497,10 +497,8 @@ interface ActivityFeedItemProps {
   roomActive?: boolean;
   /** Room id, required by the join mutation for cache invalidation. */
   roomId?: string;
-  /** Current user's balance — forwarded to the donate sheet for floor clamping. */
+  /** Current user's balance — forwarded to the donate sheet for validation. */
   currentUserBalance?: number;
-  /** Room's loss floor — forwarded to the donate sheet for floor clamping. */
-  roomChipLimit?: number | null;
 }
 
 export function ActivityFeedItem({
@@ -510,7 +508,6 @@ export function ActivityFeedItem({
   roomActive,
   roomId,
   currentUserBalance,
-  roomChipLimit,
 }: ActivityFeedItemProps) {
   if (item.type === 'bet') {
     const stakes = item.bet.stakes ?? [];
@@ -557,7 +554,6 @@ export function ActivityFeedItem({
       roomActive={roomActive}
       roomId={roomId}
       currentUserBalance={currentUserBalance}
-      roomChipLimit={roomChipLimit}
     />
   );
 }
@@ -569,7 +565,6 @@ function ChipRequestActivityCard({
   roomActive,
   roomId,
   currentUserBalance,
-  roomChipLimit,
 }: {
   chipRequest: ChipRequestWithProfile;
   timestamp: string;
@@ -577,7 +572,6 @@ function ChipRequestActivityCard({
   roomActive?: boolean;
   roomId?: string;
   currentUserBalance?: number;
-  roomChipLimit?: number | null;
 }) {
   const [donateOpen, setDonateOpen] = useState(false);
   const cancelRequest = useCancelChipRequest();
@@ -732,7 +726,6 @@ function ChipRequestActivityCard({
           chipRequest={chipRequest}
           roomId={roomId}
           donorBalance={currentUserBalance}
-          chipLimit={roomChipLimit ?? null}
         />
       ) : null}
     </View>

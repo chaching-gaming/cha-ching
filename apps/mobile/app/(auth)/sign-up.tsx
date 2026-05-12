@@ -4,10 +4,11 @@ import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { Link } from 'expo-router';
 import { z } from 'zod';
 import { supabase } from '@/lib/supabase';
-import { signInWithOAuth } from '@/lib/oauth';
+import { signInWithGoogle, signInWithApple } from '@/lib/oauth';
 import { KeyboardAwareScrollView } from '@/components/form/keyboard-aware-scroll-view';
 import { useForm } from '@/hooks/use-form';
 import { useToast } from '@/providers/toast';
+import { LoadingScreen } from '@/components/ui';
 
 const signUpSchema = z.object({
   displayName: z.string().min(1, 'Display name is required'),
@@ -55,13 +56,21 @@ export default function SignUpScreen() {
   async function handleOAuth(provider: 'google' | 'apple') {
     try {
       setOauthLoading(true);
-      await signInWithOAuth(provider);
+      if (provider === 'google') {
+        await signInWithGoogle();
+      } else {
+        await signInWithApple();
+      }
     } catch (error) {
       const message = error instanceof Error ? error.message : 'OAuth sign-up failed';
       toast.show({ type: 'error', message });
     } finally {
       setOauthLoading(false);
     }
+  }
+
+  if (oauthLoading) {
+    return <LoadingScreen message="Signing up..." />;
   }
 
   return (

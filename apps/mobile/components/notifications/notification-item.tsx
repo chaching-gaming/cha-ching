@@ -47,32 +47,32 @@ export function NotificationItem({ notification, onPress, isLast }: Notification
     <TouchableOpacity
       onPress={onPress}
       activeOpacity={0.7}
-      className={`flex-row items-start gap-3 px-5 py-4 ${
-        isUnread ? 'bg-surfaceLight/50' : ''
-      } ${isLast ? '' : 'border-b border-border'}`}
+      className={`mx-4 mb-3 flex-row items-start gap-3 rounded-xl p-4 ${
+        isUnread ? 'bg-surface' : 'bg-surface/60'
+      }`}
     >
       {/* Unread indicator dot */}
       {isUnread && (
-        <View className="absolute left-2 top-1/2 h-2 w-2 -translate-y-1/2 rounded-full bg-primary" />
+        <View className="absolute right-3 top-3 h-2.5 w-2.5 rounded-full bg-primary" />
       )}
 
       {/* Icon */}
-      <View className="mt-0.5 h-10 w-10 items-center justify-center rounded-full bg-surfaceLight">
-        <Icon size={20} color={iconColor} weight="fill" />
+      <View className="h-12 w-12 items-center justify-center rounded-full bg-surface-light">
+        <Icon size={24} color={iconColor} weight="fill" />
       </View>
 
       {/* Content */}
-      <View className="min-w-0 flex-1">
+      <View className="min-w-0 flex-1 pr-4">
         <Text
-          className={`text-base ${isUnread ? 'font-bold' : 'font-medium'} text-white`}
+          className={`text-base ${isUnread ? 'font-bold' : 'font-semibold'} text-white`}
           numberOfLines={1}
         >
           {notification.title}
         </Text>
-        <Text className="mt-0.5 text-sm text-textSecondary" numberOfLines={2}>
+        <Text className="mt-1 text-sm leading-5 text-text-secondary" numberOfLines={2}>
           {notification.body}
         </Text>
-        <Text className="mt-1 text-xs text-textMuted">
+        <Text className="mt-2 text-xs text-text-muted">
           {formatRelativeTime(notification.created_at)}
         </Text>
       </View>

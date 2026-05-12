@@ -3,7 +3,13 @@
     "version": ">= 14.0.0"
   },
   "build": {
+    "base": {
+      "env": {
+        "GOOGLE_IOS_URL_SCHEME": "com.googleusercontent.apps.1070930457721-pnuevds8ka750f5h8m1h7mtsrbr8e2s9"
+      }
+    },
     "development": {
+      "extends": "base",
       "developmentClient": true,
       "distribution": "internal",
       "env": {
@@ -11,14 +17,29 @@
       }
     },
     "staging": {
+      "extends": "base",
       "distribution": "internal",
       "env": {
         "EXPO_PUBLIC_ENV": "staging"
       }
     },
+    "preview": {
+      "extends": "base",
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_ENV": "staging"
+      }
+    },
     "production": {
+      "extends": "base",
       "env": {
         "EXPO_PUBLIC_ENV": "production"
+      },
+      "android": {
+        "buildType": "app-bundle"
       }
     }
   }

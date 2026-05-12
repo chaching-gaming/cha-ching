@@ -454,25 +454,23 @@ export default function CreateBetScreen() {
           {/* Stake */}
           <View className="mb-5">
             <Text className="mb-2 text-base font-semibold text-white">Stake</Text>
-            <View className="flex-row items-center rounded-2xl border-2 border-border bg-surface px-2 py-1">
-              <View className="min-w-0 flex-1">
-                <form.AppField name="stake">
-                  {(field) => (
-                    <field.TextField
-                      leftIcon={<Coins size={22} color={colors.chipsIcon} weight="fill" />}
-                      transformValue={(t) => t.replace(/\D/g, '')}
-                      placeholder="0"
-                      keyboardType="number-pad"
-                      editable={sessionActive}
-                      selectTextOnFocus
-                      className="mb-0"
-                      inputClassName="border-0 bg-transparent text-2xl font-bold text-white"
-                    />
-                  )}
-                </form.AppField>
-              </View>
-              <Text className="shrink-0 pr-2 text-base font-medium text-text-secondary">chips</Text>
-            </View>
+            <form.AppField name="stake">
+              {(field) => (
+                <field.TextField
+                  leftIcon={<Coins size={22} color={colors.chipsIcon} weight="fill" />}
+                  rightIcon={
+                    <Text className="text-base font-medium text-text-secondary">chips</Text>
+                  }
+                  transformValue={(t) => t.replace(/\D/g, '')}
+                  placeholder="0"
+                  keyboardType="number-pad"
+                  editable={sessionActive}
+                  selectTextOnFocus
+                  className="mb-0"
+                  inputClassName="text-xl font-bold"
+                />
+              )}
+            </form.AppField>
           </View>
 
           {/* Expiry */}
