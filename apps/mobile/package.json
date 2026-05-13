@@ -43,6 +43,7 @@
     "expo-sharing": "~14.0.8",
     "expo-splash-screen": "~31.0.13",
     "expo-status-bar": "~3.0.9",
+    "expo-updates": "~29.0.17",
     "expo-web-browser": "~15.0.11",
     "nativewind": "^4.2.3",
     "phosphor-react-native": "^3.0.4",

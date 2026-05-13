@@ -19,27 +19,40 @@
     "staging": {
       "extends": "base",
       "distribution": "internal",
+      "channel": "staging",
       "env": {
         "EXPO_PUBLIC_ENV": "staging"
       }
     },
     "preview": {
-      "extends": "base",
-      "distribution": "internal",
+      "extends": "staging",
       "android": {
         "buildType": "apk"
-      },
-      "env": {
-        "EXPO_PUBLIC_ENV": "staging"
       }
     },
     "production": {
       "extends": "base",
+      "distribution": "store",
+      "channel": "production",
+      "autoIncrement": true,
       "env": {
         "EXPO_PUBLIC_ENV": "production"
       },
       "android": {
         "buildType": "app-bundle"
+      }
+    }
+  },
+  "submit": {
+    "production": {
+      "ios": {
+        "appleId": "YOUR_APPLE_ID_EMAIL",
+        "ascAppId": "YOUR_APP_STORE_CONNECT_APP_ID",
+        "appleTeamId": "YOUR_APPLE_TEAM_ID"
+      },
+      "android": {
+        "serviceAccountKeyPath": "./play-store-service-account.json",
+        "track": "internal"
       }
     }
   }

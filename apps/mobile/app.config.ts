@@ -31,13 +31,19 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       backgroundColor: '#011E22',
     },
     edgeToEdgeEnabled: true,
-    package: 'com.chaching',
+    package: 'com.visualglobe.chaching',
     googleServicesFile: './google-services.json',
   },
   web: {
     bundler: 'metro',
     output: 'static',
     favicon: './assets/images/favicon.png',
+  },
+  updates: {
+    url: 'https://u.expo.dev/dc228f01-efda-4fc0-a714-6d455f6461e6',
+  },
+  runtimeVersion: {
+    policy: 'appVersion',
   },
   plugins: [
     'expo-router',
@@ -65,7 +71,9 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     [
       '@react-native-google-signin/google-signin',
       {
-        iosUrlScheme: process.env.GOOGLE_IOS_URL_SCHEME,
+        iosUrlScheme:
+          process.env.GOOGLE_IOS_URL_SCHEME ||
+          'com.googleusercontent.apps.1070930457721-pnuevds8ka750f5h8m1h7mtsrbr8e2s9',
       },
     ],
     'expo-apple-authentication',

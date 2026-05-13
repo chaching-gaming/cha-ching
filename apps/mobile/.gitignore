@@ -37,6 +37,9 @@ yarn-error.*
 # Firebase (contains API keys - use EAS secrets for CI/CD)
 GoogleService-Info.plist
 
+# Google Play Store service account (for automated uploads)
+play-store-service-account.json
+
 # typescript
 *.tsbuildinfo
 
@@ -44,4 +47,5 @@ GoogleService-Info.plist
 /ios
 /android
 
+.env
 .env.local
