@@ -13,10 +13,9 @@ import { notificationsKey } from '@/hooks/use-notifications-feed';
 // Configure notification handler
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
-    shouldShowAlert: true,
+    shouldShowBanner: true,
     shouldPlaySound: true,
     shouldSetBadge: true,
-    shouldShowBanner: true,
     shouldShowList: true,
   }),
 });
@@ -56,8 +55,8 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
   const [expoPushToken, setExpoPushToken] = useState<string | null>(null);
   const [unreadCount, setUnreadCount] = useState(0);
 
-  const notificationListener = useRef<Notifications.Subscription>();
-  const responseListener = useRef<Notifications.Subscription>();
+  const notificationListener = useRef<Notifications.Subscription>(undefined);
+  const responseListener = useRef<Notifications.Subscription>(undefined);
 
   // Fetch unread notification count
   const refreshUnreadCount = useCallback(async () => {
@@ -83,7 +82,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       if (!session?.user.id || ids.length === 0) return;
 
       try {
-        const { data, error } = await supabase.rpc('mark_notifications_read', {
+        const { error } = await supabase.rpc('mark_notifications_read', {
           p_notification_ids: ids,
         });
 
@@ -95,7 +94,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
         console.error('Failed to mark notifications as read:', err);
       }
     },
-    [session?.user.id, refreshUnreadCount]
+    [session?.user.id, refreshUnreadCount],
   );
 
   // Register device token with backend
@@ -113,7 +112,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
         console.error('Failed to register device:', err);
       }
     },
-    [session?.user.id]
+    [session?.user.id],
   );
 
   // Unregister device token
@@ -129,7 +128,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
         console.error('Failed to unregister device:', err);
       }
     },
-    [session?.user.id]
+    [session?.user.id],
   );
 
   // Request notification permissions and get token
@@ -211,7 +210,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
           break;
       }
     },
-    [router, markAsRead]
+    [router, markAsRead],
   );
 
   // Set up notification listeners
@@ -272,7 +271,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
           void refreshUnreadCount();
           // Invalidate notifications list if user is viewing
           queryClient.invalidateQueries({ queryKey: notificationsKey() });
-        }
+        },
       )
       .subscribe();
 

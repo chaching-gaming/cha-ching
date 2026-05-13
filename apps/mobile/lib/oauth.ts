@@ -13,13 +13,14 @@ GoogleSignin.configure({
 export async function signInWithGoogle() {
   try {
     console.log('[GoogleAuth] Starting sign in...');
-    console.log('[GoogleAuth] Web Client ID:', env.googleWebClientId);
 
     await GoogleSignin.hasPlayServices();
     console.log('[GoogleAuth] Play Services available');
 
+    // Note: On iOS, we don't use nonces because Google's iOS SDK doesn't expose the raw nonce.
+    // Enable "Skip nonce check" in Supabase Dashboard > Auth > Providers > Google for iOS Client ID.
     const response = await GoogleSignin.signIn();
-    console.log('[GoogleAuth] Sign in response:', JSON.stringify(response, null, 2));
+    console.log('[GoogleAuth] Sign in response received');
 
     if (!response.data?.idToken) {
       console.error('[GoogleAuth] No ID token in response');
@@ -41,7 +42,6 @@ export async function signInWithGoogle() {
     return data;
   } catch (err) {
     console.error('[GoogleAuth] Error:', err);
-    console.error('[GoogleAuth] Error details:', JSON.stringify(err, Object.getOwnPropertyNames(err), 2));
     throw err;
   }
 }

@@ -995,6 +995,38 @@ export type Database = {
           isSetofReturn: false;
         };
       };
+      get_notifications: {
+        Args: { p_limit?: number; p_offset?: number };
+        Returns: {
+          id: string;
+          type: string;
+          title: string;
+          body: string | null;
+          data: Json | null;
+          read: boolean;
+          created_at: string;
+        }[];
+      };
+      get_unread_notification_count: {
+        Args: Record<string, never>;
+        Returns: number;
+      };
+      mark_notifications_read: {
+        Args: { p_notification_ids: string[] };
+        Returns: number;
+      };
+      register_device: {
+        Args: { p_expo_push_token: string; p_platform: string };
+        Returns: undefined;
+      };
+      unregister_device: {
+        Args: { p_expo_push_token: string };
+        Returns: undefined;
+      };
+      update_notification_preference: {
+        Args: { p_notification_type: string; p_enabled: boolean };
+        Returns: undefined;
+      };
     };
     Enums: {
       [_ in never]: never;

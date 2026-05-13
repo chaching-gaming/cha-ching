@@ -7,12 +7,13 @@ import {
   HandCoins,
   Coins,
   UserPlus,
+  type IconProps,
 } from 'phosphor-react-native';
 
 import { colors } from '@/constants/colors';
 import type { NotificationRow, NotificationType } from '@/hooks/use-notifications-feed';
 
-const NOTIFICATION_ICONS: Record<NotificationType, React.ComponentType<any>> = {
+const NOTIFICATION_ICONS: Record<NotificationType, React.ComponentType<IconProps>> = {
   bet_matched: Handshake,
   bet_settled: Trophy,
   bet_disputed: Warning,
@@ -38,7 +39,7 @@ interface NotificationItemProps {
   isLast?: boolean;
 }
 
-export function NotificationItem({ notification, onPress, isLast }: NotificationItemProps) {
+export function NotificationItem({ notification, onPress, isLast: _isLast }: NotificationItemProps) {
   const Icon = NOTIFICATION_ICONS[notification.type];
   const iconColor = ICON_COLORS[notification.type];
   const isUnread = notification.read_at === null;

@@ -535,7 +535,7 @@ export default function BetDetailScreen() {
       >
         {canJoin ? (
           <Button onPress={handleJoinBet} size="lg">
-            Join Bet · {formatStakeChips(bet.stake)}
+            {`Join Bet · ${formatStakeChips(bet.stake)}`}
           </Button>
         ) : canSubmitOutcome ? (
           <Button onPress={() => setSubmitSheetOpen(true)} size="lg">

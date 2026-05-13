@@ -65,7 +65,10 @@ export function PreferencesProvider({ children }: { children: React.ReactNode })
     setNotificationsEnabledState(value);
     void AsyncStorage.setItem(STORAGE_KEY_NOTIFICATIONS, String(value));
     // Sync with server
-    void supabase.rpc('update_notification_preference', { p_enabled: value });
+    void supabase.rpc('update_notification_preference', {
+      p_notification_type: 'all',
+      p_enabled: value,
+    });
   }, []);
 
   return (

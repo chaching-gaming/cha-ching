@@ -38,6 +38,7 @@ const EXPORT_ROW_LIMIT = 10000;
 const LEDGER_TYPE_LABELS: Record<LedgerType, string> = {
   BET_WIN: 'Bet win',
   BET_LOSS: 'Bet loss',
+  STAKE_LOCK: 'Stake locked',
   VOID_REFUND: 'Void refund',
   DONATION_IN: 'Donation received',
   DONATION_OUT: 'Donation sent',

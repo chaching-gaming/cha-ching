@@ -1,5 +1,4 @@
-import { useEffect } from 'react';
-import { Text, TouchableOpacity, View } from 'react-native';
+import { Text, TouchableOpacity } from 'react-native';
 import Animated, {
   SlideInUp,
   SlideOutUp,
