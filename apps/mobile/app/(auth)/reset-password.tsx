@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase';
 import { KeyboardAwareScrollView } from '@/components/form/keyboard-aware-scroll-view';
 import { useForm } from '@/hooks/use-form';
 import { useToast } from '@/providers/toast';
+import { useAuth } from '@/providers/auth';
 
 const resetPasswordSchema = z
   .object({
@@ -22,6 +23,7 @@ const resetPasswordSchema = z
 export default function ResetPasswordScreen() {
   const router = useRouter();
   const toast = useToast();
+  const { session, clearPasswordRecovery } = useAuth();
 
   const form = useForm({
     defaultValues: {
@@ -29,9 +31,20 @@ export default function ResetPasswordScreen() {
       confirmPassword: '',
     },
     validators: {
-      onChange: resetPasswordSchema,
+      onSubmit: resetPasswordSchema,
     },
     onSubmit: async ({ value, formApi }) => {
+      // Verify session exists before attempting password update
+      if (!session) {
+        formApi.setErrorMap({
+          onSubmit: {
+            fields: {},
+            form: 'Session expired. Please request a new password reset link.',
+          },
+        });
+        return;
+      }
+
       const { error } = await supabase.auth.updateUser({
         password: value.password,
       });
@@ -44,7 +57,8 @@ export default function ResetPasswordScreen() {
           },
         });
       } else {
-        // Sign out after password reset to ensure clean state
+        // Clear recovery state and sign out to ensure clean state
+        clearPasswordRecovery();
         await supabase.auth.signOut();
         toast.show({ type: 'success', message: 'Password updated successfully. Please sign in.' });
         router.replace('/(auth)/sign-in');
@@ -59,9 +73,7 @@ export default function ResetPasswordScreen() {
     >
       <View className="mb-8">
         <Text className="text-3xl font-bold text-white">Reset Password</Text>
-        <Text className="mt-2 text-base text-text-secondary">
-          Enter your new password below.
-        </Text>
+        <Text className="mt-2 text-base text-text-secondary">Enter your new password below.</Text>
       </View>
 
       <form.AppForm>

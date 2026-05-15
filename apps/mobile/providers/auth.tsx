@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import type { Session } from '@supabase/supabase-js';
-import { supabase } from '@/lib/supabase';
+import * as Linking from 'expo-linking';
+import { supabase, handleDeepLinkAuth } from '@/lib/supabase';
 import { queryClient } from '@/lib/query-client';
 import { Sentry } from '@/lib/sentry';
 
@@ -26,7 +27,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const clearPasswordRecovery = () => setIsPasswordRecovery(false);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    async function initAuth() {
+      // First, check for deep link with recovery tokens
+      const initialUrl = await Linking.getInitialURL();
+      if (initialUrl) {
+        const result = await handleDeepLinkAuth(initialUrl);
+        if (result.isRecovery && result.success) {
+          setIsPasswordRecovery(true);
+        }
+      }
+
+      // Then get the session (will include recovery session if set above)
+      const { data: { session } } = await supabase.auth.getSession();
       setSession(session);
       setIsLoading(false);
 
@@ -37,10 +49,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           email: session.user.email,
         });
       }
+    }
+
+    initAuth();
+
+    // Listen for deep links while app is open
+    const subscription = Linking.addEventListener('url', async ({ url }) => {
+      const result = await handleDeepLinkAuth(url);
+      if (result.isRecovery && result.success) {
+        setIsPasswordRecovery(true);
+      }
     });
 
     const {
-      data: { subscription },
+      data: { subscription: authSubscription },
     } = supabase.auth.onAuthStateChange((event, session) => {
       // Drop cached data tied to the previous auth context so queries from
       // another user (or anonymous) can't bleed into the next session.
@@ -67,7 +89,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setSession(session);
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      subscription.remove();
+      authSubscription.unsubscribe();
+    };
   }, []);
 
   return (

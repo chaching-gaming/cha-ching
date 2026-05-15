@@ -135,7 +135,7 @@ function BetActivityCard({
   const bothSidesStaked = distinctPicksStaked >= 2;
 
   // Show submission status only when bet is PENDING_RESULT (after expiry)
-  const showSubmissionStatus = dbStatus === 'PENDING_RESULT';
+  const showSubmissionStatus = effectiveStatus === 'PENDING_RESULT';
 
   // Show "waiting" message when bet is OPEN with both sides staked
   const showWaitingForClose = dbStatus === 'OPEN' && bothSidesStaked;
@@ -151,16 +151,16 @@ function BetActivityCard({
 
   const isParticipant = !!currentUserId && stakes.some((s) => s.user_id === currentUserId);
 
-  // Only allow outcome submission when PENDING_RESULT (after expiry)
+  // Only allow outcome submission when PENDING_RESULT (after expiry) - use effectiveStatus for immediate detection
   const canSubmitOutcome =
-    !!roomActive && !!roomId && isParticipant && !mySubmission && dbStatus === 'PENDING_RESULT';
+    !!roomActive && !!roomId && isParticipant && !mySubmission && effectiveStatus === 'PENDING_RESULT';
 
   // Allow resolve for DISPUTED bets always, or PENDING_RESULT when ALL participants have submitted
   const allSubmitted = totalParticipants > 0 && submittedCount === totalParticipants;
   const canResolve =
     !!roomId &&
     (currentUserRole === 'ATTESTOR' || currentUserRole === 'ADMIN') &&
-    (dbStatus === 'DISPUTED' || (dbStatus === 'PENDING_RESULT' && allSubmitted));
+    (dbStatus === 'DISPUTED' || (effectiveStatus === 'PENDING_RESULT' && allSubmitted));
 
   const canVoid = !!roomId && currentUserRole === 'ADMIN' && dbStatus !== 'VOID';
 

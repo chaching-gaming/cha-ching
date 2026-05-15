@@ -20,7 +20,7 @@ export default function ForgotPasswordScreen() {
       email: '',
     },
     validators: {
-      onChange: forgotPasswordSchema,
+      onSubmit: forgotPasswordSchema,
     },
     onSubmit: async ({ value, formApi }) => {
       const redirectTo = Linking.createURL('/(auth)/reset-password');

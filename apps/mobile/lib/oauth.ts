@@ -38,6 +38,19 @@ export async function signInWithGoogle() {
       throw error;
     }
 
+    // Update profile with Google user info if display_name is still default
+    const googleUser = response.data.user;
+    if (data.user && googleUser?.name) {
+      await supabase
+        .from('profiles')
+        .update({
+          display_name: googleUser.name,
+          avatar_url: googleUser.photo || undefined,
+        })
+        .eq('id', data.user.id)
+        .or('display_name.is.null,display_name.eq.New User');
+    }
+
     console.log('[GoogleAuth] Success:', data.user?.email);
     return data;
   } catch (err) {
@@ -68,6 +81,20 @@ export async function signInWithApple() {
   });
 
   if (error) throw error;
+
+  // Apple only sends name on FIRST sign-in, so capture it immediately
+  const fullName = credential.fullName;
+  if (data.user && fullName) {
+    const displayName = [fullName.givenName, fullName.familyName].filter(Boolean).join(' ');
+    if (displayName) {
+      await supabase
+        .from('profiles')
+        .update({ display_name: displayName })
+        .eq('id', data.user.id)
+        .or('display_name.is.null,display_name.eq.New User');
+    }
+  }
+
   return data;
 }
 

@@ -30,7 +30,7 @@ export default function SignUpScreen() {
       password: '',
     },
     validators: {
-      onChange: signUpSchema,
+      onSubmit: signUpSchema,
     },
     onSubmit: async ({ value, formApi }) => {
       const { error } = await supabase.auth.signUp({

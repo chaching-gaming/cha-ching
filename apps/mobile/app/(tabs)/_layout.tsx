@@ -1,9 +1,10 @@
-import { useCallback, useState } from 'react';
-import { View } from 'react-native';
+import { useCallback, useMemo, useState } from 'react';
+import { Platform, View } from 'react-native';
 import { getFocusedRouteNameFromRoute } from '@react-navigation/native';
 import { Tabs, useRouter } from 'expo-router';
 import { House, Plus, ChartBar, Bell, UserCircle } from 'phosphor-react-native';
 import { useQueryClient } from '@tanstack/react-query';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { colors } from '@/constants/colors';
 import { RoomSelectionSheet } from '@/components/activity/room-selection-sheet';
@@ -11,13 +12,8 @@ import { NotificationBadge } from '@/components/notifications/notification-badge
 import { useNotifications } from '@/providers/notifications';
 import { notificationsKey } from '@/hooks/use-notifications-feed';
 
-const TAB_BAR_STYLE = {
-  backgroundColor: colors.surface,
-  borderTopColor: colors.border,
-  height: 80,
-  paddingBottom: 20,
-  paddingTop: 8,
-} as const;
+const TAB_BAR_HEIGHT = 60;
+const TAB_BAR_PADDING_TOP = 8;
 
 /** Rooms list only; stack sub-routes hide the tab bar for focused flows. */
 const ROOMS_TAB_LIST_ROUTE = 'index';
@@ -27,6 +23,21 @@ export default function TabLayout() {
   const queryClient = useQueryClient();
   const [sheetOpen, setSheetOpen] = useState(false);
   const { unreadCount, markAsRead } = useNotifications();
+  const insets = useSafeAreaInsets();
+
+  // Calculate bottom padding: use safe area inset on Android (edge-to-edge), fallback for iOS
+  const bottomPadding = Platform.OS === 'android' ? Math.max(insets.bottom, 12) : 20;
+
+  const tabBarStyle = useMemo(
+    () => ({
+      backgroundColor: colors.surface,
+      borderTopColor: colors.border,
+      height: TAB_BAR_HEIGHT + bottomPadding + TAB_BAR_PADDING_TOP,
+      paddingBottom: bottomPadding,
+      paddingTop: TAB_BAR_PADDING_TOP,
+    }),
+    [bottomPadding],
+  );
 
   const handleNotificationsTabFocus = useCallback(async () => {
     // Get all unread notification IDs from cache and mark them as read
@@ -56,7 +67,7 @@ export default function TabLayout() {
         screenOptions={{
           tabBarActiveTintColor: colors.primary,
           tabBarInactiveTintColor: colors.textMuted,
-          tabBarStyle: TAB_BAR_STYLE,
+          tabBarStyle: tabBarStyle,
           headerShown: false,
         }}
       >
@@ -67,7 +78,7 @@ export default function TabLayout() {
             const hideTabBar = focusedRoute !== ROOMS_TAB_LIST_ROUTE;
             return {
               title: 'Rooms',
-              tabBarStyle: hideTabBar ? { display: 'none' } : TAB_BAR_STYLE,
+              tabBarStyle: hideTabBar ? { display: 'none' } : tabBarStyle,
               tabBarIcon: ({ color, focused }) => (
                 <House size={24} color={color} weight={focused ? 'fill' : 'regular'} />
               ),

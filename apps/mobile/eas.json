@@ -1,11 +1,13 @@
 {
   "cli": {
-    "version": ">= 14.0.0"
+    "version": ">= 14.0.0",
+    "appVersionSource": "remote"
   },
   "build": {
     "base": {
       "env": {
-        "GOOGLE_IOS_URL_SCHEME": "com.googleusercontent.apps.1070930457721-pnuevds8ka750f5h8m1h7mtsrbr8e2s9"
+        "GOOGLE_IOS_URL_SCHEME": "com.googleusercontent.apps.1070930457721-pnuevds8ka750f5h8m1h7mtsrbr8e2s9",
+        "EXPO_PUBLIC_PROJECT_ID": "dc228f01-efda-4fc0-a714-6d455f6461e6"
       }
     },
     "development": {
@@ -27,7 +29,7 @@
     "preview": {
       "extends": "staging",
       "android": {
-        "buildType": "apk"
+        "buildType": "app-bundle"
       }
     },
     "production": {
@@ -46,9 +48,9 @@
   "submit": {
     "production": {
       "ios": {
-        "appleId": "YOUR_APPLE_ID_EMAIL",
-        "ascAppId": "YOUR_APP_STORE_CONNECT_APP_ID",
-        "appleTeamId": "YOUR_APPLE_TEAM_ID"
+        "appleId": "tchandler@visual-globe.com",
+        "ascAppId": "6768984349",
+        "appleTeamId": "QTYQ77K492"
       },
       "android": {
         "serviceAccountKeyPath": "./play-store-service-account.json",

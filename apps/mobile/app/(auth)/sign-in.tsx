@@ -24,7 +24,7 @@ export default function SignInScreen() {
       password: '',
     },
     validators: {
-      onChange: signInSchema,
+      onSubmit: signInSchema,
     },
     onSubmit: async ({ value, formApi }) => {
       const { error } = await supabase.auth.signInWithPassword({

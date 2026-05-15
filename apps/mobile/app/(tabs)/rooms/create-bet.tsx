@@ -99,7 +99,7 @@ export default function CreateBetScreen() {
       subjectPositiveOption: '',
     },
     validators: {
-      onChange: createBetSchema,
+      onSubmit: createBetSchema,
     },
     onSubmit: async ({ value, formApi }) => {
       if (!roomId) return;

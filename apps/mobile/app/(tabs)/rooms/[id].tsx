@@ -3,12 +3,14 @@ import {
   ActivityIndicator,
   Alert,
   FlatList,
+  Platform,
   RefreshControl,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Gear, Plus } from 'phosphor-react-native';
 
 import { colors } from '@/constants/colors';
@@ -45,6 +47,7 @@ export default function RoomDetailScreen() {
   const router = useRouter();
   const { session: authSession } = useAuth();
   const queryClient = useQueryClient();
+  const insets = useSafeAreaInsets();
 
   const { data: room, isLoading: roomLoading } = useRoomDetail(id);
   const { data: members } = useRoomMembers(id);
@@ -104,11 +107,11 @@ export default function RoomDetailScreen() {
 
   const feedItems = useMemo(() => activityItems ?? [], [activityItems]);
 
-  // Bet filter applies to bet items only — chip requests always stay visible.
+  // Chip requests only show in "all" tab; bet filters apply to bet items only.
   const visibleItems = useMemo(
     () =>
       feedItems.filter((item) => {
-        if (item.type === 'chip_request') return true;
+        if (item.type === 'chip_request') return filter === 'all';
         return betMatchesFilter(item.bet, filter);
       }),
     [feedItems, filter],
@@ -239,8 +242,9 @@ export default function RoomDetailScreen() {
           onPress={() => router.push(`/(tabs)/rooms/create-bet?id=${id}`)}
           activeOpacity={0.85}
           accessibilityLabel="Create bet"
-          className="absolute bottom-6 right-5 h-14 w-14 items-center justify-center rounded-full bg-primary"
+          className="absolute right-5 h-14 w-14 items-center justify-center rounded-full bg-primary"
           style={{
+            bottom: Platform.OS === 'android' ? Math.max(insets.bottom, 12) + 24 : 24,
             shadowColor: '#000',
             shadowOffset: { width: 0, height: 4 },
             shadowOpacity: 0.35,

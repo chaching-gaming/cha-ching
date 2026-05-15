@@ -30,7 +30,7 @@ export default function CreateRoomScreen() {
       startingChips: '1000',
     },
     validators: {
-      onChange: createRoomSchema,
+      onSubmit: createRoomSchema,
     },
     onSubmit: async ({ value, formApi }) => {
       try {

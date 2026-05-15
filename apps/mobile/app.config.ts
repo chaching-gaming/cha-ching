@@ -17,7 +17,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     backgroundColor: '#011E22',
   },
   ios: {
-    supportsTablet: true,
+    supportsTablet: false,
     bundleIdentifier: 'com.visualglobe.chaching',
     usesAppleSignIn: true,
     infoPlist: {
@@ -52,6 +52,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       {
         icon: './assets/images/notification-icon.png',
         color: '#2EAF7D',
+        defaultChannel: 'default',
       },
     ],
     [

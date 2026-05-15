@@ -211,13 +211,13 @@ export default function BetDetailScreen() {
     !alreadyStaked &&
     effectiveStatus !== 'EXPIRED';
 
-  // Can submit outcome?
+  // Can submit outcome? Use effectiveStatus for immediate client-side detection
   const isParticipant = !!myStake;
-  const canSubmitOutcome = isActive && isParticipant && !mySubmission && dbStatus === 'PENDING_RESULT';
+  const canSubmitOutcome = isActive && isParticipant && !mySubmission && effectiveStatus === 'PENDING_RESULT';
 
-  // Can resolve?
+  // Can resolve? Use effectiveStatus for PENDING_RESULT to allow immediate action after expiry
   const allSubmitted = totalParticipants > 0 && submittedCount === totalParticipants;
-  const canResolve = isAttestorOrAdmin && (dbStatus === 'DISPUTED' || (dbStatus === 'PENDING_RESULT' && allSubmitted));
+  const canResolve = isAttestorOrAdmin && (dbStatus === 'DISPUTED' || (effectiveStatus === 'PENDING_RESULT' && allSubmitted));
 
   // Can void?
   const canVoid = currentUserRole === 'ADMIN' && dbStatus !== 'VOID';

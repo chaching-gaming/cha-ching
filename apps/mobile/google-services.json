@@ -7,25 +7,6 @@
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:428135878479:android:a3cd68a017d74ddc767f3a",
-        "android_client_info": {
-          "package_name": "com.chaching"
-        }
-      },
-      "oauth_client": [],
-      "api_key": [
-        {
-          "current_key": "AIzaSyBSYVOO3oMFBPQypK4SRCETXaJXKR66y94"
-        }
-      ],
-      "services": {
-        "appinvite_service": {
-          "other_platform_oauth_client": []
-        }
-      }
-    },
-    {
-      "client_info": {
         "mobilesdk_app_id": "1:428135878479:android:b543550fb8325c3f767f3a",
         "android_client_info": {
           "package_name": "com.visualglobe.chaching"
