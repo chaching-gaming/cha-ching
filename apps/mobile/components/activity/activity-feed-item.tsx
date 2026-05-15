@@ -643,7 +643,7 @@ function ChipRequestActivityCard({
     remaining > 0 &&
     currentUserBalance != null;
 
-  const canCancel = !!roomActive && isRequester && status === 'OPEN' && fulfilled === 0 && !!roomId;
+  const canCancel = !!roomActive && isRequester && status === 'OPEN' && !!roomId;
 
   const dimmed = status !== 'OPEN';
 

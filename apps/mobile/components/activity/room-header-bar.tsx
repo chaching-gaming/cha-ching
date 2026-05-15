@@ -34,10 +34,10 @@ export function RoomHeaderBar({
   const visible = members.slice(0, MAX_AVATARS);
   const overflow = members.length - MAX_AVATARS;
 
-  // Show request button when balance is zero or less (fund me feature)
-  const atZero = balance <= 0;
-  const showRequestButton = !!roomActive && atZero && !hasOpenRequest && !!roomId;
-  const showPendingHint = !!roomActive && atZero && hasOpenRequest;
+  // Show request button when balance is 100 or below (fund me feature)
+  const lowBalance = balance <= 100;
+  const showRequestButton = !!roomActive && lowBalance && !hasOpenRequest && !!roomId;
+  const showPendingHint = !!roomActive && lowBalance && hasOpenRequest;
 
   return (
     <View className="py-4">

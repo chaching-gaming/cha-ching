@@ -3,6 +3,7 @@ import {
   ActivityIndicator,
   FlatList,
   Modal,
+  Platform,
   Pressable,
   Text,
   TouchableOpacity,
@@ -19,10 +20,10 @@ import { Avatar } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { KeyboardAwareScrollView } from '@/components/form/keyboard-aware-scroll-view';
 import { ScreenHeader } from '@/components/ui/screen-header';
-import { useAuth } from '@/providers/auth';
 import { useForm } from '@/hooks/use-form';
 import { useCreateBet } from '@/hooks/use-create-bet';
 import { useQuestionTemplates } from '@/hooks/use-question-templates';
+import { useMyRoomBalance } from '@/hooks/use-activity-feed';
 import {
   getRpcErrorMessage,
   useRoomDetail,
@@ -40,7 +41,7 @@ const BINARY_OPTIONS = ['Yes', 'No'] as const;
 
 const createBetSchema = z
   .object({
-    memberId: z.string().min(1, 'Choose who this bet is about'),
+    memberId: z.string(), // Optional - bet can be about anyone or no one specific
     templateId: z.string().nullable(),
     writeInOpen: z.boolean(),
     writeInBody: z.string(),
@@ -50,7 +51,6 @@ const createBetSchema = z
       .refine((v) => parseInt(v, 10) > 0, 'Enter a positive stake (whole chips)'),
     expiryIndex: z.number(),
     offeredPick: z.string().min(1, 'Pick your side'),
-    subjectPositiveOption: z.string(),
   })
   .refine(
     (data) => data.templateId !== null || (data.writeInOpen && data.writeInBody.trim().length > 0),
@@ -64,7 +64,7 @@ type ReviewPayload = {
   templateId: string | null;
   subjectDisplayName: string | null;
   memberAvatarUrl: string | null;
-  memberDisplayName: string;
+  memberDisplayName: string | null;
   offeredPick: string;
 };
 
@@ -76,10 +76,10 @@ export default function CreateBetScreen() {
   const { id: roomId } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const safeInsets = useSafeAreaInsets();
-  const { session: authSession } = useAuth();
   const { data: room, isLoading: roomLoading } = useRoomDetail(roomId);
   const { data: members, isLoading: membersLoading } = useRoomMembers(roomId);
   const { data: templates, isLoading: templatesLoading } = useQuestionTemplates('golf');
+  const { data: balance } = useMyRoomBalance(roomId ?? '');
   const createBet = useCreateBet();
 
   const [reviewOpen, setReviewOpen] = useState(false);
@@ -96,7 +96,6 @@ export default function CreateBetScreen() {
       // casual-bet timescale.
       expiryIndex: 1,
       offeredPick: '',
-      subjectPositiveOption: '',
     },
     validators: {
       onSubmit: createBetSchema,
@@ -104,14 +103,16 @@ export default function CreateBetScreen() {
     onSubmit: async ({ value, formApi }) => {
       if (!roomId) return;
 
-      const member = members?.find((m) => m.user_id === value.memberId) ?? null;
-      if (!member) return;
-
-      const name = memberDisplayName(member);
+      const member = value.memberId
+        ? (members?.find((m) => m.user_id === value.memberId) ?? null)
+        : null;
+      const name = member ? memberDisplayName(member) : null;
       const tpl = templates?.find((t) => t.id === value.templateId) ?? null;
       const finalQuestion = tpl
-        ? composeTemplateQuestion(tpl.question_text, name)
-        : composeWriteInQuestion(value.writeInBody.trim(), name);
+        ? composeTemplateQuestion(tpl.question_text, name ?? '')
+        : name
+          ? composeWriteInQuestion(value.writeInBody.trim(), name)
+          : value.writeInBody.trim();
 
       const stakeNum = parseInt(value.stake, 10);
       const expiresAt = new Date(
@@ -126,10 +127,10 @@ export default function CreateBetScreen() {
           p_stake: stakeNum,
           p_expires_at: expiresAt,
           p_offered_pick: value.offeredPick,
-          p_subject_user_id: member.user_id!,
-          p_subject_positive_option: value.subjectPositiveOption || null,
+          p_subject_user_id: member?.user_id ?? null,
+          p_subject_positive_option: null,
           p_template_id: tpl?.id ?? null,
-          p_subject_display_name: tpl ? name : null,
+          p_subject_display_name: tpl && name ? name : null,
         });
         setReviewOpen(false);
         setReviewPayload(null);
@@ -161,14 +162,16 @@ export default function CreateBetScreen() {
       return;
     }
 
-    const member = members?.find((m) => m.user_id === values.memberId) ?? null;
-    if (!member) return;
-
-    const name = memberDisplayName(member);
+    const member = values.memberId
+      ? (members?.find((m) => m.user_id === values.memberId) ?? null)
+      : null;
+    const name = member ? memberDisplayName(member) : null;
     const tpl = templates?.find((t) => t.id === values.templateId) ?? null;
     const finalQuestion = tpl
-      ? composeTemplateQuestion(tpl.question_text, name)
-      : composeWriteInQuestion(values.writeInBody.trim(), name);
+      ? composeTemplateQuestion(tpl.question_text, name ?? '')
+      : name
+        ? composeWriteInQuestion(values.writeInBody.trim(), name)
+        : values.writeInBody.trim();
 
     const stakeNum = parseInt(values.stake, 10);
 
@@ -178,8 +181,8 @@ export default function CreateBetScreen() {
       stake: stakeNum,
       expiryIndex: values.expiryIndex,
       templateId: tpl?.id ?? null,
-      subjectDisplayName: tpl ? name : null,
-      memberAvatarUrl: member.profiles?.avatar_url ?? null,
+      subjectDisplayName: tpl && name ? name : null,
+      memberAvatarUrl: member?.profiles?.avatar_url ?? null,
       memberDisplayName: name,
       offeredPick: values.offeredPick,
     });
@@ -266,9 +269,10 @@ export default function CreateBetScreen() {
             }
           </form.Subscribe>
 
-          {/* Players */}
+          {/* Players (optional) */}
           <View className="mb-5">
-            <Text className="mb-3 text-base font-semibold text-white">Who is this about?</Text>
+            <Text className="mb-1 text-base font-semibold text-white">Who is this about?</Text>
+            <Text className="mb-3 text-sm text-text-secondary">Optional — select a player or skip</Text>
             {membersLoading ? (
               <ActivityIndicator color={colors.primary} />
             ) : (
@@ -412,48 +416,14 @@ export default function CreateBetScreen() {
             </form.AppField>
           </View>
 
-          {/* Subject's allowed side — only needed for write-in bets where the
-              creator isn't the subject; template bets derive this server-side. */}
-          <form.Subscribe
-            selector={(state) => [state.values.templateId, state.values.memberId] as const}
-          >
-            {([templateId, memberId]) => {
-              const isWriteIn = templateId === null;
-              const subjectIsSelf = !!memberId && memberId === authSession?.user.id;
-              if (!isWriteIn || subjectIsSelf || !memberId) return null;
-              const subjectMember = members?.find((m) => m.user_id === memberId) ?? null;
-              const subjectName = subjectMember ? memberDisplayName(subjectMember) : 'this player';
-              return (
-                <View className="mb-5">
-                  <Text className="mb-2 text-base font-semibold text-white">
-                    If {subjectName} joins
-                  </Text>
-                  <Text className="mb-2 text-sm text-text-secondary">
-                    They can only back one side — the one they&rsquo;d want to be true regardless of
-                    the bet.
-                  </Text>
-                  <form.AppField name="subjectPositiveOption">
-                    {(field) => (
-                      <field.OptionField
-                        layout="wrap"
-                        className="mb-0"
-                        disabled={!sessionActive}
-                        options={BINARY_OPTIONS.map((opt) => ({
-                          id: `subject-${opt}`,
-                          label: opt,
-                          value: opt,
-                        }))}
-                      />
-                    )}
-                  </form.AppField>
-                </View>
-              );
-            }}
-          </form.Subscribe>
-
           {/* Stake */}
           <View className="mb-5">
-            <Text className="mb-2 text-base font-semibold text-white">Stake</Text>
+            <View className="mb-2 flex-row items-center justify-between">
+              <Text className="text-base font-semibold text-white">Stake</Text>
+              <Text className="text-sm text-text-secondary">
+                Balance: <Text className="font-semibold text-primary">{balance ?? 0}</Text> chips
+              </Text>
+            </View>
             <form.AppField name="stake">
               {(field) => (
                 <field.TextField
@@ -492,10 +462,21 @@ export default function CreateBetScreen() {
             </form.AppField>
           </View>
 
+          {/* Spacer for sticky button */}
+          <View className="h-20" />
+        </KeyboardAwareScrollView>
+
+        {/* Sticky footer button */}
+        <View
+          className="absolute bottom-0 left-0 right-0 border-t border-border bg-background px-5 pt-3"
+          style={{
+            paddingBottom: Platform.OS === 'android' ? Math.max(safeInsets.bottom, 12) + 12 : Math.max(safeInsets.bottom, 20),
+          }}
+        >
           <Button size="lg" disabled={!sessionActive} onPress={handleReview}>
             Review and Post
           </Button>
-        </KeyboardAwareScrollView>
+        </View>
 
         <Modal visible={reviewOpen} animationType="slide" transparent onRequestClose={closeReview}>
           <GestureHandlerRootView style={{ flex: 1 }}>
@@ -532,19 +513,21 @@ export default function CreateBetScreen() {
                       </View>
                     ) : null}
 
-                    <View className="mb-4 flex-row items-center gap-3">
-                      <Avatar
-                        uri={reviewPayload?.memberAvatarUrl}
-                        fallback={reviewPayload?.memberDisplayName ?? ''}
-                        size="lg"
-                      />
-                      <View className="flex-1">
-                        <Text className="text-sm font-medium text-text-secondary">Player</Text>
-                        <Text className="text-lg font-semibold text-white">
-                          {reviewPayload?.memberDisplayName}
-                        </Text>
+                    {reviewPayload?.memberDisplayName ? (
+                      <View className="mb-4 flex-row items-center gap-3">
+                        <Avatar
+                          uri={reviewPayload?.memberAvatarUrl}
+                          fallback={reviewPayload?.memberDisplayName}
+                          size="lg"
+                        />
+                        <View className="flex-1">
+                          <Text className="text-sm font-medium text-text-secondary">Player</Text>
+                          <Text className="text-lg font-semibold text-white">
+                            {reviewPayload?.memberDisplayName}
+                          </Text>
+                        </View>
                       </View>
-                    </View>
+                    ) : null}
 
                     <View className="mb-4 rounded-2xl border border-border bg-surface px-4 py-3">
                       <Text className="text-sm font-medium text-text-secondary">Question</Text>
