@@ -8,6 +8,7 @@ import {
   roomChipRequestsKey,
   roomMemberBalancesKey,
 } from '@/hooks/use-activity-feed';
+import { useFeedback } from '@/providers/feedback';
 
 const ROOMS_KEY = ['rooms'] as const;
 
@@ -39,6 +40,7 @@ export function useRequestChips() {
 
 export function useDonateChips() {
   const queryClient = useQueryClient();
+  const { trigger } = useFeedback();
 
   return useMutation({
     mutationFn: async (params: { p_chip_request_id: string; p_amount: number; roomId: string }) => {
@@ -53,8 +55,11 @@ export function useDonateChips() {
       queryClient.invalidateQueries({ queryKey: roomChipRequestsKey(variables.roomId) });
       queryClient.invalidateQueries({ queryKey: roomBalanceKey(variables.roomId) });
       queryClient.invalidateQueries({ queryKey: roomMemberBalancesKey(variables.roomId) });
-      // Update rooms list to reflect new balance
-      queryClient.invalidateQueries({ queryKey: ROOMS_KEY });
+      // Update rooms list to reflect new balance (both active and history tabs)
+      queryClient.invalidateQueries({ queryKey: [...ROOMS_KEY, 'active'] });
+      queryClient.invalidateQueries({ queryKey: [...ROOMS_KEY, 'history'] });
+      // Haptic feedback for donation
+      trigger('chip_donated');
     },
   });
 }

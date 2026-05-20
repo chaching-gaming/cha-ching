@@ -1,4 +1,4 @@
-import { Text, TextInput, View } from 'react-native';
+import { Platform, Text, TextInput, View } from 'react-native';
 import type { TextInputProps } from 'react-native';
 import { useFieldContext } from '@/hooks/form-context';
 import { colors } from '@/constants/colors';
@@ -26,6 +26,7 @@ export function TextField({
   inputClassName = '',
   className = '',
   placeholder,
+  multiline,
   ...inputProps
 }: TextFieldProps) {
   const field = useFieldContext<string>();
@@ -43,11 +44,37 @@ export function TextField({
       )}
       <View className="relative">
         <TextInput
-          className={`min-h-[48px] rounded-xl border bg-surface-light py-3.5 text-base text-white ${padL} ${padR} ${
+          className={`rounded-xl border bg-surface-light text-base text-white ${padL} ${padR} ${
             errors ? 'border-error' : 'border-border'
           } ${inputClassName}`}
+          style={[
+            multiline
+              ? {
+                  minHeight: 48,
+                  textAlignVertical: 'top',
+                  includeFontPadding: false,
+                  paddingTop: 14,
+                  paddingBottom: 14,
+                }
+              : {
+                  height: 48,
+                  textAlignVertical: 'center',
+                  includeFontPadding: false,
+                },
+            !multiline &&
+              Platform.OS === 'ios' && {
+                paddingTop: 0,
+                paddingBottom: 0,
+                lineHeight: 20,
+              },
+            !multiline &&
+              Platform.OS === 'android' && {
+                paddingVertical: 12,
+              },
+          ]}
           placeholderTextColor={colors.textMuted}
           placeholder={placeholder}
+          multiline={multiline}
           value={field.state.value}
           onChangeText={(text) => {
             const next = transformValue ? transformValue(text) : text;

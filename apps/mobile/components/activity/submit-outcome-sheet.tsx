@@ -14,9 +14,20 @@ type Props = {
   onClose: () => void;
   bet: BetWithProfiles;
   roomId: string;
+  /** Contextual label for "Yes" option (e.g., "Hit", "Make") - falls back to "Yes" */
+  positiveLabel?: string;
+  /** Contextual label for "No" option (e.g., "Miss") - falls back to "No" */
+  negativeLabel?: string;
 };
 
-export function SubmitOutcomeSheet({ visible, onClose, bet, roomId }: Props) {
+export function SubmitOutcomeSheet({
+  visible,
+  onClose,
+  bet,
+  roomId,
+  positiveLabel,
+  negativeLabel,
+}: Props) {
   const safeInsets = useSafeAreaInsets();
   const submitOutcome = useSubmitOutcome();
   const [selected, setSelected] = useState<string | null>(null);
@@ -25,6 +36,18 @@ export function SubmitOutcomeSheet({ visible, onClose, bet, roomId }: Props) {
     const raw = Array.isArray(bet.options) ? (bet.options as unknown[]) : [];
     return raw.filter((o): o is string => typeof o === 'string' && o.trim().length > 0);
   }, [bet.options]);
+
+  // Map raw option (Yes/No) to contextual display label
+  const getDisplayLabel = useCallback(
+    (rawOption: string): string => {
+      if (!positiveLabel && !negativeLabel) return rawOption;
+      const lower = rawOption.trim().toLowerCase();
+      if (lower === 'yes' && positiveLabel) return positiveLabel;
+      if (lower === 'no' && negativeLabel) return negativeLabel;
+      return rawOption;
+    },
+    [positiveLabel, negativeLabel],
+  );
 
   const handleClose = useCallback(() => {
     if (submitOutcome.isPending) return;
@@ -36,7 +59,7 @@ export function SubmitOutcomeSheet({ visible, onClose, bet, roomId }: Props) {
     if (!selected) return;
     Alert.alert(
       'Submit outcome?',
-      `You're reporting "${selected}" as the result. This can't be changed.`,
+      `You're reporting "${getDisplayLabel(selected)}" as the result. This can't be changed.`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -58,7 +81,7 @@ export function SubmitOutcomeSheet({ visible, onClose, bet, roomId }: Props) {
         },
       ],
     );
-  }, [bet.id, onClose, roomId, selected, submitOutcome]);
+  }, [bet.id, onClose, roomId, selected, submitOutcome, getDisplayLabel]);
 
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={handleClose}>
@@ -103,7 +126,7 @@ export function SubmitOutcomeSheet({ visible, onClose, bet, roomId }: Props) {
                   <Text
                     className={`text-base font-semibold ${isSelected ? 'text-primary' : 'text-white'}`}
                   >
-                    {option}
+                    {getDisplayLabel(option)}
                   </Text>
                   {isSelected ? <Check size={22} color={colors.primary} weight="bold" /> : null}
                 </TouchableOpacity>

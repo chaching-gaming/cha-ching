@@ -7,9 +7,12 @@ import { colors } from '@/constants/colors';
 import { Avatar, EmptyState, ScreenHeader, SkeletonStatsCard } from '@/components/ui';
 import { RoomSelectionSheet } from '@/components/activity/room-selection-sheet';
 import { StatCard } from '@/components/stats/stat-card';
+import { MyBetsSection } from '@/components/stats/my-bets-section';
 import { useRooms } from '@/hooks/use-rooms';
 import { useRoomEventStats, useRoomPlayerStats, type PlayerStat } from '@/hooks/use-room-stats';
 import { balanceColorClass, formatBalance } from '@/lib/format-balance';
+
+type StatsTab = 'leaderboard' | 'my-bets';
 
 function formatChipCount(n: number): string {
   return Math.round(n).toLocaleString('en-US');
@@ -19,6 +22,7 @@ export default function StatsScreen() {
   const { data: rooms, isLoading: roomsLoading } = useRooms('active');
   const [selectedRoomId, setSelectedRoomId] = useState<string | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<StatsTab>('leaderboard');
 
   const selectedRoom = useMemo(
     () => rooms?.find((r) => r.room.id === selectedRoomId) ?? null,
@@ -69,13 +73,39 @@ export default function StatsScreen() {
   return (
     <View className="flex-1 bg-background">
       <ScreenHeader title="Stats" />
-      <View className="px-5 pb-3">
-        <RoomDropdown
-          roomName={selectedRoom?.room.name ?? 'Select a room'}
-          onPress={() => setPickerOpen(true)}
+
+      {/* Tab switcher */}
+      <View className="mx-5 mb-3 flex-row rounded-xl bg-surface p-1">
+        <TabButton
+          label="Leaderboard"
+          isActive={activeTab === 'leaderboard'}
+          onPress={() => setActiveTab('leaderboard')}
+        />
+        <TabButton
+          label="My Bets"
+          isActive={activeTab === 'my-bets'}
+          onPress={() => setActiveTab('my-bets')}
         />
       </View>
-      {selectedRoomId ? <RoomStats roomId={selectedRoomId} /> : null}
+
+      {/* Room dropdown (only for leaderboard) */}
+      {activeTab === 'leaderboard' && (
+        <View className="px-5 pb-3">
+          <RoomDropdown
+            roomName={selectedRoom?.room.name ?? 'Select a room'}
+            onPress={() => setPickerOpen(true)}
+          />
+        </View>
+      )}
+
+      {/* Tab content */}
+      {activeTab === 'leaderboard' ? (
+        selectedRoomId ? (
+          <RoomStats roomId={selectedRoomId} />
+        ) : null
+      ) : (
+        <MyBetsSection roomId={selectedRoomId} />
+      )}
 
       <RoomSelectionSheet
         visible={pickerOpen}
@@ -83,6 +113,34 @@ export default function StatsScreen() {
         onSelectRoom={handleSelectRoom}
       />
     </View>
+  );
+}
+
+// ============================================================================
+// Tab button for the tab switcher
+// ============================================================================
+
+function TabButton({
+  label,
+  isActive,
+  onPress,
+}: {
+  label: string;
+  isActive: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <TouchableOpacity
+      onPress={onPress}
+      activeOpacity={0.8}
+      className={`flex-1 items-center rounded-lg py-2.5 ${isActive ? 'bg-primary' : ''}`}
+    >
+      <Text
+        className={`text-sm font-semibold ${isActive ? 'text-text-primary' : 'text-text-secondary'}`}
+      >
+        {label}
+      </Text>
+    </TouchableOpacity>
   );
 }
 
@@ -166,6 +224,19 @@ function RoomStats({ roomId }: { roomId: string }) {
           />
         </View>
 
+        <SectionLabel>Players</SectionLabel>
+        {players && players.length > 0 ? (
+          <View className="overflow-hidden rounded-2xl border border-border bg-surface">
+            {players.map((p, idx) => (
+              <PlayerRow key={p.user_id} player={p} isLast={idx === players.length - 1} />
+            ))}
+          </View>
+        ) : (
+          <View className="rounded-2xl border border-border bg-surface px-4 py-6">
+            <Text className="text-center text-base text-text-secondary">No members yet</Text>
+          </View>
+        )}
+
         <SectionLabel>By status</SectionLabel>
         <View className="flex-row gap-3">
           <StatusCard dotClass="bg-primary" label="Open" value={event?.open_bets ?? 0} />
@@ -198,19 +269,6 @@ function RoomStats({ roomId }: { roomId: string }) {
         ) : (
           <View className="rounded-2xl border border-border bg-surface px-4 py-6">
             <Text className="text-center text-base text-text-secondary">No bets yet</Text>
-          </View>
-        )}
-
-        <SectionLabel>Players</SectionLabel>
-        {players && players.length > 0 ? (
-          <View className="overflow-hidden rounded-2xl border border-border bg-surface">
-            {players.map((p, idx) => (
-              <PlayerRow key={p.user_id} player={p} isLast={idx === players.length - 1} />
-            ))}
-          </View>
-        ) : (
-          <View className="rounded-2xl border border-border bg-surface px-4 py-6">
-            <Text className="text-center text-base text-text-secondary">No members yet</Text>
           </View>
         )}
       </View>

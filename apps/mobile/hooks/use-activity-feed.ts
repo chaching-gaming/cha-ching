@@ -1,5 +1,5 @@
-import { useEffect, useMemo } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useEffect, useMemo, useRef, useCallback } from 'react';
+import { useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import type { Database } from '@cha-ching/types';
 import { useAuth } from '@/providers/auth';
@@ -43,6 +43,10 @@ export type ChipRequestWithProfile = ChipRequest & {
 export type ActivityItem =
   | { type: 'bet'; timestamp: string; bet: BetWithProfiles }
   | { type: 'chip_request'; timestamp: string; chipRequest: ChipRequestWithProfile };
+
+/** Invalidate to refresh the rooms list (used for balance updates visible on the list page). */
+const ROOMS_ACTIVE_KEY = ['rooms', 'active'] as const;
+const ROOMS_HISTORY_KEY = ['rooms', 'history'] as const;
 
 export const roomBetsKey = (roomId: string) => ['rooms', roomId, 'bets'] as const;
 export const roomChipRequestsKey = (roomId: string) => ['rooms', roomId, 'chip_requests'] as const;
@@ -184,6 +188,31 @@ type RealtimeActivityFeedOptions = {
   onCurrentUserRemoved?: () => void;
 };
 
+/**
+ * Creates a debounced invalidation function that batches rapid query invalidations.
+ * This prevents UI freezes when multiple realtime events arrive in quick succession
+ * (e.g., bet settlement creates multiple ledger entries).
+ */
+function createDebouncedInvalidator(queryClient: QueryClient, delay = 150) {
+  const pendingKeys = new Set<string>();
+  let timeoutId: ReturnType<typeof setTimeout> | null = null;
+
+  return (queryKey: readonly unknown[]) => {
+    const keyStr = JSON.stringify(queryKey);
+    pendingKeys.add(keyStr);
+
+    if (timeoutId) clearTimeout(timeoutId);
+
+    timeoutId = setTimeout(() => {
+      for (const key of pendingKeys) {
+        queryClient.invalidateQueries({ queryKey: JSON.parse(key) });
+      }
+      pendingKeys.clear();
+      timeoutId = null;
+    }, delay);
+  };
+}
+
 export function useRealtimeActivityFeed(
   roomId: string,
   options?: RealtimeActivityFeedOptions,
@@ -191,6 +220,13 @@ export function useRealtimeActivityFeed(
   const queryClient = useQueryClient();
   const { session } = useAuth();
   const currentUserId = session?.user.id;
+
+  // Create a stable debounced invalidator to batch rapid realtime events
+  const invalidatorRef = useRef<ReturnType<typeof createDebouncedInvalidator> | null>(null);
+  if (!invalidatorRef.current) {
+    invalidatorRef.current = createDebouncedInvalidator(queryClient);
+  }
+  const invalidate = invalidatorRef.current;
 
   useEffect(() => {
     if (!roomId) return;
@@ -214,9 +250,12 @@ export function useRealtimeActivityFeed(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'bets', filter: `room_id=eq.${roomId}` },
         () => {
-          queryClient.invalidateQueries({ queryKey: roomBetsKey(roomId) });
-          queryClient.invalidateQueries({ queryKey: roomBalanceKey(roomId) });
-          queryClient.invalidateQueries({ queryKey: roomMemberBalancesKey(roomId) });
+          invalidate(roomBetsKey(roomId));
+          invalidate(roomBalanceKey(roomId));
+          invalidate(roomMemberBalancesKey(roomId));
+          // Also update rooms list so balance shows correctly on the list page
+          invalidate(ROOMS_ACTIVE_KEY);
+          invalidate(ROOMS_HISTORY_KEY);
         },
       )
       .subscribe();
@@ -232,9 +271,12 @@ export function useRealtimeActivityFeed(
           filter: `room_id=eq.${roomId}`,
         },
         () => {
-          queryClient.invalidateQueries({ queryKey: roomChipRequestsKey(roomId) });
-          queryClient.invalidateQueries({ queryKey: roomBalanceKey(roomId) });
-          queryClient.invalidateQueries({ queryKey: roomMemberBalancesKey(roomId) });
+          invalidate(roomChipRequestsKey(roomId));
+          invalidate(roomBalanceKey(roomId));
+          invalidate(roomMemberBalancesKey(roomId));
+          // Also update rooms list so balance shows correctly on the list page
+          invalidate(ROOMS_ACTIVE_KEY);
+          invalidate(ROOMS_HISTORY_KEY);
         },
       )
       .subscribe();
@@ -247,7 +289,7 @@ export function useRealtimeActivityFeed(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'outcome_submissions' },
         () => {
-          queryClient.invalidateQueries({ queryKey: roomBetsKey(roomId) });
+          invalidate(roomBetsKey(roomId));
         },
       )
       .subscribe();
@@ -257,13 +299,16 @@ export function useRealtimeActivityFeed(
     const betStakesChannel = supabase
       .channel(`cc-feed:${roomId}:stakes:${token}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'bet_stakes' }, () => {
-        queryClient.invalidateQueries({ queryKey: roomBetsKey(roomId) });
-        queryClient.invalidateQueries({ queryKey: roomBalanceKey(roomId) });
-        queryClient.invalidateQueries({ queryKey: roomMemberBalancesKey(roomId) });
+        invalidate(roomBetsKey(roomId));
+        invalidate(roomBalanceKey(roomId));
+        invalidate(roomMemberBalancesKey(roomId));
+        // Also update rooms list so balance shows correctly on the list page
+        invalidate(ROOMS_ACTIVE_KEY);
+        invalidate(ROOMS_HISTORY_KEY);
       })
       .subscribe();
 
-    // room_members: see when someone joins/leaves the room in real-time.
+    // room_members: see when someone joins/leaves the room, or balance changes (chip donations).
     const roomMembersChannel = supabase
       .channel(`cc-feed:${roomId}:members:${token}`)
       .on(
@@ -275,11 +320,16 @@ export function useRealtimeActivityFeed(
           filter: `room_id=eq.${roomId}`,
         },
         (payload) => {
-          queryClient.invalidateQueries({ queryKey: roomMembersKey(roomId) });
-          queryClient.invalidateQueries({ queryKey: roomDetailKey(roomId) });
-          queryClient.invalidateQueries({ queryKey: roomMemberBalancesKey(roomId) });
+          invalidate(roomMembersKey(roomId));
+          invalidate(roomDetailKey(roomId));
+          invalidate(roomMemberBalancesKey(roomId));
+          // Invalidate current user's balance (for chip donations received)
+          invalidate(roomBalanceKey(roomId));
+          // Update rooms list so balance shows correctly on the list page
+          invalidate(ROOMS_ACTIVE_KEY);
+          invalidate(ROOMS_HISTORY_KEY);
 
-          // If the current user was removed, notify via callback
+          // If the current user was removed, notify via callback (immediate, not debounced)
           if (
             payload.eventType === 'DELETE' &&
             payload.old &&
@@ -291,6 +341,28 @@ export function useRealtimeActivityFeed(
       )
       .subscribe();
 
+    // ledger_entries: balance changes from chip donations, bet settlements, etc.
+    // This is the source of truth for balances, so we must watch it.
+    const ledgerEntriesChannel = supabase
+      .channel(`cc-feed:${roomId}:ledger:${token}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'ledger_entries',
+          filter: `room_id=eq.${roomId}`,
+        },
+        () => {
+          invalidate(roomBalanceKey(roomId));
+          invalidate(roomMemberBalancesKey(roomId));
+          // Update rooms list so balance shows correctly on the list page
+          invalidate(ROOMS_ACTIVE_KEY);
+          invalidate(ROOMS_HISTORY_KEY);
+        },
+      )
+      .subscribe();
+
     return () => {
       void (async () => {
         await supabase.removeChannel(betsChannel);
@@ -298,6 +370,7 @@ export function useRealtimeActivityFeed(
         await supabase.removeChannel(outcomeSubmissionsChannel);
         await supabase.removeChannel(betStakesChannel);
         await supabase.removeChannel(roomMembersChannel);
+        await supabase.removeChannel(ledgerEntriesChannel);
       })();
     };
   }, [roomId, queryClient, currentUserId, options]);

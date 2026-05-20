@@ -40,6 +40,9 @@ GoogleService-Info.plist
 # Google Play Store service account (for automated uploads)
 play-store-service-account.json
 
+# Firebase Admin SDK (contains private keys)
+*-firebase-adminsdk-*.json
+
 # typescript
 *.tsbuildinfo
 

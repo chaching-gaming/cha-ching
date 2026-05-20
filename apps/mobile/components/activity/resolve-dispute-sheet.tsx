@@ -14,9 +14,20 @@ type Props = {
   onClose: () => void;
   bet: BetWithProfiles;
   roomId: string;
+  /** Contextual label for "Yes" option (e.g., "Hit", "Make") - falls back to "Yes" */
+  positiveLabel?: string;
+  /** Contextual label for "No" option (e.g., "Miss") - falls back to "No" */
+  negativeLabel?: string;
 };
 
-export function ResolveDisputeSheet({ visible, onClose, bet, roomId }: Props) {
+export function ResolveDisputeSheet({
+  visible,
+  onClose,
+  bet,
+  roomId,
+  positiveLabel,
+  negativeLabel,
+}: Props) {
   const safeInsets = useSafeAreaInsets();
   const resolveDispute = useResolveDispute();
   const [selected, setSelected] = useState<string | null>(null);
@@ -26,6 +37,18 @@ export function ResolveDisputeSheet({ visible, onClose, bet, roomId }: Props) {
     const raw = Array.isArray(bet.options) ? (bet.options as unknown[]) : [];
     return raw.filter((o): o is string => typeof o === 'string' && o.trim().length > 0);
   }, [bet.options]);
+
+  // Map raw option (Yes/No) to contextual display label
+  const getDisplayLabel = useCallback(
+    (rawOption: string): string => {
+      if (!positiveLabel && !negativeLabel) return rawOption;
+      const lower = rawOption.trim().toLowerCase();
+      if (lower === 'yes' && positiveLabel) return positiveLabel;
+      if (lower === 'no' && negativeLabel) return negativeLabel;
+      return rawOption;
+    },
+    [positiveLabel, negativeLabel],
+  );
 
   // Group submissions by the option they chose, so the attestor sees "4 said
   // Yes · 2 said No" rather than the old fixed two-row offerer/acceptor view.
@@ -53,7 +76,7 @@ export function ResolveDisputeSheet({ visible, onClose, bet, roomId }: Props) {
     if (!selected) return;
     Alert.alert(
       isDispute ? 'Resolve this dispute?' : 'Settle this bet?',
-      `You're setting the final outcome to "${selected}". This settles the bet and cannot be undone.`,
+      `You're setting the final outcome to "${getDisplayLabel(selected)}". This settles the bet and cannot be undone.`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -78,7 +101,7 @@ export function ResolveDisputeSheet({ visible, onClose, bet, roomId }: Props) {
         },
       ],
     );
-  }, [bet.id, onClose, roomId, selected, resolveDispute, isDispute]);
+  }, [bet.id, onClose, roomId, selected, resolveDispute, isDispute, getDisplayLabel]);
 
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={handleClose}>
@@ -128,7 +151,7 @@ export function ResolveDisputeSheet({ visible, onClose, bet, roomId }: Props) {
                   className="flex-row items-center justify-between rounded-xl border border-border bg-surface-light px-3 py-2.5"
                 >
                   <Text className="text-sm font-semibold text-white" numberOfLines={1}>
-                    {option}
+                    {getDisplayLabel(option)}
                   </Text>
                   <Text className={`text-sm font-bold ${tone}`} numberOfLines={1}>
                     {count === 0 ? 'no votes' : count === 1 ? '1 vote' : `${count} votes`}
@@ -155,7 +178,7 @@ export function ResolveDisputeSheet({ visible, onClose, bet, roomId }: Props) {
                   <Text
                     className={`text-base font-semibold ${isSelected ? 'text-primary' : 'text-white'}`}
                   >
-                    {option}
+                    {getDisplayLabel(option)}
                   </Text>
                   {isSelected ? <Check size={22} color={colors.primary} weight="bold" /> : null}
                 </TouchableOpacity>

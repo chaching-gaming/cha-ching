@@ -17,6 +17,7 @@ import { colors } from '@/constants/colors';
 import { Avatar, EmptyState, ScreenHeader, SkeletonListItem } from '@/components/ui';
 import {
   useRooms,
+  useRealtimeRoomsList,
   useEndSession,
   getRpcErrorMessage,
   type RoomWithMembership,
@@ -169,6 +170,9 @@ function RoomsEmptyState() {
 export default function RoomsListScreen() {
   const router = useRouter();
   const { data: rooms, isLoading, refetch, isRefetching } = useRooms('active');
+
+  // Subscribe to realtime balance updates across all rooms
+  useRealtimeRoomsList();
 
   const onRefresh = useCallback(() => {
     refetch();

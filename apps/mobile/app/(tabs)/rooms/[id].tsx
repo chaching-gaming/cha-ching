@@ -21,9 +21,7 @@ import {
   betMatchesFilter,
   type BetFilter,
 } from '@/components/activity/bet-feed-status-filter';
-import { LockedInCelebration } from '@/components/activity/locked-in-celebration';
 import { RoomHeaderBar } from '@/components/activity/room-header-bar';
-import { WinnerCelebration } from '@/components/activity/winner-celebration';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/providers/auth';
 import { useRoomDetail, useRoomMembers } from '@/hooks/use-rooms';
@@ -32,8 +30,6 @@ import {
   useRealtimeActivityFeed,
   useRoomActivityFeed,
 } from '@/hooks/use-activity-feed';
-import { useLockedInCelebration } from '@/hooks/use-locked-in-celebration';
-import { useWinnerCelebration } from '@/hooks/use-winner-celebration';
 
 const EMPTY_STATE_COPY: Record<BetFilter, { title: string; subtitle: string }> = {
   all: { title: 'No bets yet', subtitle: 'Tap Create Bet to start the action.' },
@@ -115,22 +111,6 @@ export default function RoomDetailScreen() {
         return betMatchesFilter(item.bet, filter);
       }),
     [feedItems, filter],
-  );
-
-  // Detects live bet.status → SETTLED transitions and queues a celebration
-  // for the current user if they were a participant. `feedLoading` gates the
-  // initial seed so historical SETTLED bets don't fire on first render.
-  const { celebratingBet, dismissCelebration } = useWinnerCelebration(
-    feedItems,
-    authSession?.user.id ?? null,
-    feedLoading,
-  );
-
-  // Detects OPEN → MATCHED transitions and queues a "You're locked in" flash.
-  const { lockedInBet, dismissLockedIn } = useLockedInCelebration(
-    feedItems,
-    authSession?.user.id ?? null,
-    feedLoading,
   );
 
   const openSettings = useCallback(() => {
@@ -223,18 +203,6 @@ export default function RoomDetailScreen() {
             </View>
           )
         }
-      />
-
-      <WinnerCelebration
-        bet={celebratingBet}
-        currentUserId={authSession?.user.id ?? null}
-        onDismiss={dismissCelebration}
-      />
-
-      <LockedInCelebration
-        bet={lockedInBet}
-        currentUserId={authSession?.user.id ?? null}
-        onDismiss={dismissLockedIn}
       />
 
       {isActive ? (

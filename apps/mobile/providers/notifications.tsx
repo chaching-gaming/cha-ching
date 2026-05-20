@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useRef, useState } f
 import { AppState, Platform } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import { useQueryClient } from '@tanstack/react-query';
 
@@ -10,14 +11,29 @@ import { env } from '@/lib/env';
 import { supabase } from '@/lib/supabase';
 import { notificationsKey } from '@/hooks/use-notifications-feed';
 
-// Configure notification handler
+// Storage keys matching preferences provider
+const STORAGE_KEY_SOUND = 'pref.sound';
+const STORAGE_KEY_NOTIFICATIONS = 'pref.notifications';
+
+// Configure notification handler - checks user preferences before showing/playing
 Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowBanner: true,
-    shouldPlaySound: true,
-    shouldSetBadge: true,
-    shouldShowList: true,
-  }),
+  handleNotification: async () => {
+    // Read user preferences from AsyncStorage
+    const [soundPref, notifPref] = await AsyncStorage.multiGet([
+      STORAGE_KEY_SOUND,
+      STORAGE_KEY_NOTIFICATIONS,
+    ]);
+    // Default to true if not set
+    const soundEnabled = soundPref[1] !== 'false';
+    const notificationsEnabled = notifPref[1] !== 'false';
+
+    return {
+      shouldShowBanner: notificationsEnabled,
+      shouldPlaySound: soundEnabled && notificationsEnabled,
+      shouldSetBadge: notificationsEnabled,
+      shouldShowList: notificationsEnabled,
+    };
+  },
 });
 
 // Set up Android notification channel (required for Android 8.0+)
@@ -45,6 +61,7 @@ type NotificationContextType = {
   unreadCount: number;
   requestPermissions: () => Promise<boolean>;
   markAsRead: (ids: string[]) => Promise<void>;
+  markAllAsRead: () => Promise<void>;
   refreshUnreadCount: () => Promise<void>;
 };
 
@@ -98,6 +115,22 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     },
     [session?.user.id, refreshUnreadCount],
   );
+
+  // Mark ALL notifications as read (not just loaded ones)
+  const markAllAsRead = useCallback(async () => {
+    if (!session?.user.id) return;
+
+    try {
+      const { error } = await supabase.rpc('mark_all_notifications_read');
+
+      if (!error) {
+        // Refresh count after marking all as read
+        await refreshUnreadCount();
+      }
+    } catch (err) {
+      console.error('Failed to mark all notifications as read:', err);
+    }
+  }, [session?.user.id, refreshUnreadCount]);
 
   // Register device token with backend
   const registerDevice = useCallback(
@@ -202,6 +235,9 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       switch (type) {
         case 'bet_matched':
         case 'bet_settled':
+        case 'bet_won':
+        case 'bet_lost':
+        case 'bet_voided':
         case 'bet_disputed':
         case 'bet_expiring':
         case 'bet_accepted':
@@ -310,6 +346,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
         unreadCount,
         requestPermissions,
         markAsRead,
+        markAllAsRead,
         refreshUnreadCount,
       }}
     >

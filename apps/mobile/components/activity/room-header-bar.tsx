@@ -92,10 +92,10 @@ export function RoomHeaderBar({
           onPress={() => setRequestOpen(true)}
           activeOpacity={0.85}
           accessibilityLabel="Request chips from the room"
-          className="mt-3 flex-row items-center justify-center gap-2 rounded-xl border border-primary/40 bg-primary/10 py-3"
+          className="mt-3 flex-row items-center justify-center gap-2 rounded-xl bg-warning py-3"
         >
-          <HandHeart size={18} color={colors.primary} weight="fill" />
-          <Text className="text-sm font-bold text-primary">Request chips</Text>
+          <HandHeart size={18} color={colors.background} weight="fill" />
+          <Text className="text-sm font-bold text-background">Request chips</Text>
         </TouchableOpacity>
       ) : showPendingHint ? (
         <View className="mt-3 flex-row items-center justify-center gap-2 rounded-xl border border-border bg-surface-light py-3">

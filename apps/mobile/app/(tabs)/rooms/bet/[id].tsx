@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   RefreshControl,
   ScrollView,
   Text,
@@ -11,6 +12,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   Check,
+  Clock,
   Coins,
   Crown,
   Gavel,
@@ -27,15 +29,16 @@ import { Avatar } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ScreenHeader } from '@/components/ui/screen-header';
+import { LockedInCelebration } from '@/components/activity/locked-in-celebration';
 import { ResolveDisputeSheet } from '@/components/activity/resolve-dispute-sheet';
 import { SubmitOutcomeSheet } from '@/components/activity/submit-outcome-sheet';
 import { VoidBetSheet } from '@/components/activity/void-bet-sheet';
-import {
-  betDetailKey,
-  useBetDetail,
-  type BetStakeWithProfile,
-} from '@/hooks/use-activity-feed';
-import { useRoomDetail, useRoomMembers } from '@/hooks/use-rooms';
+import { WinnerCelebration } from '@/components/activity/winner-celebration';
+import { useFeedback } from '@/providers/feedback';
+import { betDetailKey, useBetDetail, type BetStakeWithProfile } from '@/hooks/use-activity-feed';
+import { useRoomDetail, useRoomMembers, getRpcErrorMessage } from '@/hooks/use-rooms';
+import { useJoinBet } from '@/hooks/use-join-bet';
+import { useQuestionTemplates } from '@/hooks/use-question-templates';
 import { useAuth } from '@/providers/auth';
 import { formatBetCountdown, formatRelativeActivityTime } from '@/lib/date-format';
 import { getEffectiveBetStatus } from '@/lib/effective-bet-status';
@@ -51,7 +54,7 @@ function getBetStatusPill(status: string | null | undefined): {
     case 'MATCHED':
       return { label: 'MATCHED', variant: 'matched' };
     case 'PENDING_RESULT':
-      return { label: 'PENDING', variant: 'attestor' };
+      return { label: 'AWAITING OUTCOMES', variant: 'attestor' };
     case 'SETTLED':
       return { label: 'SETTLED', variant: 'default' };
     case 'EXPIRED':
@@ -80,14 +83,77 @@ export default function BetDetailScreen() {
   const { data: bet, isLoading } = useBetDetail(id ?? '');
   const { data: room } = useRoomDetail(bet?.room_id ?? '');
   const { data: members } = useRoomMembers(bet?.room_id ?? '');
+  const { data: templates } = useQuestionTemplates('golf');
+  const joinBet = useJoinBet();
+
+  // Get template for contextual labels (Hit/Miss, Make/Miss, etc.)
+  const betTemplate = useMemo(() => {
+    if (!bet?.template_id || !templates) return null;
+    return templates.find((t) => t.id === bet.template_id) ?? null;
+  }, [bet?.template_id, templates]);
+
+  // Map raw option (Yes/No) to contextual display label
+  const getDisplayLabel = useCallback(
+    (rawOption: string): string => {
+      if (!betTemplate) return rawOption;
+      const lower = rawOption.trim().toLowerCase();
+      if (lower === 'yes') return betTemplate.positive_label;
+      if (lower === 'no') return betTemplate.negative_label;
+      return rawOption;
+    },
+    [betTemplate],
+  );
 
   const [tick, setTick] = useState(0);
   const [submitSheetOpen, setSubmitSheetOpen] = useState(false);
   const [disputeSheetOpen, setDisputeSheetOpen] = useState(false);
   const [voidSheetOpen, setVoidSheetOpen] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [showWinCelebration, setShowWinCelebration] = useState(false);
+  const [showLockedInCelebration, setShowLockedInCelebration] = useState(false);
+  const { trigger } = useFeedback();
 
   const dbStatus = bet?.status ?? '';
+  const prevStatusRef = useRef<string | null>(null);
+
+  // Detect status transitions and trigger celebrations
+  useEffect(() => {
+    if (!bet || isLoading) return;
+
+    const prevStatus = prevStatusRef.current;
+    prevStatusRef.current = dbStatus;
+
+    // Skip on initial load (prevStatus is null)
+    if (prevStatus === null) return;
+
+    const userParticipated =
+      currentUserId && (bet.stakes ?? []).some((s) => s.user_id === currentUserId);
+
+    // OPEN → MATCHED: "You're locked in" celebration
+    if (prevStatus === 'OPEN' && dbStatus === 'MATCHED' && userParticipated) {
+      setShowLockedInCelebration(true);
+      trigger('bet_matched');
+    }
+
+    // → SETTLED: Win/loss celebration
+    if (prevStatus !== 'SETTLED' && dbStatus === 'SETTLED') {
+      const userWon =
+        currentUserId &&
+        bet.outcome &&
+        (bet.stakes ?? []).some(
+          (s) =>
+            s.user_id === currentUserId &&
+            s.pick.trim().toLowerCase() === bet.outcome!.trim().toLowerCase(),
+        );
+
+      if (userWon) {
+        setShowWinCelebration(true);
+        trigger('bet_won');
+      } else if (userParticipated) {
+        trigger('bet_lost');
+      }
+    }
+  }, [bet, dbStatus, isLoading, currentUserId, trigger]);
 
   // Tick every second for countdown when bet is OPEN
   useEffect(() => {
@@ -105,17 +171,17 @@ export default function BetDetailScreen() {
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'bets', filter: `id=eq.${id}` },
-        () => queryClient.invalidateQueries({ queryKey: betDetailKey(id) })
+        () => queryClient.invalidateQueries({ queryKey: betDetailKey(id) }),
       )
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'bet_stakes', filter: `bet_id=eq.${id}` },
-        () => queryClient.invalidateQueries({ queryKey: betDetailKey(id) })
+        () => queryClient.invalidateQueries({ queryKey: betDetailKey(id) }),
       )
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'outcome_submissions', filter: `bet_id=eq.${id}` },
-        () => queryClient.invalidateQueries({ queryKey: betDetailKey(id) })
+        () => queryClient.invalidateQueries({ queryKey: betDetailKey(id) }),
       )
       .subscribe();
 
@@ -129,7 +195,7 @@ export default function BetDetailScreen() {
   const effectiveStatus = useMemo(
     () => (bet ? getEffectiveBetStatus(bet, new Date()) : ''),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [bet, tick]
+    [bet, tick],
   );
 
   const options = useMemo(() => {
@@ -164,25 +230,40 @@ export default function BetDetailScreen() {
   // Current user's stake
   const myStake = useMemo(
     () => stakes.find((s) => s.user_id === currentUserId) ?? null,
-    [stakes, currentUserId]
+    [stakes, currentUserId],
   );
   const currentUserLost = dbStatus === 'SETTLED' && !!myStake && !currentUserWon;
 
   // Outcome submissions
-  const outcomeSubmissions = useMemo(() => bet?.outcome_submissions ?? [], [bet?.outcome_submissions]);
+  const outcomeSubmissions = useMemo(
+    () => bet?.outcome_submissions ?? [],
+    [bet?.outcome_submissions],
+  );
   const submittedCount = outcomeSubmissions.length;
   const totalParticipants = stakes.length;
   const mySubmission = useMemo(
-    () => (currentUserId ? (outcomeSubmissions.find((s) => s.user_id === currentUserId) ?? null) : null),
-    [outcomeSubmissions, currentUserId]
+    () =>
+      currentUserId ? (outcomeSubmissions.find((s) => s.user_id === currentUserId) ?? null) : null,
+    [outcomeSubmissions, currentUserId],
   );
+
+  // Participants who haven't submitted yet
+  const pendingParticipants = useMemo(() => {
+    const submittedUserIds = new Set(outcomeSubmissions.map((s) => s.user_id));
+    return stakes
+      .filter((s) => !submittedUserIds.has(s.user_id))
+      .map((s) => ({
+        user_id: s.user_id,
+        display_name: s.user?.display_name ?? 'Unknown',
+      }));
+  }, [stakes, outcomeSubmissions]);
 
   // Group submissions by option for attestor view
   const submissionsByOption = useMemo(() => {
     const grouped: Record<string, typeof outcomeSubmissions> = {};
     for (const option of options) {
       grouped[option] = outcomeSubmissions.filter(
-        (s) => s.selected_option.trim().toLowerCase() === option.trim().toLowerCase()
+        (s) => s.selected_option.trim().toLowerCase() === option.trim().toLowerCase(),
       );
     }
     return grouped;
@@ -213,11 +294,14 @@ export default function BetDetailScreen() {
 
   // Can submit outcome? Use effectiveStatus for immediate client-side detection
   const isParticipant = !!myStake;
-  const canSubmitOutcome = isActive && isParticipant && !mySubmission && effectiveStatus === 'PENDING_RESULT';
+  const canSubmitOutcome =
+    isActive && isParticipant && !mySubmission && effectiveStatus === 'PENDING_RESULT';
 
   // Can resolve? Use effectiveStatus for PENDING_RESULT to allow immediate action after expiry
   const allSubmitted = totalParticipants > 0 && submittedCount === totalParticipants;
-  const canResolve = isAttestorOrAdmin && (dbStatus === 'DISPUTED' || (effectiveStatus === 'PENDING_RESULT' && allSubmitted));
+  const canResolve =
+    isAttestorOrAdmin &&
+    (dbStatus === 'DISPUTED' || (effectiveStatus === 'PENDING_RESULT' && allSubmitted));
 
   // Can void?
   const canVoid = currentUserRole === 'ADMIN' && dbStatus !== 'VOID';
@@ -225,7 +309,7 @@ export default function BetDetailScreen() {
   // Find user's submission in a stake
   const getUserSubmission = useCallback(
     (userId: string) => outcomeSubmissions.find((s) => s.user_id === userId),
-    [outcomeSubmissions]
+    [outcomeSubmissions],
   );
 
   const onRefresh = useCallback(async () => {
@@ -234,10 +318,34 @@ export default function BetDetailScreen() {
     setRefreshing(false);
   }, [id, queryClient]);
 
-  const handleJoinBet = useCallback(() => {
-    if (!bet) return;
-    router.push(`/(tabs)/rooms/accept-bet?betId=${bet.id}`);
-  }, [bet, router]);
+  const handleJoinBet = useCallback(
+    (option: string) => {
+      if (!bet?.room_id) return;
+      Alert.alert(
+        'Join this bet?',
+        `You'll back "${getDisplayLabel(option)}" for ${bet.stake.toLocaleString('en-US')} chips.`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Lock In',
+            style: 'default',
+            onPress: async () => {
+              try {
+                await joinBet.mutateAsync({
+                  p_bet_id: bet.id,
+                  p_pick: option,
+                  roomId: bet.room_id!,
+                });
+              } catch (err) {
+                Alert.alert('Could not join bet', getRpcErrorMessage(err, 'Please try again.'));
+              }
+            },
+          },
+        ],
+      );
+    },
+    [bet, joinBet, getDisplayLabel],
+  );
 
   if (isLoading) {
     return (
@@ -265,7 +373,11 @@ export default function BetDetailScreen() {
         className="flex-1"
         contentContainerStyle={{ paddingBottom: safeInsets.bottom + 100 }}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={colors.primary}
+          />
         }
       >
         {/* WIN BANNER */}
@@ -293,7 +405,9 @@ export default function BetDetailScreen() {
         )}
 
         {/* MAIN CARD - Question + Status + Info */}
-        <View className={`mx-4 mt-4 rounded-2xl border border-border bg-surface p-4 ${dimmed ? 'opacity-60' : ''}`}>
+        <View
+          className={`mx-4 mt-4 rounded-2xl border border-border bg-surface p-4 ${dimmed ? 'opacity-60' : ''}`}
+        >
           {/* Status + Time */}
           <View className="flex-row items-center justify-between">
             <Badge variant={pill.variant} label={pill.label} />
@@ -343,10 +457,14 @@ export default function BetDetailScreen() {
             <View className="mt-3 flex-row items-center gap-2">
               <Check size={16} color={colors.primary} weight="bold" />
               <Text className="text-sm font-medium text-primary">
-                Your pick: {myStake.pick}
+                Your pick: {getDisplayLabel(myStake.pick)}
                 {bothSidesStaked && dbStatus !== 'VOID' && (
                   <Text className="text-primary/70">
-                    {' '}· Win {Math.floor(pool / (stakesByPick[myStake.pick]?.length || 1)).toLocaleString('en-US')}
+                    {' '}
+                    · Win{' '}
+                    {Math.floor(pool / (stakesByPick[myStake.pick]?.length || 1)).toLocaleString(
+                      'en-US',
+                    )}
                   </Text>
                 )}
               </Text>
@@ -358,9 +476,12 @@ export default function BetDetailScreen() {
             <View className="mt-3 flex-row items-center gap-2">
               <Trophy size={16} color={colors.primary} weight="fill" />
               <Text className="text-sm font-medium text-primary">
-                Result: {bet.outcome}
+                Result: {getDisplayLabel(bet.outcome)}
                 {bet.settlement_method && (
-                  <Text className="text-text-muted"> · via {bet.settlement_method.toLowerCase()}</Text>
+                  <Text className="text-text-muted">
+                    {' '}
+                    · via {bet.settlement_method.toLowerCase()}
+                  </Text>
                 )}
               </Text>
             </View>
@@ -405,21 +526,33 @@ export default function BetDetailScreen() {
 
         {/* PENDING_RESULT - Submission Progress */}
         {dbStatus === 'PENDING_RESULT' && (
-          <View className="mx-4 mt-3 flex-row items-center justify-between rounded-xl bg-surface px-4 py-3">
-            <View className="flex-row items-center gap-2">
-              <Text className="text-sm text-text-secondary">Submissions</Text>
-              <Text className="font-bold text-primary">
-                {submittedCount}/{totalParticipants}
-              </Text>
-            </View>
-            {mySubmission ? (
-              <View className="flex-row items-center gap-1">
-                <Check size={14} color={colors.primary} weight="bold" />
-                <Text className="text-sm text-primary">{mySubmission.selected_option}</Text>
+          <View className="mx-4 mt-3 rounded-xl bg-surface px-4 py-3">
+            {/* Header row */}
+            <View className="flex-row items-center justify-between">
+              <View className="flex-row items-center gap-2">
+                <Text className="text-sm text-text-secondary">Submissions</Text>
+                <Text className="font-bold text-primary">
+                  {submittedCount}/{totalParticipants}
+                </Text>
               </View>
-            ) : isParticipant ? (
-              <Text className="text-sm text-warning">Awaiting your submission</Text>
-            ) : null}
+              {mySubmission ? (
+                <View className="flex-row items-center gap-1">
+                  <Check size={14} color={colors.primary} weight="bold" />
+                  <Text className="text-sm text-primary">
+                    {getDisplayLabel(mySubmission.selected_option)}
+                  </Text>
+                </View>
+              ) : isParticipant ? (
+                <Text className="text-sm text-warning">Submit your outcome</Text>
+              ) : null}
+            </View>
+
+            {/* Show who's waiting */}
+            {pendingParticipants.length > 0 && (
+              <Text className="mt-2 text-xs text-text-muted">
+                Waiting for {pendingParticipants.map((p) => p.display_name).join(', ')}
+              </Text>
+            )}
           </View>
         )}
 
@@ -427,27 +560,51 @@ export default function BetDetailScreen() {
         <View className={`mx-4 mt-4 flex-row gap-3 ${dimmed ? 'opacity-60' : ''}`}>
           {options.map((option, idx) => {
             const optionStakes = stakesByPick[option] ?? [];
-            const isWinner = !!bet.outcome && option.trim().toLowerCase() === bet.outcome.trim().toLowerCase();
+            const isWinner =
+              !!bet.outcome && option.trim().toLowerCase() === bet.outcome.trim().toLowerCase();
             const isLosingOption = dbStatus === 'SETTLED' && !!bet.outcome && !isWinner;
             const submissions = submissionsByOption[option] ?? [];
             const voteCount = submissions.length;
             const isLeft = idx === 0;
+            const canTapToJoin = canJoin && !joinBet.isPending;
+
+            const CardWrapper = canTapToJoin ? TouchableOpacity : View;
+            const cardProps = canTapToJoin
+              ? {
+                  onPress: () => handleJoinBet(option),
+                  activeOpacity: 0.7,
+                  disabled: joinBet.isPending,
+                }
+              : {};
 
             return (
-              <View
+              <CardWrapper
                 key={option}
+                {...cardProps}
                 className={`flex-1 rounded-2xl border bg-surface p-3 ${
-                  isWinner ? 'border-primary' : isLosingOption ? 'border-border opacity-60' : 'border-border'
+                  isWinner
+                    ? 'border-primary'
+                    : isLosingOption
+                      ? 'border-border opacity-60'
+                      : canTapToJoin
+                        ? `border-2 ${isLeft ? 'border-primary' : 'border-error'}`
+                        : 'border-border'
                 }`}
               >
                 {/* Option Header */}
                 <View className={`mb-3 items-center ${isLeft ? '' : ''}`}>
                   <Text
                     className={`text-base font-bold uppercase ${
-                      isWinner ? 'text-primary' : isLosingOption ? 'text-text-muted' : isLeft ? 'text-primary' : 'text-error'
+                      isWinner
+                        ? 'text-primary'
+                        : isLosingOption
+                          ? 'text-text-muted'
+                          : isLeft
+                            ? 'text-primary'
+                            : 'text-error'
                     }`}
                   >
-                    {option}
+                    {getDisplayLabel(option)}
                   </Text>
                   {isWinner && (
                     <View className="mt-1 flex-row items-center gap-1">
@@ -489,10 +646,25 @@ export default function BetDetailScreen() {
                               +{perWinnerPayout.toLocaleString('en-US')}
                             </Text>
                           )}
-                          {/* Submission status for attestors */}
-                          {isAttestorOrAdmin && dbStatus === 'PENDING_RESULT' && (
-                            <Text className={`text-xs ${submission ? 'text-primary' : 'text-text-muted'}`}>
-                              {submission ? `→ ${submission.selected_option}` : 'Pending'}
+                          {/* Submission status for all participants */}
+                          {dbStatus === 'PENDING_RESULT' && (
+                            <View className="mt-0.5 flex-row items-center gap-1">
+                              {submission ? (
+                                <Check size={12} color={colors.primary} weight="bold" />
+                              ) : (
+                                <Clock size={12} color={colors.textMuted} weight="regular" />
+                              )}
+                              <Text
+                                className={`text-xs ${submission ? 'text-primary' : 'text-text-muted'}`}
+                              >
+                                {submission ? 'Submitted' : 'Pending'}
+                              </Text>
+                            </View>
+                          )}
+                          {/* Detailed submission view for attestors only */}
+                          {isAttestorOrAdmin && dbStatus === 'PENDING_RESULT' && submission && (
+                            <Text className="text-xs text-text-muted">
+                              → {getDisplayLabel(submission.selected_option)}
                             </Text>
                           )}
                         </View>
@@ -501,10 +673,19 @@ export default function BetDetailScreen() {
                   </View>
                 ) : (
                   <View className="items-center py-4">
-                    <Text className="text-xs text-text-muted">No backers</Text>
+                    <Text className="text-xs text-text-muted">No backers yet</Text>
                   </View>
                 )}
-              </View>
+
+                {/* Tap to join hint */}
+                {canTapToJoin && (
+                  <View className="mt-2 items-center rounded-lg bg-surface-light py-1.5">
+                    <Text className={`text-xs font-bold ${isLeft ? 'text-primary' : 'text-error'}`}>
+                      Tap to back {getDisplayLabel(option)}
+                    </Text>
+                  </View>
+                )}
+              </CardWrapper>
             );
           })}
         </View>
@@ -512,18 +693,11 @@ export default function BetDetailScreen() {
         {/* Status hint for OPEN bets */}
         {dbStatus === 'OPEN' && isParticipant && (
           <View className="mx-4 mb-4 flex-row items-center gap-2">
-            {bothSidesStaked ? (
-              <>
-                <Check size={14} color={colors.primary} weight="bold" />
-                <Text className="text-sm text-text-secondary">
-                  Matched! Waiting for expiry to submit outcomes.
-                </Text>
-              </>
-            ) : (
+            {!bothSidesStaked ? (
               <Text className="text-sm text-text-muted">
                 Waiting for someone to take the other side.
               </Text>
-            )}
+            ) : null}
           </View>
         )}
       </ScrollView>
@@ -534,9 +708,13 @@ export default function BetDetailScreen() {
         style={{ paddingBottom: Math.max(safeInsets.bottom, 16) }}
       >
         {canJoin ? (
-          <Button onPress={handleJoinBet} size="lg">
-            {`Join Bet · ${formatStakeChips(bet.stake)}`}
-          </Button>
+          <View className="items-center rounded-xl bg-primary/10 py-4">
+            <Text className="text-base font-semibold text-primary">
+              {joinBet.isPending
+                ? 'Joining...'
+                : `Pick a side above · ${formatStakeChips(bet.stake)}`}
+            </Text>
+          </View>
         ) : canSubmitOutcome ? (
           <Button onPress={() => setSubmitSheetOpen(true)} size="lg">
             Submit Outcome
@@ -577,6 +755,8 @@ export default function BetDetailScreen() {
           onClose={() => setSubmitSheetOpen(false)}
           bet={bet}
           roomId={bet.room_id}
+          positiveLabel={betTemplate?.positive_label}
+          negativeLabel={betTemplate?.negative_label}
         />
       )}
 
@@ -586,6 +766,8 @@ export default function BetDetailScreen() {
           onClose={() => setDisputeSheetOpen(false)}
           bet={bet}
           roomId={bet.room_id}
+          positiveLabel={betTemplate?.positive_label}
+          negativeLabel={betTemplate?.negative_label}
         />
       )}
 
@@ -597,13 +779,27 @@ export default function BetDetailScreen() {
           roomId={bet.room_id}
         />
       )}
+
+      {/* Locked-in celebration - shows on OPEN → MATCHED transition */}
+      <LockedInCelebration
+        bet={showLockedInCelebration ? bet : null}
+        currentUserId={currentUserId}
+        onDismiss={() => setShowLockedInCelebration(false)}
+      />
+
+      {/* Winner celebration - shows on live SETTLED transition */}
+      <WinnerCelebration
+        bet={showWinCelebration ? bet : null}
+        currentUserId={currentUserId}
+        onDismiss={() => setShowWinCelebration(false)}
+      />
     </View>
   );
 }
 
 function groupStakesByPick(
   options: string[],
-  stakes: BetStakeWithProfile[]
+  stakes: BetStakeWithProfile[],
 ): Record<string, BetStakeWithProfile[]> {
   const out: Record<string, BetStakeWithProfile[]> = {};
   for (const option of options) out[option] = [];

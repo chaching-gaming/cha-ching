@@ -15,6 +15,11 @@ import { colors } from '@/constants/colors';
 import { EmptyState, ScreenHeader, SkeletonNotificationItem } from '@/components/ui';
 import { NotificationItem } from '@/components/notifications/notification-item';
 import {
+  NotificationFilterBar,
+  notificationMatchesFilter,
+  type NotificationFilter,
+} from '@/components/notifications/notification-filter';
+import {
   useNotificationsFeed,
   notificationsKey,
   type NotificationRow,
@@ -61,7 +66,7 @@ function groupByDate(notifications: NotificationRow[]): GroupedNotifications[] {
 export default function NotificationsScreen() {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const { markAsRead, refreshUnreadCount } = useNotifications();
+  const { markAsRead, markAllAsRead, refreshUnreadCount, unreadCount } = useNotifications();
   const {
     data,
     isLoading,
@@ -73,31 +78,30 @@ export default function NotificationsScreen() {
 
   const [refreshing, setRefreshing] = useState(false);
   const [markingAllRead, setMarkingAllRead] = useState(false);
+  const [filter, setFilter] = useState<NotificationFilter>('all');
 
   const allNotifications = useMemo(() => {
     return data?.pages.flat() ?? [];
   }, [data]);
 
-  const unreadNotifications = useMemo(() => {
-    return allNotifications.filter((n) => !n.read_at);
-  }, [allNotifications]);
+  const filteredNotifications = useMemo(() => {
+    return allNotifications.filter((n) => notificationMatchesFilter(n, filter));
+  }, [allNotifications, filter]);
 
   const groupedData = useMemo(() => {
-    return groupByDate(allNotifications);
-  }, [allNotifications]);
+    return groupByDate(filteredNotifications);
+  }, [filteredNotifications]);
 
   const handleMarkAllRead = useCallback(async () => {
-    if (unreadNotifications.length === 0) return;
-
     setMarkingAllRead(true);
     try {
-      const unreadIds = unreadNotifications.map((n) => n.id);
-      await markAsRead(unreadIds);
+      // Mark ALL notifications as read (server-side), not just loaded ones
+      await markAllAsRead();
       await queryClient.invalidateQueries({ queryKey: notificationsKey() });
     } finally {
       setMarkingAllRead(false);
     }
-  }, [unreadNotifications, markAsRead, queryClient]);
+  }, [markAllAsRead, queryClient]);
 
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -140,7 +144,7 @@ export default function NotificationsScreen() {
     }
   }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
-  const markAllReadButton = unreadNotifications.length > 0 ? (
+  const markAllReadButton = unreadCount > 0 ? (
     <TouchableOpacity
       onPress={handleMarkAllRead}
       disabled={markingAllRead}
@@ -180,9 +184,22 @@ export default function NotificationsScreen() {
     );
   }
 
+  const emptyFilterMessage: Record<NotificationFilter, { title: string; subtitle: string }> = {
+    all: { title: 'No notifications', subtitle: 'You have no notifications yet.' },
+    results: {
+      title: 'No results yet',
+      subtitle: 'Bet outcomes (wins and losses) will appear here.',
+    },
+    activity: {
+      title: 'No activity yet',
+      subtitle: 'Matched bets, chip donations, and other activity will appear here.',
+    },
+  };
+
   return (
     <View className="flex-1 bg-background">
       <ScreenHeader title="Notifications" right={markAllReadButton} />
+      <NotificationFilterBar value={filter} onChange={setFilter} />
       <FlatList
         data={groupedData}
         keyExtractor={(item) => item.title}
@@ -210,6 +227,17 @@ export default function NotificationsScreen() {
         }
         onEndReached={handleLoadMore}
         onEndReachedThreshold={0.5}
+        ListEmptyComponent={
+          <View className="items-center px-5 py-12">
+            <Bell size={48} color={colors.textMuted} />
+            <Text className="mt-4 text-center text-xl font-semibold text-text-secondary">
+              {emptyFilterMessage[filter].title}
+            </Text>
+            <Text className="mt-2 max-w-sm text-center text-base leading-6 text-text-muted">
+              {emptyFilterMessage[filter].subtitle}
+            </Text>
+          </View>
+        }
         ListFooterComponent={
           isFetchingNextPage ? (
             <View className="py-4">

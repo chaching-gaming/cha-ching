@@ -112,8 +112,10 @@ export default function ProfileScreen() {
   const [uploading, setUploading] = useState(false);
 
   const {
+    soundEnabled,
     hapticsEnabled,
     notificationsEnabled,
+    setSoundEnabled,
     setHapticsEnabled,
     setNotificationsEnabled,
     isHydrated,
@@ -227,7 +229,19 @@ export default function ProfileScreen() {
         <View className="px-5">
           <SectionLabel>Settings</SectionLabel>
           <View className="overflow-hidden rounded-2xl border border-border bg-surface">
-            {/* Sound Effects setting hidden until custom sounds are implemented */}
+            <SettingsCardRow
+              label="Sound Effects"
+              trailing={
+                <Switch
+                  value={soundEnabled}
+                  onValueChange={setSoundEnabled}
+                  disabled={!isHydrated}
+                  trackColor={{ true: colors.primary, false: colors.border }}
+                  thumbColor="#ffffff"
+                  ios_backgroundColor={colors.border}
+                />
+              }
+            />
             <SettingsCardRow
               label="Haptics"
               trailing={

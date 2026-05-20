@@ -4,11 +4,13 @@ import { supabase } from '@/lib/supabase';
 import type { Database } from '@cha-ching/types';
 
 import { roomBalanceKey, roomBetsKey } from '@/hooks/use-activity-feed';
+import { useFeedback } from '@/providers/feedback';
 
 type Bet = Database['public']['Tables']['bets']['Row'];
 
 export function useCreateBet() {
   const queryClient = useQueryClient();
+  const { trigger } = useFeedback();
 
   return useMutation({
     mutationFn: async (params: {
@@ -64,6 +66,8 @@ export function useCreateBet() {
       // Creator now immediately has a BET ledger entry locking their stake.
       queryClient.invalidateQueries({ queryKey: roomBalanceKey(variables.p_room_id) });
       queryClient.invalidateQueries({ queryKey: ['rooms'] });
+      // Haptic feedback for bet creation
+      trigger('bet_accepted');
     },
   });
 }

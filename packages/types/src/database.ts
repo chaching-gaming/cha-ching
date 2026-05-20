@@ -411,7 +411,9 @@ export type Database = {
           category: string;
           created_at: string;
           id: string;
+          negative_label: string;
           options: Json;
+          positive_label: string;
           question_text: string;
           short_label: string;
           slug: string;
@@ -421,7 +423,9 @@ export type Database = {
           category?: string;
           created_at?: string;
           id?: string;
+          negative_label?: string;
           options: Json;
+          positive_label?: string;
           question_text: string;
           short_label: string;
           slug: string;
@@ -431,7 +435,9 @@ export type Database = {
           category?: string;
           created_at?: string;
           id?: string;
+          negative_label?: string;
           options?: Json;
+          positive_label?: string;
           question_text?: string;
           short_label?: string;
           slug?: string;
@@ -824,7 +830,9 @@ export type Database = {
           category: string;
           created_at: string;
           id: string;
+          negative_label: string;
           options: Json;
+          positive_label: string;
           question_text: string;
           short_label: string;
           slug: string;

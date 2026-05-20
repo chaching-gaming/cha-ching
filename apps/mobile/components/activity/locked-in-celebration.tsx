@@ -1,12 +1,5 @@
-import { useEffect } from 'react';
-import { Modal, Pressable, Text, View } from 'react-native';
-import Animated, {
-  useAnimatedStyle,
-  useSharedValue,
-  withRepeat,
-  withSequence,
-  withTiming,
-} from 'react-native-reanimated';
+import { useEffect, useState } from 'react';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { ChatCircleDots, Coins } from 'phosphor-react-native';
 
 import { colors } from '@/constants/colors';
@@ -21,14 +14,12 @@ type Props = {
 const AUTO_DISMISS_MS = 3500;
 
 export function LockedInCelebration({ bet, currentUserId, onDismiss }: Props) {
-  const visible = bet !== null;
+  if (!bet) return null;
 
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onDismiss}>
-      {bet ? (
-        <LockedInContent bet={bet} currentUserId={currentUserId} onDismiss={onDismiss} />
-      ) : null}
-    </Modal>
+    <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
+      <LockedInContent bet={bet} currentUserId={currentUserId} onDismiss={onDismiss} />
+    </View>
   );
 }
 
@@ -46,85 +37,63 @@ function LockedInContent({
     ? ((bet.stakes ?? []).find((s) => s.user_id === currentUserId) ?? null)
     : null;
 
-  const iconOpacity = useSharedValue(0);
-  const iconScale = useSharedValue(0.6);
-  const glowOpacity = useSharedValue(0);
-  const glowScale = useSharedValue(0.4);
-  const progress = useSharedValue(0);
+  // Progress bar state (0-100)
+  const [progress, setProgress] = useState(0);
 
   useEffect(() => {
-    iconOpacity.value = withTiming(1, { duration: 350 });
-    iconScale.value = withSequence(
-      withTiming(1.1, { duration: 380 }),
-      withTiming(1, { duration: 200 }),
-    );
+    // Update progress every 50ms for smooth bar
+    const interval = setInterval(() => {
+      setProgress((prev) => {
+        const next = prev + (100 / (AUTO_DISMISS_MS / 50));
+        return next >= 100 ? 100 : next;
+      });
+    }, 50);
 
-    glowOpacity.value = withSequence(
-      withTiming(0.55, { duration: 400 }),
-      withRepeat(
-        withSequence(withTiming(0.25, { duration: 900 }), withTiming(0.55, { duration: 900 })),
-        -1,
-        false,
-      ),
-    );
-    glowScale.value = withRepeat(
-      withSequence(withTiming(1.25, { duration: 900 }), withTiming(1, { duration: 900 })),
-      -1,
-      false,
-    );
-
-    progress.value = withTiming(1, { duration: AUTO_DISMISS_MS });
+    // Auto-dismiss after timeout
     const timer = setTimeout(onDismiss, AUTO_DISMISS_MS);
-    return () => clearTimeout(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
-  const iconStyle = useAnimatedStyle(() => ({
-    opacity: iconOpacity.value,
-    transform: [{ scale: iconScale.value }],
-  }));
-
-  const glowStyle = useAnimatedStyle(() => ({
-    opacity: glowOpacity.value,
-    transform: [{ scale: glowScale.value }],
-  }));
-
-  const progressStyle = useAnimatedStyle(() => ({
-    width: `${progress.value * 100}%`,
-  }));
+    return () => {
+      clearInterval(interval);
+      clearTimeout(timer);
+    };
+  }, [onDismiss]);
 
   return (
-    <Pressable className="flex-1 items-center justify-center bg-black/90" onPress={onDismiss}>
+    <Pressable
+      style={StyleSheet.absoluteFill}
+      className="items-center justify-center bg-black/90"
+      onPress={onDismiss}
+    >
       <View className="items-center px-8">
-        {/* Icon with pulsing glow */}
+        {/* Icon with static glow effect */}
         <View className="relative h-36 w-36 items-center justify-center">
-          <Animated.View
-            style={[
-              glowStyle,
-              {
-                position: 'absolute',
-                width: 144,
-                height: 144,
-                borderRadius: 72,
-                backgroundColor: colors.primary,
-              },
-            ]}
+          <View
+            style={{
+              position: 'absolute',
+              width: 144,
+              height: 144,
+              borderRadius: 72,
+              backgroundColor: colors.primary,
+              opacity: 0.35,
+            }}
           />
-          <Animated.View
-            style={[
-              iconStyle,
-              {
-                width: 80,
-                height: 80,
-                borderRadius: 40,
-                backgroundColor: colors.primary,
-                alignItems: 'center',
-                justifyContent: 'center',
-              },
-            ]}
+          <View
+            style={{
+              width: 80,
+              height: 80,
+              borderRadius: 40,
+              backgroundColor: colors.primary,
+              alignItems: 'center',
+              justifyContent: 'center',
+              shadowColor: colors.primary,
+              shadowOffset: { width: 0, height: 0 },
+              shadowOpacity: 0.6,
+              shadowRadius: 20,
+              elevation: 10,
+            }}
           >
             <ChatCircleDots size={44} color={colors.textPrimary} weight="fill" />
-          </Animated.View>
+          </View>
         </View>
 
         <Text className="mt-6 text-3xl font-black uppercase tracking-wider text-white">
@@ -159,10 +128,14 @@ function LockedInContent({
         </Text>
       </View>
 
-      {/* Auto-dismiss progress bar */}
+      {/* Auto-dismiss progress bar - using regular View with width percentage */}
       <View className="absolute bottom-12 left-8 right-8 h-1 overflow-hidden rounded-full bg-surface">
-        <Animated.View
-          style={[progressStyle, { height: '100%', backgroundColor: colors.primary }]}
+        <View
+          style={{
+            height: '100%',
+            width: `${progress}%`,
+            backgroundColor: colors.primary,
+          }}
         />
       </View>
     </Pressable>

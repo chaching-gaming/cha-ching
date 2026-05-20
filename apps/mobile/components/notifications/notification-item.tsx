@@ -7,6 +7,9 @@ import {
   HandCoins,
   Coins,
   UserPlus,
+  TrendDown,
+  Prohibit,
+  PlusCircle,
   type IconProps,
 } from 'phosphor-react-native';
 
@@ -14,8 +17,12 @@ import { colors } from '@/constants/colors';
 import type { NotificationRow, NotificationType } from '@/hooks/use-notifications-feed';
 
 const NOTIFICATION_ICONS: Record<NotificationType, React.ComponentType<IconProps>> = {
+  bet_created: PlusCircle,
   bet_matched: Handshake,
   bet_settled: Trophy,
+  bet_won: Trophy,
+  bet_lost: TrendDown,
+  bet_voided: Prohibit,
   bet_disputed: Warning,
   bet_expiring: Timer,
   chip_request_created: HandCoins,
@@ -24,8 +31,12 @@ const NOTIFICATION_ICONS: Record<NotificationType, React.ComponentType<IconProps
 };
 
 const ICON_COLORS: Record<NotificationType, string> = {
+  bet_created: colors.primary,
   bet_matched: colors.primary,
   bet_settled: colors.primary,
+  bet_won: '#22C55E', // green for wins
+  bet_lost: '#EF4444', // red for losses
+  bet_voided: colors.textMuted,
   bet_disputed: colors.warning,
   bet_expiring: colors.warning,
   chip_request_created: colors.chipsIcon,

@@ -29,7 +29,7 @@
     "preview": {
       "extends": "staging",
       "android": {
-        "buildType": "app-bundle"
+        "buildType": "apk"
       }
     },
     "production": {

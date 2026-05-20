@@ -6,11 +6,15 @@ import { useAuth } from '@/providers/auth';
 export type NotificationType =
   | 'bet_matched'
   | 'bet_settled'
+  | 'bet_won'
+  | 'bet_lost'
+  | 'bet_voided'
   | 'bet_disputed'
   | 'bet_expiring'
   | 'chip_request_created'
   | 'chip_donated'
-  | 'bet_accepted';
+  | 'bet_accepted'
+  | 'bet_created';
 
 export type NotificationRow = {
   id: string;
@@ -21,6 +25,12 @@ export type NotificationRow = {
     room_id?: string;
     bet_id?: string;
     chip_request_id?: string;
+    won?: boolean;
+    amount?: number;
+    donor_name?: string;
+    outcome?: string;
+    room_name?: string;
+    creator_name?: string;
   };
   read_at: string | null;
   created_at: string;

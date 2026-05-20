@@ -1,4 +1,5 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useEffect, useRef } from 'react';
+import { useQuery, useMutation, useQueryClient, type QueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import type { Database } from '@cha-ching/types';
 import { useAuth } from '@/providers/auth';
@@ -9,6 +10,36 @@ type Profile = Database['public']['Tables']['profiles']['Row'];
 
 const ROOMS_KEY = ['rooms'] as const;
 const roomsKey = (filter: 'active' | 'history') => ['rooms', filter] as const;
+
+/** Generate unique topic token for realtime subscriptions */
+function realtimeTopicToken(): string {
+  const c = globalThis.crypto;
+  if (c && typeof c.randomUUID === 'function') return c.randomUUID();
+  return `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
+}
+
+/**
+ * Creates a debounced invalidation function that batches rapid query invalidations.
+ */
+function createDebouncedInvalidator(queryClient: QueryClient, delay = 150) {
+  const pendingKeys = new Set<string>();
+  let timeoutId: ReturnType<typeof setTimeout> | null = null;
+
+  return (queryKey: readonly unknown[]) => {
+    const keyStr = JSON.stringify(queryKey);
+    pendingKeys.add(keyStr);
+
+    if (timeoutId) clearTimeout(timeoutId);
+
+    timeoutId = setTimeout(() => {
+      for (const key of pendingKeys) {
+        queryClient.invalidateQueries({ queryKey: JSON.parse(key) });
+      }
+      pendingKeys.clear();
+      timeoutId = null;
+    }, delay);
+  };
+}
 export const roomDetailKey = (id: string) => ['rooms', id] as const;
 export const roomMembersKey = (id: string) => ['rooms', id, 'members'] as const;
 
@@ -104,6 +135,71 @@ export function useRooms(filter: 'active' | 'history' = 'active') {
     },
     enabled: !!session?.user.id,
   });
+}
+
+/**
+ * Realtime subscription for rooms list - listens to ledger_entries changes
+ * for the current user to update balances across all rooms in realtime.
+ */
+export function useRealtimeRoomsList() {
+  const queryClient = useQueryClient();
+  const { session } = useAuth();
+  const currentUserId = session?.user.id;
+
+  // Create a stable debounced invalidator to batch rapid realtime events
+  const invalidatorRef = useRef<ReturnType<typeof createDebouncedInvalidator> | null>(null);
+  if (!invalidatorRef.current) {
+    invalidatorRef.current = createDebouncedInvalidator(queryClient);
+  }
+  const invalidate = invalidatorRef.current;
+
+  useEffect(() => {
+    if (!currentUserId) return;
+
+    const token = realtimeTopicToken();
+
+    // Subscribe to ledger_entries for the current user (balance changes)
+    const ledgerChannel = supabase
+      .channel(`cc-rooms-list:ledger:${token}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'ledger_entries',
+          filter: `user_id=eq.${currentUserId}`,
+        },
+        () => {
+          // Invalidate both active and history room lists to refresh balances
+          invalidate(roomsKey('active'));
+          invalidate(roomsKey('history'));
+        },
+      )
+      .subscribe();
+
+    // Also subscribe to chip_requests for the current user (to see request status updates)
+    const chipRequestsChannel = supabase
+      .channel(`cc-rooms-list:chips:${token}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'chip_requests',
+          filter: `requested_by=eq.${currentUserId}`,
+        },
+        () => {
+          invalidate(roomsKey('active'));
+          invalidate(roomsKey('history'));
+        },
+      )
+      .subscribe();
+
+    return () => {
+      void supabase.removeChannel(ledgerChannel);
+      void supabase.removeChannel(chipRequestsChannel);
+    };
+  }, [currentUserId, queryClient]);
 }
 
 export function useRoomDetail(roomId: string) {

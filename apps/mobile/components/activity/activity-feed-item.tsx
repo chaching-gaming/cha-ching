@@ -22,6 +22,7 @@ import { SubmitOutcomeSheet } from '@/components/activity/submit-outcome-sheet';
 import { SwipeToAcceptRow } from '@/components/activity/swipe-to-accept-row';
 import { VoidBetSheet } from '@/components/activity/void-bet-sheet';
 import { useCancelChipRequest } from '@/hooks/use-chip-requests';
+import { useQuestionTemplates } from '@/hooks/use-question-templates';
 import { getRpcErrorMessage } from '@/hooks/use-rooms';
 import type {
   ActivityItem,
@@ -47,7 +48,7 @@ function getBetStatusPill(status: string | null | undefined): {
     case 'MATCHED':
       return { label: 'MATCHED', variant: 'matched' };
     case 'PENDING_RESULT':
-      return { label: 'PENDING', variant: 'attestor' };
+      return { label: 'AWAITING OUTCOMES', variant: 'attestor' };
     case 'SETTLED':
       return { label: 'SETTLED', variant: 'default' };
     case 'EXPIRED':
@@ -83,6 +84,24 @@ function BetActivityCard({
   const [disputeSheetOpen, setDisputeSheetOpen] = useState(false);
   const [voidSheetOpen, setVoidSheetOpen] = useState(false);
   const dbStatus = bet.status ?? '';
+
+  // Get template for contextual labels
+  const { data: templates } = useQuestionTemplates('golf');
+  const betTemplate = useMemo(() => {
+    if (!bet.template_id || !templates) return null;
+    return templates.find((t) => t.id === bet.template_id) ?? null;
+  }, [bet.template_id, templates]);
+
+  const getDisplayLabel = useCallback(
+    (rawOption: string): string => {
+      if (!betTemplate) return rawOption;
+      const lower = rawOption.trim().toLowerCase();
+      if (lower === 'yes') return betTemplate.positive_label;
+      if (lower === 'no') return betTemplate.negative_label;
+      return rawOption;
+    },
+    [betTemplate]
+  );
 
   useEffect(() => {
     if (dbStatus !== 'OPEN' || !bet.expires_at) return;
@@ -201,6 +220,7 @@ function BetActivityCard({
           stakesByPick={stakesByPick}
           winningPick={dbStatus === 'SETTLED' ? bet.outcome : null}
           currentUserId={currentUserId ?? null}
+          getDisplayLabel={getDisplayLabel}
         />
       ) : null}
 
@@ -212,7 +232,7 @@ function BetActivityCard({
             </Text>
             {mySubmission ? (
               <Text className="mt-0.5 text-xs font-medium text-primary" numberOfLines={1}>
-                ✓ You reported &ldquo;{mySubmission.selected_option}&rdquo;
+                ✓ You reported &ldquo;{getDisplayLabel(mySubmission.selected_option)}&rdquo;
               </Text>
             ) : null}
           </View>
@@ -247,7 +267,7 @@ function BetActivityCard({
           <View className="flex-row items-center gap-1.5">
             <Trophy size={18} color={colors.primary} weight="fill" />
             <Text className="text-sm font-semibold text-primary">
-              {bet.outcome.toUpperCase()}
+              {getDisplayLabel(bet.outcome).toUpperCase()}
               {perWinnerPayout > 0
                 ? ` · +${perWinnerPayout.toLocaleString('en-US')}${
                     winningStakes.length > 1 ? ' each' : ''
@@ -396,11 +416,13 @@ function PoolTally({
   stakesByPick,
   winningPick,
   currentUserId,
+  getDisplayLabel,
 }: {
   options: string[];
   stakesByPick: Record<string, BetStakeWithProfile[]>;
   winningPick: string | null;
   currentUserId: string | null;
+  getDisplayLabel: (option: string) => string;
 }) {
   if (options.length === 0) return null;
   return (
@@ -414,7 +436,7 @@ function PoolTally({
         return (
           <PoolSide
             key={option}
-            label={option}
+            label={getDisplayLabel(option)}
             count={list.length}
             stakes={list}
             tone={tone}

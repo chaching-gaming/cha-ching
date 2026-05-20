@@ -61,7 +61,7 @@ export function ScreenHeader({
       </View>
 
       {/* Right slot */}
-      <View className="w-12 items-end">{right ?? null}</View>
+      <View className="min-w-12 items-end">{right ?? null}</View>
     </View>
   );
 }
