@@ -1,17 +1,13 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import {
-  Alert,
-  Keyboard,
-  KeyboardAvoidingView,
-  Modal,
-  Platform,
-  Pressable,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Alert, Keyboard, Platform, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import {
+  BottomSheetBackdrop,
+  type BottomSheetBackdropProps,
+  BottomSheetModal,
+  BottomSheetTextInput,
+  BottomSheetView,
+} from '@gorhom/bottom-sheet';
 import { Coins, HandCoins, X } from 'phosphor-react-native';
 
 import { colors } from '@/constants/colors';
@@ -37,6 +33,7 @@ export function DonateChipsSheet({
   donorBalance,
 }: Props) {
   const safeInsets = useSafeAreaInsets();
+  const sheetRef = useRef<BottomSheetModal>(null);
   const donateChips = useDonateChips();
 
   const remaining = Math.max(0, chipRequest.requested_amount - chipRequest.fulfilled_amount);
@@ -56,7 +53,12 @@ export function DonateChipsSheet({
   const [amountText, setAmountText] = useState<string>(String(suggestedAmount));
 
   useEffect(() => {
-    if (visible) setAmountText(String(suggestedAmount));
+    if (visible) {
+      sheetRef.current?.present();
+      setAmountText(String(suggestedAmount));
+    } else {
+      sheetRef.current?.dismiss();
+    }
   }, [visible, suggestedAmount]);
 
   const parsedAmount = useMemo(() => {
@@ -72,11 +74,24 @@ export function DonateChipsSheet({
 
   const requesterName = chipRequest.requested_by_profile?.display_name ?? 'this member';
 
+  const renderBackdrop = useCallback(
+    (props: BottomSheetBackdropProps) => (
+      <BottomSheetBackdrop
+        {...props}
+        appearsOnIndex={0}
+        disappearsOnIndex={-1}
+        pressBehavior="close"
+        opacity={0.65}
+      />
+    ),
+    [],
+  );
+
   const handleClose = useCallback(() => {
     if (donateChips.isPending) return;
     Keyboard.dismiss();
-    onClose();
-  }, [donateChips.isPending, onClose]);
+    sheetRef.current?.dismiss();
+  }, [donateChips.isPending]);
 
   const handleSubmit = useCallback(() => {
     Keyboard.dismiss();
@@ -96,7 +111,7 @@ export function DonateChipsSheet({
                 p_amount: parsedAmount,
                 roomId,
               });
-              onClose();
+              sheetRef.current?.dismiss();
             } catch (err) {
               Alert.alert('Could not donate', getRpcErrorMessage(err, 'Please try again.'));
             }
@@ -104,99 +119,105 @@ export function DonateChipsSheet({
         },
       ],
     );
-  }, [amountValid, balanceAfter, chipRequest.id, donateChips, onClose, parsedAmount, roomId]);
+  }, [amountValid, balanceAfter, chipRequest.id, donateChips, parsedAmount, roomId]);
+
+  // On Android with fillParent keyboard behavior, use smaller padding since the sheet
+  // sits directly above the keyboard. On iOS, use safe area inset.
+  const bottomInset = Platform.OS === 'android' ? 16 : Math.max(safeInsets.bottom, 20);
 
   return (
-    <Modal visible={visible} animationType="slide" transparent onRequestClose={handleClose}>
-      <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      >
-        <Pressable
-          className="flex-1 justify-end bg-black/65"
-          onPress={handleClose}
-          disabled={donateChips.isPending}
-        >
-          <Pressable
-            className="rounded-t-3xl border-t border-border bg-background px-5 pt-4"
-            style={{ paddingBottom: Math.max(safeInsets.bottom, 20) }}
-            onPress={(e) => e.stopPropagation()}
+    <BottomSheetModal
+      ref={sheetRef}
+      enableDynamicSizing
+      enablePanDownToClose
+      onDismiss={onClose}
+      backgroundStyle={{ backgroundColor: colors.background }}
+      handleIndicatorStyle={{ backgroundColor: colors.textMuted }}
+      backdropComponent={renderBackdrop}
+      keyboardBehavior={Platform.OS === 'ios' ? 'extend' : 'fillParent'}
+      keyboardBlurBehavior="restore"
+      android_keyboardInputMode="adjustResize"
+    >
+      <BottomSheetView style={{ paddingHorizontal: 20, paddingTop: 4, paddingBottom: bottomInset }}>
+        <View className="mb-4 flex-row items-center justify-between">
+          <View className="flex-row items-center gap-2">
+            <HandCoins size={22} color={colors.primary} weight="fill" />
+            <Text className="text-xl font-bold text-white">Donate chips</Text>
+          </View>
+          <TouchableOpacity
+            onPress={handleClose}
+            disabled={donateChips.isPending}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
           >
-            <View className="mb-4 flex-row items-center justify-between">
-              <View className="flex-row items-center gap-2">
-                <HandCoins size={22} color={colors.primary} weight="fill" />
-                <Text className="text-xl font-bold text-white">Donate chips</Text>
-              </View>
-              <TouchableOpacity
-                onPress={handleClose}
-                disabled={donateChips.isPending}
-                hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-              >
-                <X size={26} color={colors.textSecondary} />
-              </TouchableOpacity>
-            </View>
+            <X size={26} color={colors.textSecondary} />
+          </TouchableOpacity>
+        </View>
 
-            <View className="mb-4 flex-row items-center gap-3 rounded-xl border border-border bg-surface-light px-3 py-2.5">
-              <Avatar
-                uri={chipRequest.requested_by_profile?.avatar_url}
-                fallback={requesterName.charAt(0)}
-                size="md"
-              />
-              <View className="min-w-0 flex-1">
-                <Text className="text-base font-semibold text-white" numberOfLines={1}>
-                  {requesterName}
-                </Text>
-                <Text className="text-sm text-text-secondary">
-                  {remaining.toLocaleString('en-US')} of{' '}
-                  {chipRequest.requested_amount.toLocaleString('en-US')} chips still needed
-                </Text>
-              </View>
-            </View>
+        <View className="mb-4 flex-row items-center gap-3 rounded-xl border border-border bg-surface-light px-3 py-2.5">
+          <Avatar
+            uri={chipRequest.requested_by_profile?.avatar_url}
+            fallback={requesterName.charAt(0)}
+            size="md"
+          />
+          <View className="min-w-0 flex-1">
+            <Text className="text-base font-semibold text-white" numberOfLines={1}>
+              {requesterName}
+            </Text>
+            <Text className="text-sm text-text-secondary">
+              {remaining.toLocaleString('en-US')} of{' '}
+              {chipRequest.requested_amount.toLocaleString('en-US')} chips still needed
+            </Text>
+          </View>
+        </View>
 
-            <Text className="mb-2 text-sm font-medium text-text-secondary">Donation amount</Text>
-            <View className="mb-3 flex-row items-center rounded-xl border border-border bg-surface-light px-3 py-2">
-              <Coins size={20} color={colors.chipsIcon} weight="fill" />
-              <TextInput
-                value={amountText}
-                onChangeText={(t) => setAmountText(t.replace(/\D/g, ''))}
-                editable={!donateChips.isPending}
-                placeholder="0"
-                placeholderTextColor={colors.textMuted}
-                keyboardType="number-pad"
-                selectTextOnFocus
-                maxLength={6}
-                className="ml-2 flex-1 text-2xl font-bold text-white"
-              />
-              <Text className="text-base font-medium text-text-secondary">chips</Text>
-            </View>
+        <Text className="mb-2 text-sm font-medium text-text-secondary">Donation amount</Text>
+        <View className="mb-3 flex-row items-center rounded-xl border border-border bg-surface-light px-3 py-2">
+          <Coins size={20} color={colors.chipsIcon} weight="fill" />
+          <BottomSheetTextInput
+            value={amountText}
+            onChangeText={(t) => setAmountText(t.replace(/\D/g, ''))}
+            editable={!donateChips.isPending}
+            placeholder="0"
+            placeholderTextColor={colors.textMuted}
+            keyboardType="number-pad"
+            selectTextOnFocus
+            maxLength={6}
+            style={{
+              marginLeft: 8,
+              flex: 1,
+              fontSize: 24,
+              fontWeight: 'bold',
+              color: colors.textPrimary,
+            }}
+          />
+          <Text className="text-base font-medium text-text-secondary">chips</Text>
+        </View>
 
-            <View className="mb-5 flex-row items-center justify-between">
-              <Text className="text-sm text-text-secondary">
-                Your balance after:{' '}
-                <Text className={`font-semibold ${balanceAfter < 0 ? 'text-error' : 'text-white'}`}>
-                  {balanceAfter.toLocaleString('en-US')}
-                </Text>
-              </Text>
-              {exceedsBalance ? (
-                <Text className="text-xs font-semibold text-error">Not enough chips</Text>
-              ) : exceedsRemaining ? (
-                <Text className="text-xs font-semibold text-error">Over the goal</Text>
-              ) : null}
-            </View>
+        <View className="mb-5 flex-row items-center justify-between">
+          <Text className="text-sm text-text-secondary">
+            Your balance after:{' '}
+            <Text className={`font-semibold ${balanceAfter < 0 ? 'text-error' : 'text-white'}`}>
+              {balanceAfter.toLocaleString('en-US')}
+            </Text>
+          </Text>
+          {exceedsBalance ? (
+            <Text className="text-xs font-semibold text-error">Not enough chips</Text>
+          ) : exceedsRemaining ? (
+            <Text className="text-xs font-semibold text-error">Over the goal</Text>
+          ) : null}
+        </View>
 
-            <Button
-              variant="primary"
-              onPress={handleSubmit}
-              disabled={!amountValid}
-              loading={donateChips.isPending}
-            >
-              {parsedAmount > 0
-                ? `Donate ${parsedAmount.toLocaleString('en-US')} chips`
-                : 'Donate chips'}
-            </Button>
-          </Pressable>
-        </Pressable>
-      </KeyboardAvoidingView>
-    </Modal>
+        <Button
+          variant="primary"
+          onPress={handleSubmit}
+          disabled={!amountValid}
+          loading={donateChips.isPending}
+        >
+          {parsedAmount > 0
+            ? `Donate ${parsedAmount.toLocaleString('en-US')} chips`
+            : 'Donate chips'}
+        </Button>
+      </BottomSheetView>
+    </BottomSheetModal>
   );
 }

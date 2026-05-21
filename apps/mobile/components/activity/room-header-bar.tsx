@@ -1,11 +1,14 @@
-import { useState } from 'react';
-import { Text, TouchableOpacity, View } from 'react-native';
-import { Coins, HandHeart, Hourglass } from 'phosphor-react-native';
+import { useCallback, useState } from 'react';
+import { Alert, Text, TouchableOpacity, View } from 'react-native';
+import { Coins, HandHeart, X } from 'phosphor-react-native';
 
 import { colors } from '@/constants/colors';
 import { Avatar } from '@/components/ui/avatar';
 import { RequestChipsSheet } from '@/components/activity/request-chips-sheet';
+import { useCancelChipRequest } from '@/hooks/use-chip-requests';
+import { getRpcErrorMessage } from '@/hooks/use-rooms';
 import type { RoomMemberWithProfile } from '@/hooks/use-rooms';
+import type { ChipRequestWithProfile } from '@/hooks/use-activity-feed';
 import { balanceColorClass, formatBalance } from '@/lib/format-balance';
 
 interface RoomHeaderBarProps {
@@ -16,8 +19,8 @@ interface RoomHeaderBarProps {
   roomId?: string;
   /** Active session — request button is hidden when the session has ended. */
   roomActive?: boolean;
-  /** Whether the current user already has an OPEN chip request in this room. */
-  hasOpenRequest?: boolean;
+  /** The current user's open chip request, if any. */
+  myOpenChipRequest?: ChipRequestWithProfile | null;
 }
 
 const MAX_AVATARS = 5;
@@ -28,16 +31,44 @@ export function RoomHeaderBar({
   onOpenStandings,
   roomId,
   roomActive,
-  hasOpenRequest,
+  myOpenChipRequest,
 }: RoomHeaderBarProps) {
   const [requestOpen, setRequestOpen] = useState(false);
+  const cancelRequest = useCancelChipRequest();
   const visible = members.slice(0, MAX_AVATARS);
   const overflow = members.length - MAX_AVATARS;
 
   // Show request button when balance is 100 or below (fund me feature)
   const lowBalance = balance <= 100;
+  const hasOpenRequest = !!myOpenChipRequest;
   const showRequestButton = !!roomActive && lowBalance && !hasOpenRequest && !!roomId;
-  const showPendingHint = !!roomActive && lowBalance && hasOpenRequest;
+  const showPendingStatus = !!roomActive && hasOpenRequest && !!roomId;
+
+  // Progress calculation for open request
+  const requested = myOpenChipRequest?.requested_amount ?? 0;
+  const fulfilled = myOpenChipRequest?.fulfilled_amount ?? 0;
+  const progressPercent = requested > 0 ? Math.min(100, Math.round((fulfilled / requested) * 100)) : 0;
+
+  const handleCancel = useCallback(() => {
+    if (!roomId || !myOpenChipRequest) return;
+    Alert.alert('Cancel chip request?', 'Your request will be removed.', [
+      { text: 'Keep it', style: 'cancel' },
+      {
+        text: 'Cancel request',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await cancelRequest.mutateAsync({
+              p_chip_request_id: myOpenChipRequest.id,
+              roomId,
+            });
+          } catch (err) {
+            Alert.alert('Could not cancel', getRpcErrorMessage(err, 'Please try again.'));
+          }
+        },
+      },
+    ]);
+  }, [cancelRequest, myOpenChipRequest, roomId]);
 
   return (
     <View className="py-4">
@@ -97,12 +128,44 @@ export function RoomHeaderBar({
           <HandHeart size={18} color={colors.background} weight="fill" />
           <Text className="text-sm font-bold text-background">Request chips</Text>
         </TouchableOpacity>
-      ) : showPendingHint ? (
-        <View className="mt-3 flex-row items-center justify-center gap-2 rounded-xl border border-border bg-surface-light py-3">
-          <Hourglass size={16} color={colors.textMuted} weight="fill" />
-          <Text className="text-sm font-semibold text-text-muted">
-            Chip request pending in feed
-          </Text>
+      ) : showPendingStatus ? (
+        <View className="mt-3 rounded-xl border border-border bg-surface-light px-4 py-3">
+          {/* Progress info */}
+          <View className="flex-row items-center justify-between">
+            <View className="flex-row items-center gap-2">
+              <HandHeart size={18} color={colors.primary} weight="fill" />
+              <Text className="text-sm font-semibold text-white">Your chip request</Text>
+            </View>
+            <View className="flex-row items-center gap-1.5">
+              <Coins size={16} color={colors.chipsIcon} weight="fill" />
+              <Text className="text-sm font-semibold text-white">
+                {fulfilled.toLocaleString('en-US')}
+                <Text className="text-text-secondary"> / {requested.toLocaleString('en-US')}</Text>
+              </Text>
+            </View>
+          </View>
+
+          {/* Progress bar */}
+          <View className="mt-2 h-2 overflow-hidden rounded-full bg-surface">
+            <View
+              className="h-full rounded-full bg-primary"
+              style={{ width: `${progressPercent}%` }}
+            />
+          </View>
+
+          {/* Cancel button */}
+          <TouchableOpacity
+            onPress={handleCancel}
+            disabled={cancelRequest.isPending}
+            activeOpacity={0.8}
+            accessibilityLabel="Cancel your chip request"
+            className="mt-3 flex-row items-center justify-center gap-2 rounded-lg border border-border bg-surface py-2.5"
+          >
+            <X size={16} color={colors.textMuted} weight="bold" />
+            <Text className="text-sm font-semibold text-text-muted">
+              {cancelRequest.isPending ? 'Cancelling...' : 'Cancel request'}
+            </Text>
+          </TouchableOpacity>
         </View>
       ) : null}
 

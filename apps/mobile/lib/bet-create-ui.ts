@@ -48,6 +48,11 @@ export function composeTemplateQuestion(pattern: string, displayName: string): s
   return pattern.replace(/\{player\}/g, displayName.trim());
 }
 
+/** Returns true if the template's question_text contains {player} placeholder */
+export function templateRequiresPlayer(questionText: string | null | undefined): boolean {
+  return questionText?.includes('{player}') ?? false;
+}
+
 export function composeWriteInQuestion(trimmedBody: string, displayName: string): string {
   return `For ${displayName.trim()}: ${trimmedBody}`;
 }

@@ -3,7 +3,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import type { Database } from '@cha-ching/types';
 
-import { betDetailKey, roomBalanceKey, roomBetsKey } from '@/hooks/use-activity-feed';
+import { betDetailKey, roomActivityKey, roomBalanceKey, roomBetsKey } from '@/hooks/use-activity-feed';
 
 type OutcomeSubmission = Database['public']['Tables']['outcome_submissions']['Row'];
 
@@ -21,6 +21,7 @@ export function useSubmitOutcome() {
     },
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: roomBetsKey(variables.roomId) });
+      queryClient.invalidateQueries({ queryKey: roomActivityKey(variables.roomId) });
       // Invalidate the individual bet detail query so the UI updates immediately
       queryClient.invalidateQueries({ queryKey: betDetailKey(variables.p_bet_id) });
       // Consensus auto-settle at the tail of submit_outcome may credit a WIN

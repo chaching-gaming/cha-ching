@@ -1,12 +1,12 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, Text, TouchableOpacity, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import {
-  ArrowRight,
   Check,
   Coins,
   HandCoins,
   HandHeart,
+  Lock,
   Prohibit,
   Timer,
   Trophy,
@@ -19,9 +19,10 @@ import { Badge } from '@/components/ui/badge';
 import { DonateChipsSheet } from '@/components/activity/donate-chips-sheet';
 import { ResolveDisputeSheet } from '@/components/activity/resolve-dispute-sheet';
 import { SubmitOutcomeSheet } from '@/components/activity/submit-outcome-sheet';
-import { SwipeToAcceptRow } from '@/components/activity/swipe-to-accept-row';
+import { SwipeToConfirmButton } from '@/components/activity/swipe-to-confirm-button';
 import { VoidBetSheet } from '@/components/activity/void-bet-sheet';
 import { useCancelChipRequest } from '@/hooks/use-chip-requests';
+import { useProcessExpiredBet } from '@/hooks/use-process-expired-bet';
 import { useQuestionTemplates } from '@/hooks/use-question-templates';
 import { getRpcErrorMessage } from '@/hooks/use-rooms';
 import type {
@@ -65,25 +66,72 @@ function getBetStatusPill(status: string | null | undefined): {
 function BetActivityCard({
   bet,
   timestamp,
-  showAcceptHint,
   currentUserId,
   currentUserRole,
   roomActive,
   roomId,
+  canJoin,
+  selectedPick,
+  onSelectPick,
+  onJoinSuccess,
+  onNavigate,
 }: {
   bet: BetWithProfiles;
   timestamp: string;
-  showAcceptHint?: boolean;
   currentUserId?: string | null;
   currentUserRole?: 'PLAYER' | 'ATTESTOR' | 'ADMIN' | string | null;
   roomActive?: boolean;
   roomId?: string;
+  canJoin?: boolean;
+  selectedPick?: string | null;
+  onSelectPick?: (pick: string) => void;
+  onJoinSuccess?: () => void;
+  onNavigate?: () => void;
 }) {
   const [tick, setTick] = useState(0);
   const [submitSheetOpen, setSubmitSheetOpen] = useState(false);
   const [disputeSheetOpen, setDisputeSheetOpen] = useState(false);
   const [voidSheetOpen, setVoidSheetOpen] = useState(false);
   const dbStatus = bet.status ?? '';
+  const processExpiredBet = useProcessExpiredBet();
+  const processedRef = useRef<string | null>(null);
+
+  // Auto-process expired bets immediately (eliminates 0-60s cron lag)
+  // Handles client/server clock skew by retrying until server processes the bet
+  useEffect(() => {
+    if (!roomId) return;
+    if (processExpiredBet.isPending) return;
+    if (dbStatus !== 'OPEN') return;
+    if (!bet.expires_at) return;
+
+    // Client-side expiry check
+    const expiresAt = new Date(bet.expires_at);
+    if (expiresAt > new Date()) return;
+
+    // Don't call RPC again if we're already waiting for retry
+    if (processedRef.current === bet.id) return;
+
+    const betId = bet.id;
+    const roomIdValue = roomId;
+
+    processExpiredBet.mutate(
+      { betId, roomId: roomIdValue },
+      {
+        onSuccess: (result) => {
+          if (result.status === 'OPEN') {
+            // Server clock hasn't reached expiry yet - schedule retry
+            setTimeout(() => {
+              processedRef.current = null; // Allow retry on next render
+            }, 3000);
+          }
+          processedRef.current = betId;
+        },
+        onError: () => {
+          processedRef.current = null;
+        },
+      }
+    );
+  }, [bet.id, bet.expires_at, dbStatus, roomId, processExpiredBet]);
 
   // Get template for contextual labels
   const { data: templates } = useQuestionTemplates('golf');
@@ -191,10 +239,9 @@ function BetActivityCard({
       : `${offererName} · about ${subjectName}`
     : `${offererName}'s offer`;
 
-  return (
-    <View
-      className={`mb-3 rounded-2xl border border-border bg-surface px-4 py-3.5 ${dimmed ? 'opacity-60' : ''}`}
-    >
+  // Header section with question - tappable for navigation when canJoin
+  const headerContent = (
+    <>
       <View className="mb-3 flex-row items-center justify-between gap-2">
         <Text
           className="shrink text-xs font-semibold uppercase tracking-widest text-text-muted"
@@ -213,6 +260,20 @@ function BetActivityCard({
       <Text className="text-lg font-bold leading-6 text-white" numberOfLines={4}>
         {bet.question}
       </Text>
+    </>
+  );
+
+  return (
+    <View
+      className={`mb-3 rounded-2xl border border-border bg-surface px-4 py-3.5 ${dimmed ? 'opacity-60' : ''}`}
+    >
+      {canJoin && onNavigate ? (
+        <TouchableOpacity activeOpacity={0.7} onPress={onNavigate}>
+          {headerContent}
+        </TouchableOpacity>
+      ) : (
+        headerContent
+      )}
 
       {options.length > 0 ? (
         <PoolTally
@@ -221,6 +282,11 @@ function BetActivityCard({
           winningPick={dbStatus === 'SETTLED' ? bet.outcome : null}
           currentUserId={currentUserId ?? null}
           getDisplayLabel={getDisplayLabel}
+          canJoin={canJoin}
+          selectedPick={selectedPick}
+          onSelectPick={onSelectPick}
+          subjectUserId={bet.subject_user_id}
+          subjectPositiveOption={bet.subject_positive_option}
         />
       ) : null}
 
@@ -290,11 +356,13 @@ function BetActivityCard({
 
       <Text className="mt-2 text-xs text-text-muted">{formatRelativeActivityTime(timestamp)}</Text>
 
-      {showAcceptHint ? (
-        <View className="mt-3 flex-row items-center justify-center gap-2 rounded-xl border border-primary/30 bg-primary/10 py-3">
-          <ArrowRight size={18} color={colors.primary} weight="bold" />
-          <Text className="text-sm font-semibold text-primary">Swipe to join</Text>
-        </View>
+      {canJoin ? (
+        <SwipeToConfirmButton
+          bet={bet}
+          selectedPick={selectedPick ?? null}
+          displayLabel={selectedPick ? getDisplayLabel(selectedPick) : null}
+          onSuccess={onJoinSuccess}
+        />
       ) : null}
 
       {canSubmitOutcome ? (
@@ -314,6 +382,8 @@ function BetActivityCard({
           onClose={() => setSubmitSheetOpen(false)}
           bet={bet}
           roomId={roomId}
+          positiveLabel={betTemplate?.positive_label}
+          negativeLabel={betTemplate?.negative_label}
         />
       ) : null}
 
@@ -417,14 +487,28 @@ function PoolTally({
   winningPick,
   currentUserId,
   getDisplayLabel,
+  canJoin,
+  selectedPick,
+  onSelectPick,
+  subjectUserId,
+  subjectPositiveOption,
 }: {
   options: string[];
   stakesByPick: Record<string, BetStakeWithProfile[]>;
   winningPick: string | null;
   currentUserId: string | null;
   getDisplayLabel: (option: string) => string;
+  canJoin?: boolean;
+  selectedPick?: string | null;
+  onSelectPick?: (pick: string) => void;
+  subjectUserId?: string | null;
+  subjectPositiveOption?: string | null;
 }) {
   if (options.length === 0) return null;
+
+  // Subject user can only pick the positive option (if set)
+  const isSubject = !!currentUserId && !!subjectUserId && currentUserId === subjectUserId;
+
   return (
     <View className="mt-3 flex-row items-stretch gap-2">
       {options.map((option, idx) => {
@@ -433,15 +517,24 @@ function PoolTally({
         const isWinner =
           !!winningPick && option.trim().toLowerCase() === winningPick.trim().toLowerCase();
         const youOnThisSide = !!currentUserId && list.some((s) => s.user_id === currentUserId);
+        const isSelected = canJoin && selectedPick === option;
+        const isDisabled =
+          isSubject && subjectPositiveOption !== null && option !== subjectPositiveOption;
+
         return (
           <PoolSide
             key={option}
+            option={option}
             label={getDisplayLabel(option)}
             count={list.length}
             stakes={list}
             tone={tone}
             isWinner={isWinner}
             youOnThisSide={youOnThisSide}
+            canJoin={canJoin && !isDisabled}
+            isSelected={isSelected}
+            isDisabled={isDisabled}
+            onPress={canJoin && !isDisabled ? onSelectPick : undefined}
           />
         );
       })}
@@ -450,29 +543,64 @@ function PoolTally({
 }
 
 function PoolSide({
+  option,
   label,
   count,
   stakes,
   tone,
   isWinner,
   youOnThisSide,
+  canJoin,
+  isSelected,
+  isDisabled,
+  onPress,
 }: {
+  option: string;
   label: string;
   count: number;
   stakes: BetStakeWithProfile[];
   tone: 'primary' | 'error';
   isWinner: boolean;
   youOnThisSide: boolean;
+  canJoin?: boolean;
+  isSelected?: boolean;
+  isDisabled?: boolean;
+  onPress?: (option: string) => void;
 }) {
-  const borderClass = isWinner
-    ? 'border-primary'
+  const handlePress = useCallback(() => {
+    onPress?.(option);
+  }, [onPress, option]);
+
+  // Determine border and background based on state
+  let borderClass: string;
+  let bgClass: string;
+
+  if (isDisabled) {
+    borderClass = 'border-border';
+    bgClass = 'bg-surface-light opacity-40';
+  } else if (isSelected) {
+    borderClass = tone === 'primary' ? 'border-primary' : 'border-error';
+    bgClass = tone === 'primary' ? 'bg-primary/15' : 'bg-error/15';
+  } else if (isWinner) {
+    borderClass = 'border-primary';
+    bgClass = 'bg-primary/10';
+  } else if (canJoin) {
+    // Tappable but not selected - show subtle hint
+    borderClass = tone === 'primary' ? 'border-primary/50' : 'border-error/50';
+    bgClass = 'bg-surface-light';
+  } else {
+    borderClass = 'border-border';
+    bgClass = 'bg-surface-light';
+  }
+
+  const labelClass = isDisabled
+    ? 'text-text-muted'
     : tone === 'primary'
-      ? 'border-border'
-      : 'border-border';
-  const labelClass = tone === 'primary' ? 'text-primary' : 'text-error';
-  const bgClass = isWinner ? 'bg-primary/10' : 'bg-surface-light';
-  return (
-    <View className={`min-w-0 flex-1 rounded-xl border-2 ${borderClass} ${bgClass} px-3 py-2.5`}>
+      ? 'text-primary'
+      : 'text-error';
+
+  const content = (
+    <>
       <View className="flex-row items-center justify-between">
         <Text
           className={`text-sm font-bold uppercase tracking-wide ${labelClass}`}
@@ -480,13 +608,42 @@ function PoolSide({
         >
           {label}
         </Text>
-        {isWinner ? <Trophy size={14} color={colors.primary} weight="fill" /> : null}
+        {isDisabled ? (
+          <Lock size={14} color={colors.textMuted} weight="bold" />
+        ) : isSelected ? (
+          <Check size={14} color={tone === 'primary' ? colors.primary : colors.error} weight="bold" />
+        ) : isWinner ? (
+          <Trophy size={14} color={colors.primary} weight="fill" />
+        ) : null}
       </View>
       <Text className="mt-1 text-xs text-text-secondary">
         {count === 0 ? 'no backers' : count === 1 ? '1 backer' : `${count} backers`}
         {youOnThisSide ? ' · you' : ''}
       </Text>
       {count > 0 ? <StakeAvatars stakes={stakes} /> : null}
+      {canJoin && !isDisabled && !isSelected ? (
+        <Text className={`mt-2 text-center text-[10px] font-bold uppercase ${labelClass}`}>
+          Tap to select
+        </Text>
+      ) : null}
+    </>
+  );
+
+  if (canJoin && !isDisabled) {
+    return (
+      <TouchableOpacity
+        onPress={handlePress}
+        activeOpacity={0.7}
+        className={`min-w-0 flex-1 rounded-xl border-2 ${borderClass} ${bgClass} px-3 py-2.5`}
+      >
+        {content}
+      </TouchableOpacity>
+    );
+  }
+
+  return (
+    <View className={`min-w-0 flex-1 rounded-xl border-2 ${borderClass} ${bgClass} px-3 py-2.5`}>
+      {content}
     </View>
   );
 }
@@ -578,17 +735,10 @@ function BetActivityFeedItem({
   roomId?: string;
 }) {
   const router = useRouter();
+  const [selectedPick, setSelectedPick] = useState<string | null>(null);
 
   const stakes = item.bet.stakes ?? [];
   const alreadyStaked = !!currentUserId && stakes.some((s) => s.user_id === currentUserId);
-  const subjectDisallowed =
-    !!currentUserId &&
-    item.bet.subject_user_id === currentUserId &&
-    !!item.bet.subject_positive_option;
-  // We still show the swipe gate for subjects — the accept screen will lock
-  // the disallowed tile. Only hide it if they literally can't join at all,
-  // which never happens since the allowed side is always open.
-  void subjectDisallowed;
   const canJoin =
     roomActive &&
     !!roomId &&
@@ -601,12 +751,39 @@ function BetActivityFeedItem({
     router.push(`/(tabs)/rooms/bet/${item.bet.id}`);
   }, [router, item.bet.id]);
 
-  const card = (
+  const handleSelectPick = useCallback((pick: string) => {
+    setSelectedPick((prev) => (prev === pick ? null : pick));
+  }, []);
+
+  const handleJoinSuccess = useCallback(() => {
+    setSelectedPick(null);
+  }, []);
+
+  // When user can join, we use a View wrapper to prevent accidental navigation
+  // The card content has a separate tap area for navigation (header)
+  if (canJoin) {
+    return (
+      <BetActivityCard
+        bet={item.bet}
+        timestamp={item.timestamp}
+        currentUserId={currentUserId}
+        currentUserRole={currentUserRole}
+        roomActive={roomActive}
+        roomId={roomId}
+        canJoin={canJoin}
+        selectedPick={selectedPick}
+        onSelectPick={handleSelectPick}
+        onJoinSuccess={handleJoinSuccess}
+        onNavigate={handleBetPress}
+      />
+    );
+  }
+
+  return (
     <TouchableOpacity activeOpacity={0.85} onPress={handleBetPress}>
       <BetActivityCard
         bet={item.bet}
         timestamp={item.timestamp}
-        showAcceptHint={canJoin}
         currentUserId={currentUserId}
         currentUserRole={currentUserRole}
         roomActive={roomActive}
@@ -614,11 +791,6 @@ function BetActivityFeedItem({
       />
     </TouchableOpacity>
   );
-
-  if (canJoin) {
-    return <SwipeToAcceptRow bet={item.bet}>{card}</SwipeToAcceptRow>;
-  }
-  return card;
 }
 
 function ChipRequestActivityCard({

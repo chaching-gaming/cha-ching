@@ -23,16 +23,19 @@ function didUserParticipate(bet: BetWithProfiles, userId: string | null): boolea
  *   - `bet_lost` feedback when the user participated but didn't win (no overlay).
  *
  * On first data load we seed the "seen" set so we don't fire for historical
- * settlements. When multiple bets settle in the same tick, a win takes priority
+ * settlements. When paginating, we also seed new bets rather than celebrating
+ * them. When multiple bets settle in the same tick, a win takes priority
  * over a loss for feedback (one sound per transition).
  */
 export function useWinnerCelebration(
   items: ActivityItem[],
   currentUserId: string | null,
   isLoading: boolean,
+  isFetchingNextPage: boolean = false,
 ) {
   const seenSettled = useRef<Set<string>>(new Set());
   const initialized = useRef(false);
+  const wasFetchingNextPage = useRef(false);
   const [celebratingBet, setCelebratingBet] = useState<BetWithProfiles | null>(null);
   const { trigger } = useFeedback();
 
@@ -42,14 +45,25 @@ export function useWinnerCelebration(
     // arriving on the next render fires as a "new" transition.
     if (isLoading) return;
 
+    // Detect if we just finished paginating (transition from fetching to not fetching).
+    // When pagination completes, isFetchingNextPage becomes false and new items arrive
+    // in the same render, so we need to track the previous state.
+    const justFinishedPaginating = wasFetchingNextPage.current && !isFetchingNextPage;
+    wasFetchingNextPage.current = isFetchingNextPage;
+
+    // While actively fetching, do nothing - wait for data to arrive
+    if (isFetchingNextPage) return;
+
     const settledBets: BetWithProfiles[] = items
       .filter((it): it is Extract<ActivityItem, { type: 'bet' }> => it.type === 'bet')
       .map((it) => it.bet)
       .filter((b) => b.status === 'SETTLED');
 
-    if (!initialized.current) {
+    // On initial load OR after pagination completes, seed the set without celebrating.
+    // We only want to celebrate real-time settlements, not historical ones.
+    if (!initialized.current || justFinishedPaginating) {
       for (const bet of settledBets) seenSettled.current.add(bet.id);
-      initialized.current = true;
+      if (!initialized.current) initialized.current = true;
       return;
     }
 
@@ -80,7 +94,7 @@ export function useWinnerCelebration(
     } else if (lossBet) {
       trigger('bet_lost');
     }
-  }, [items, currentUserId, isLoading, trigger]);
+  }, [items, currentUserId, isLoading, isFetchingNextPage, trigger]);
 
   const dismissCelebration = () => setCelebratingBet(null);
 

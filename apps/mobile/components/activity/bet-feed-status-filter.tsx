@@ -15,30 +15,60 @@ const OPTIONS: { key: BetFilter; label: string }[] = [
 interface BetFeedStatusFilterProps {
   value: BetFilter;
   onChange: (v: BetFilter) => void;
+  myBetsOnly?: boolean;
+  onMyBetsChange?: (v: boolean) => void;
 }
 
-export function BetFeedStatusFilter({ value, onChange }: BetFeedStatusFilterProps) {
+export function BetFeedStatusFilter({
+  value,
+  onChange,
+  myBetsOnly = false,
+  onMyBetsChange,
+}: BetFeedStatusFilterProps) {
   return (
-    <View className="mb-3 flex-row gap-2">
-      {OPTIONS.map((o) => {
-        const active = o.key === value;
-        return (
-          <TouchableOpacity
-            key={o.key}
-            onPress={() => onChange(o.key)}
-            activeOpacity={0.8}
-            accessibilityRole="button"
-            accessibilityState={{ selected: active }}
-            className={`flex-1 items-center justify-center rounded-xl py-2.5 ${
-              active ? 'bg-primary' : 'border border-border bg-surface-light'
-            }`}
+    <View className="mb-3 flex-row items-center">
+      {/* Status filters */}
+      <View className="flex-1 flex-row gap-2">
+        {OPTIONS.map((o) => {
+          const active = o.key === value;
+          return (
+            <TouchableOpacity
+              key={o.key}
+              onPress={() => onChange(o.key)}
+              activeOpacity={0.8}
+              accessibilityRole="button"
+              accessibilityState={{ selected: active }}
+              className={`flex-1 items-center justify-center rounded-xl py-2.5 ${
+                active ? 'bg-primary' : 'border border-border bg-surface-light'
+              }`}
+            >
+              <Text className={`text-sm font-bold ${active ? 'text-white' : 'text-text-secondary'}`}>
+                {o.label}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+
+      {/* My Bets toggle - separated */}
+      {onMyBetsChange ? (
+        <TouchableOpacity
+          onPress={() => onMyBetsChange(!myBetsOnly)}
+          activeOpacity={0.8}
+          accessibilityRole="button"
+          accessibilityState={{ selected: myBetsOnly }}
+          accessibilityLabel="Show only my bets"
+          className={`ml-3 items-center justify-center rounded-xl px-3 py-2.5 ${
+            myBetsOnly ? 'bg-primary' : 'border border-border bg-surface-light'
+          }`}
+        >
+          <Text
+            className={`text-sm font-bold ${myBetsOnly ? 'text-white' : 'text-text-secondary'}`}
           >
-            <Text className={`text-sm font-bold ${active ? 'text-white' : 'text-text-secondary'}`}>
-              {o.label}
-            </Text>
-          </TouchableOpacity>
-        );
-      })}
+            Me
+          </Text>
+        </TouchableOpacity>
+      ) : null}
     </View>
   );
 }
@@ -63,4 +93,10 @@ export function betMatchesFilter(bet: BetWithProfiles, filter: BetFilter): boole
     bet.status === 'EXPIRED' ||
     effectiveStatus === 'EXPIRED'
   );
+}
+
+/** Check if the current user is involved in a bet (has a stake) */
+export function betInvolvesUser(bet: BetWithProfiles, userId: string | null): boolean {
+  if (!userId) return false;
+  return (bet.stakes ?? []).some((s) => s.user_id === userId);
 }

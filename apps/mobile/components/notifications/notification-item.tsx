@@ -14,6 +14,7 @@ import {
 } from 'phosphor-react-native';
 
 import { colors } from '@/constants/colors';
+import { formatRelativeActivityTime } from '@/lib/date-format';
 import type { NotificationRow, NotificationType } from '@/hooks/use-notifications-feed';
 
 const NOTIFICATION_ICONS: Record<NotificationType, React.ComponentType<IconProps>> = {
@@ -85,25 +86,10 @@ export function NotificationItem({ notification, onPress, isLast: _isLast }: Not
           {notification.body}
         </Text>
         <Text className="mt-2 text-xs text-text-muted">
-          {formatRelativeTime(notification.created_at)}
+          {formatRelativeActivityTime(notification.created_at)}
         </Text>
       </View>
     </TouchableOpacity>
   );
 }
 
-function formatRelativeTime(dateString: string): string {
-  const date = new Date(dateString);
-  const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const diffMins = Math.floor(diffMs / 60000);
-  const diffHours = Math.floor(diffMs / 3600000);
-  const diffDays = Math.floor(diffMs / 86400000);
-
-  if (diffMins < 1) return 'Just now';
-  if (diffMins < 60) return `${diffMins}m ago`;
-  if (diffHours < 24) return `${diffHours}h ago`;
-  if (diffDays === 1) return 'Yesterday';
-  if (diffDays < 7) return `${diffDays}d ago`;
-  return date.toLocaleDateString();
-}

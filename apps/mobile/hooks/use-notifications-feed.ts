@@ -36,7 +36,7 @@ export type NotificationRow = {
   created_at: string;
 };
 
-export const NOTIFICATIONS_PAGE_SIZE = 20;
+export const NOTIFICATIONS_PAGE_SIZE = 15;
 
 export const notificationsKey = () => ['notifications'] as const;
 

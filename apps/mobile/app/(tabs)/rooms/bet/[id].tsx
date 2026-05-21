@@ -35,9 +35,10 @@ import { SubmitOutcomeSheet } from '@/components/activity/submit-outcome-sheet';
 import { VoidBetSheet } from '@/components/activity/void-bet-sheet';
 import { WinnerCelebration } from '@/components/activity/winner-celebration';
 import { useFeedback } from '@/providers/feedback';
-import { betDetailKey, useBetDetail, type BetStakeWithProfile } from '@/hooks/use-activity-feed';
+import { betDetailKey, roomBalanceKey, useBetDetail, type BetStakeWithProfile } from '@/hooks/use-activity-feed';
 import { useRoomDetail, useRoomMembers, getRpcErrorMessage } from '@/hooks/use-rooms';
 import { useJoinBet } from '@/hooks/use-join-bet';
+import { useProcessExpiredBet } from '@/hooks/use-process-expired-bet';
 import { useQuestionTemplates } from '@/hooks/use-question-templates';
 import { useAuth } from '@/providers/auth';
 import { formatBetCountdown, formatRelativeActivityTime } from '@/lib/date-format';
@@ -85,6 +86,10 @@ export default function BetDetailScreen() {
   const { data: members } = useRoomMembers(bet?.room_id ?? '');
   const { data: templates } = useQuestionTemplates('golf');
   const joinBet = useJoinBet();
+  const processExpiredBet = useProcessExpiredBet();
+
+  // Track if we've already triggered processing for this bet
+  const processedBetRef = useRef<string | null>(null);
 
   // Get template for contextual labels (Hit/Miss, Make/Miss, etc.)
   const betTemplate = useMemo(() => {
@@ -155,6 +160,54 @@ export default function BetDetailScreen() {
     }
   }, [bet, dbStatus, isLoading, currentUserId, trigger]);
 
+  // Auto-process expired bets immediately (eliminates 0-60s cron lag)
+  // Handles client/server clock skew by retrying until server processes the bet
+  useEffect(() => {
+    if (!bet || isLoading || !bet.room_id) return;
+    if (processExpiredBet.isPending) return;
+    if (dbStatus !== 'OPEN') return;
+    if (!bet.expires_at) return;
+
+    // Client-side expiry check - if client clock is ahead of server,
+    // the RPC will return without processing, and we'll retry
+    const expiresAt = new Date(bet.expires_at);
+    if (expiresAt > new Date()) return;
+
+    // Don't call RPC again if we're already waiting for retry
+    if (processedBetRef.current === bet.id) return;
+
+    const roomId = bet.room_id;
+    const betId = bet.id;
+
+    (async () => {
+      try {
+        const result = await processExpiredBet.mutateAsync({ betId, roomId });
+
+        // Check if RPC actually processed the bet (status changed from OPEN)
+        if (result.status === 'OPEN') {
+          // Server clock hasn't reached expiry yet - schedule retry
+          console.log('[process_expired_bet] Server not ready, scheduling retry');
+          setTimeout(() => {
+            processedBetRef.current = null; // Allow retry
+            // Trigger re-render to retry
+            queryClient.invalidateQueries({ queryKey: betDetailKey(betId) });
+          }, 3000); // Retry in 3 seconds
+          processedBetRef.current = betId; // Prevent immediate re-call
+        } else {
+          // Successfully processed - mark as done and refetch
+          processedBetRef.current = betId;
+          await Promise.all([
+            queryClient.refetchQueries({ queryKey: betDetailKey(betId) }),
+            queryClient.refetchQueries({ queryKey: roomBalanceKey(roomId) }),
+          ]);
+        }
+      } catch (err) {
+        console.error('[process_expired_bet] RPC failed:', err);
+        processedBetRef.current = null;
+      }
+    })();
+  }, [bet, dbStatus, isLoading, processExpiredBet, queryClient]);
+
   // Tick every second for countdown when bet is OPEN
   useEffect(() => {
     if (dbStatus !== 'OPEN' || !bet?.expires_at) return;
@@ -164,14 +217,21 @@ export default function BetDetailScreen() {
 
   // Realtime subscription for bet updates
   useEffect(() => {
-    if (!id) return;
+    if (!id || !bet?.room_id) return;
 
+    const roomId = bet.room_id;
+
+    // Unique token prevents reusing an already-subscribed channel on re-mount
+    const token = `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
     const channel = supabase
-      .channel(`bet-detail:${id}`)
+      .channel(`bet-detail:${id}:${token}`)
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'bets', filter: `id=eq.${id}` },
-        () => queryClient.invalidateQueries({ queryKey: betDetailKey(id) }),
+        () => {
+          // Force immediate refetch for bet status changes
+          void queryClient.refetchQueries({ queryKey: betDetailKey(id) });
+        },
       )
       .on(
         'postgres_changes',
@@ -183,12 +243,20 @@ export default function BetDetailScreen() {
         { event: '*', schema: 'public', table: 'outcome_submissions', filter: `bet_id=eq.${id}` },
         () => queryClient.invalidateQueries({ queryKey: betDetailKey(id) }),
       )
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'ledger_entries', filter: `bet_id=eq.${id}` },
+        () => {
+          // Force immediate balance refetch when ledger entries are added (refunds, wins)
+          void queryClient.refetchQueries({ queryKey: roomBalanceKey(roomId) });
+        },
+      )
       .subscribe();
 
     return () => {
       void supabase.removeChannel(channel);
     };
-  }, [id, queryClient]);
+  }, [id, bet?.room_id, queryClient]);
 
   void tick;
 

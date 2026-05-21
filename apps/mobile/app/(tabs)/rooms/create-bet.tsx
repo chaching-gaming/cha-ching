@@ -42,6 +42,7 @@ import {
   composeWriteInQuestion,
   customExpiryToMs,
   formatCustomExpiryLabel,
+  templateRequiresPlayer,
   type ExpiryUnit,
 } from '@/lib/bet-create-ui';
 
@@ -202,11 +203,8 @@ export default function CreateBetScreen() {
         });
         setReviewOpen(false);
         setReviewPayload(null);
-        if (router.canGoBack()) {
-          router.back();
-        } else {
-          router.replace(`/(tabs)/rooms/${roomId}`);
-        }
+        // Always navigate to room detail page after creating bet
+        router.replace(`/(tabs)/rooms/${roomId}`);
       } catch (err) {
         formApi.setErrorMap({
           onSubmit: { fields: {}, form: getRpcErrorMessage(err) },
@@ -245,9 +243,21 @@ export default function CreateBetScreen() {
       });
       return;
     }
+
+    // Validate member selection for templates that require {player}
+    if (values.templateId) {
+      const tpl = templates?.find((t) => t.id === values.templateId);
+      if (tpl && templateRequiresPlayer(tpl.question_text) && !values.memberId) {
+        form.setErrorMap({
+          onSubmit: { fields: {}, form: 'Select a player for this bet type' },
+        });
+        return;
+      }
+    }
+
     form.setErrorMap({});
     setStep(2);
-  }, [form]);
+  }, [form, templates]);
 
   const handlePrevStep = useCallback(() => {
     form.setErrorMap({});
@@ -402,66 +412,79 @@ export default function CreateBetScreen() {
                   }
                 </form.Subscribe>
 
-                {/* Players (optional) */}
+                {/* Players (required for templates with {player}, optional for custom) */}
                 <View className="mb-4">
-                  <Text className="mb-2 text-sm font-medium text-text-secondary">
-                    Who is this about? (optional)
-                  </Text>
-                  {membersLoading ? (
-                    <ActivityIndicator color={colors.primary} />
-                  ) : (
-                    <form.Subscribe selector={(state) => state.values.memberId}>
-                      {(memberId) => (
-                        <FlatList
-                          horizontal
-                          data={members ?? []}
-                          keyExtractor={(item) => item.id}
-                          showsHorizontalScrollIndicator={false}
-                          nestedScrollEnabled={true}
-                          contentContainerClassName="gap-3"
-                          renderItem={({ item }) => {
-                            const selected = item.user_id === memberId;
-                            const name = memberDisplayName(item);
-                            return (
-                              <TouchableOpacity
-                                onPress={() => {
-                                  form.setErrorMap({});
-                                  const uid = item.user_id;
-                                  if (uid) form.setFieldValue('memberId', uid);
-                                }}
-                                disabled={!sessionActive}
-                                className={`items-center rounded-2xl px-2 py-2 ${
-                                  selected ? 'bg-primary/15' : 'bg-transparent'
-                                }`}
-                                activeOpacity={0.75}
-                                hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
-                              >
-                                <View
-                                  className={`rounded-full p-0.5 ${
-                                    selected
-                                      ? 'border-2 border-primary'
-                                      : 'border-2 border-transparent'
-                                  }`}
-                                >
-                                  <Avatar
-                                    uri={item.profiles?.avatar_url}
-                                    fallback={name}
-                                    size="lg"
-                                  />
-                                </View>
-                                <Text
-                                  className="mt-1 max-w-[60px] text-center text-xs font-medium text-text-secondary"
-                                  numberOfLines={1}
-                                >
-                                  {name}
-                                </Text>
-                              </TouchableOpacity>
-                            );
-                          }}
-                        />
-                      )}
-                    </form.Subscribe>
-                  )}
+                  <form.Subscribe
+                    selector={(state) => [state.values.memberId, state.values.templateId] as const}
+                  >
+                    {([memberId, templateId]) => {
+                      const tpl = templates?.find((t) => t.id === templateId);
+                      const isPlayerRequired = tpl && templateRequiresPlayer(tpl.question_text);
+                      return (
+                        <>
+                          <Text className="mb-2 text-sm font-medium text-text-secondary">
+                            Who is this about?{' '}
+                            {isPlayerRequired ? (
+                              <Text className="text-primary">(required)</Text>
+                            ) : (
+                              '(optional)'
+                            )}
+                          </Text>
+                          {membersLoading ? (
+                            <ActivityIndicator color={colors.primary} />
+                          ) : (
+                            <FlatList
+                              horizontal
+                              data={members ?? []}
+                              keyExtractor={(item) => item.id}
+                              showsHorizontalScrollIndicator={false}
+                              nestedScrollEnabled={true}
+                              contentContainerClassName="gap-3"
+                              renderItem={({ item }) => {
+                                const selected = item.user_id === memberId;
+                                const name = memberDisplayName(item);
+                                return (
+                                  <TouchableOpacity
+                                    onPress={() => {
+                                      form.setErrorMap({});
+                                      const uid = item.user_id;
+                                      if (uid) form.setFieldValue('memberId', uid);
+                                    }}
+                                    disabled={!sessionActive}
+                                    className={`items-center rounded-2xl px-2 py-2 ${
+                                      selected ? 'bg-primary/15' : 'bg-transparent'
+                                    }`}
+                                    activeOpacity={0.75}
+                                    hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
+                                  >
+                                    <View
+                                      className={`rounded-full p-0.5 ${
+                                        selected
+                                          ? 'border-2 border-primary'
+                                          : 'border-2 border-transparent'
+                                      }`}
+                                    >
+                                      <Avatar
+                                        uri={item.profiles?.avatar_url}
+                                        fallback={name}
+                                        size="lg"
+                                      />
+                                    </View>
+                                    <Text
+                                      className="mt-1 max-w-[60px] text-center text-xs font-medium text-text-secondary"
+                                      numberOfLines={1}
+                                    >
+                                      {name}
+                                    </Text>
+                                  </TouchableOpacity>
+                                );
+                              }}
+                            />
+                          )}
+                        </>
+                      );
+                    }}
+                  </form.Subscribe>
                 </View>
 
                 {/* Templates */}
@@ -609,66 +632,79 @@ export default function CreateBetScreen() {
                   }
                 </form.Subscribe>
 
-                {/* Players (optional) */}
+                {/* Players (required for templates with {player}, optional for custom) */}
                 <View className="mb-4">
-                  <Text className="mb-2 text-sm font-medium text-text-secondary">
-                    Who is this about? (optional)
-                  </Text>
-                  {membersLoading ? (
-                    <ActivityIndicator color={colors.primary} />
-                  ) : (
-                    <form.Subscribe selector={(state) => state.values.memberId}>
-                      {(memberId) => (
-                        <FlatList
-                          horizontal
-                          data={members ?? []}
-                          keyExtractor={(item) => item.id}
-                          showsHorizontalScrollIndicator={false}
-                          nestedScrollEnabled={true}
-                          contentContainerClassName="gap-3"
-                          renderItem={({ item }) => {
-                            const selected = item.user_id === memberId;
-                            const name = memberDisplayName(item);
-                            return (
-                              <TouchableOpacity
-                                onPress={() => {
-                                  form.setErrorMap({});
-                                  const uid = item.user_id;
-                                  if (uid) form.setFieldValue('memberId', uid);
-                                }}
-                                disabled={!sessionActive}
-                                className={`items-center rounded-2xl px-2 py-2 ${
-                                  selected ? 'bg-primary/15' : 'bg-transparent'
-                                }`}
-                                activeOpacity={0.75}
-                                hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
-                              >
-                                <View
-                                  className={`rounded-full p-0.5 ${
-                                    selected
-                                      ? 'border-2 border-primary'
-                                      : 'border-2 border-transparent'
-                                  }`}
-                                >
-                                  <Avatar
-                                    uri={item.profiles?.avatar_url}
-                                    fallback={name}
-                                    size="lg"
-                                  />
-                                </View>
-                                <Text
-                                  className="mt-1 max-w-[60px] text-center text-xs font-medium text-text-secondary"
-                                  numberOfLines={1}
-                                >
-                                  {name}
-                                </Text>
-                              </TouchableOpacity>
-                            );
-                          }}
-                        />
-                      )}
-                    </form.Subscribe>
-                  )}
+                  <form.Subscribe
+                    selector={(state) => [state.values.memberId, state.values.templateId] as const}
+                  >
+                    {([memberId, templateId]) => {
+                      const tpl = templates?.find((t) => t.id === templateId);
+                      const isPlayerRequired = tpl && templateRequiresPlayer(tpl.question_text);
+                      return (
+                        <>
+                          <Text className="mb-2 text-sm font-medium text-text-secondary">
+                            Who is this about?{' '}
+                            {isPlayerRequired ? (
+                              <Text className="text-primary">(required)</Text>
+                            ) : (
+                              '(optional)'
+                            )}
+                          </Text>
+                          {membersLoading ? (
+                            <ActivityIndicator color={colors.primary} />
+                          ) : (
+                            <FlatList
+                              horizontal
+                              data={members ?? []}
+                              keyExtractor={(item) => item.id}
+                              showsHorizontalScrollIndicator={false}
+                              nestedScrollEnabled={true}
+                              contentContainerClassName="gap-3"
+                              renderItem={({ item }) => {
+                                const selected = item.user_id === memberId;
+                                const name = memberDisplayName(item);
+                                return (
+                                  <TouchableOpacity
+                                    onPress={() => {
+                                      form.setErrorMap({});
+                                      const uid = item.user_id;
+                                      if (uid) form.setFieldValue('memberId', uid);
+                                    }}
+                                    disabled={!sessionActive}
+                                    className={`items-center rounded-2xl px-2 py-2 ${
+                                      selected ? 'bg-primary/15' : 'bg-transparent'
+                                    }`}
+                                    activeOpacity={0.75}
+                                    hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
+                                  >
+                                    <View
+                                      className={`rounded-full p-0.5 ${
+                                        selected
+                                          ? 'border-2 border-primary'
+                                          : 'border-2 border-transparent'
+                                      }`}
+                                    >
+                                      <Avatar
+                                        uri={item.profiles?.avatar_url}
+                                        fallback={name}
+                                        size="lg"
+                                      />
+                                    </View>
+                                    <Text
+                                      className="mt-1 max-w-[60px] text-center text-xs font-medium text-text-secondary"
+                                      numberOfLines={1}
+                                    >
+                                      {name}
+                                    </Text>
+                                  </TouchableOpacity>
+                                );
+                              }}
+                            />
+                          )}
+                        </>
+                      );
+                    }}
+                  </form.Subscribe>
                 </View>
 
                 {/* Templates */}
@@ -816,11 +852,8 @@ export default function CreateBetScreen() {
                   {([templateId, writeInBody, offeredPick, memberId]) => {
                     const tpl = templates?.find((t) => t.id === templateId);
                     const member = members?.find((m) => m.user_id === memberId);
-                    const displayPick = tpl
-                      ? offeredPick === 'Yes'
-                        ? tpl.positive_label
-                        : tpl.negative_label
-                      : offeredPick;
+                    // offeredPick is already stored as the display label (e.g., "Hit"/"Miss")
+                    const displayPick = offeredPick;
 
                     return (
                       <>

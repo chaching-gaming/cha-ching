@@ -78,7 +78,7 @@ export default function NotificationsScreen() {
 
   const [refreshing, setRefreshing] = useState(false);
   const [markingAllRead, setMarkingAllRead] = useState(false);
-  const [filter, setFilter] = useState<NotificationFilter>('all');
+  const [filter, setFilter] = useState<NotificationFilter>('results');
 
   const allNotifications = useMemo(() => {
     return data?.pages.flat() ?? [];
@@ -185,7 +185,6 @@ export default function NotificationsScreen() {
   }
 
   const emptyFilterMessage: Record<NotificationFilter, { title: string; subtitle: string }> = {
-    all: { title: 'No notifications', subtitle: 'You have no notifications yet.' },
     results: {
       title: 'No results yet',
       subtitle: 'Bet outcomes (wins and losses) will appear here.',

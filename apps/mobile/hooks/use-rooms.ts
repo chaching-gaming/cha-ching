@@ -195,9 +195,29 @@ export function useRealtimeRoomsList() {
       )
       .subscribe();
 
+    // Subscribe to room_members changes for the current user (to detect being removed)
+    const membersChannel = supabase
+      .channel(`cc-rooms-list:members:${token}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'DELETE',
+          schema: 'public',
+          table: 'room_members',
+          filter: `user_id=eq.${currentUserId}`,
+        },
+        () => {
+          // When removed from a room, refresh the rooms list
+          invalidate(roomsKey('active'));
+          invalidate(roomsKey('history'));
+        },
+      )
+      .subscribe();
+
     return () => {
       void supabase.removeChannel(ledgerChannel);
       void supabase.removeChannel(chipRequestsChannel);
+      void supabase.removeChannel(membersChannel);
     };
   }, [currentUserId, queryClient]);
 }

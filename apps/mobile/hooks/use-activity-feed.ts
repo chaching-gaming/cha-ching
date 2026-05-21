@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useCallback } from 'react';
-import { useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
+import { useQuery, useInfiniteQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import type { Database } from '@cha-ching/types';
 import { useAuth } from '@/providers/auth';
@@ -183,6 +183,70 @@ export function useRoomActivityFeed(roomId: string) {
   return { data: items, isLoading: betsLoading || chipRequestsLoading };
 }
 
+const ACTIVITY_PAGE_SIZE = 10;
+
+export const roomActivityKey = (roomId: string) => ['rooms', roomId, 'activity'] as const;
+
+/**
+ * Paginated activity feed with infinite scroll support.
+ * Fetches bets with pagination and chip requests (non-paginated, typically fewer).
+ */
+export function useRoomActivityFeedPaginated(roomId: string) {
+  const { session } = useAuth();
+  const { data: chipRequests, isLoading: chipRequestsLoading } = useRoomChipRequests(roomId);
+
+  const betsQuery = useInfiniteQuery({
+    queryKey: roomActivityKey(roomId),
+    initialPageParam: 0,
+    queryFn: async ({ pageParam }): Promise<BetWithProfiles[]> => {
+      const { data, error } = await supabase
+        .from('bets')
+        .select(
+          '*, offered_by_profile:profiles!bets_offered_by_fkey(*), subject_profile:profiles!bets_subject_user_id_fkey(*), outcome_submissions(*), stakes:bet_stakes(*, user:profiles!bet_stakes_user_id_fkey(*)), void_logs:bet_void_logs(*, voided_by_profile:profiles!bet_void_logs_voided_by_fkey(*))',
+        )
+        .eq('room_id', roomId)
+        .order('created_at', { ascending: false })
+        .range(pageParam, pageParam + ACTIVITY_PAGE_SIZE - 1);
+
+      if (error) throw error;
+      return data as unknown as BetWithProfiles[];
+    },
+    getNextPageParam: (lastPage, allPages) =>
+      lastPage.length === ACTIVITY_PAGE_SIZE
+        ? allPages.length * ACTIVITY_PAGE_SIZE
+        : undefined,
+    enabled: !!session?.user.id && !!roomId,
+  });
+
+  const items = useMemo((): ActivityItem[] => {
+    const feed: ActivityItem[] = [];
+    const bets = betsQuery.data?.pages.flat() ?? [];
+
+    for (const bet of bets) {
+      feed.push({ type: 'bet', timestamp: bet.created_at ?? '', bet });
+    }
+
+    // Chip requests are added once (not paginated) - they appear at the top if recent
+    if (chipRequests) {
+      for (const cr of chipRequests) {
+        feed.push({ type: 'chip_request', timestamp: cr.created_at ?? '', chipRequest: cr });
+      }
+    }
+
+    feed.sort((a, b) => (b.timestamp > a.timestamp ? 1 : b.timestamp < a.timestamp ? -1 : 0));
+
+    return feed;
+  }, [betsQuery.data, chipRequests]);
+
+  return {
+    data: items,
+    isLoading: betsQuery.isLoading || chipRequestsLoading,
+    isFetchingNextPage: betsQuery.isFetchingNextPage,
+    hasNextPage: betsQuery.hasNextPage,
+    fetchNextPage: betsQuery.fetchNextPage,
+  };
+}
+
 type RealtimeActivityFeedOptions = {
   /** Called when the current user is removed from the room */
   onCurrentUserRemoved?: () => void;
@@ -251,6 +315,7 @@ export function useRealtimeActivityFeed(
         { event: '*', schema: 'public', table: 'bets', filter: `room_id=eq.${roomId}` },
         () => {
           invalidate(roomBetsKey(roomId));
+          invalidate(roomActivityKey(roomId));
           invalidate(roomBalanceKey(roomId));
           invalidate(roomMemberBalancesKey(roomId));
           // Also update rooms list so balance shows correctly on the list page
@@ -290,6 +355,7 @@ export function useRealtimeActivityFeed(
         { event: '*', schema: 'public', table: 'outcome_submissions' },
         () => {
           invalidate(roomBetsKey(roomId));
+          invalidate(roomActivityKey(roomId));
         },
       )
       .subscribe();
@@ -300,6 +366,7 @@ export function useRealtimeActivityFeed(
       .channel(`cc-feed:${roomId}:stakes:${token}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'bet_stakes' }, () => {
         invalidate(roomBetsKey(roomId));
+        invalidate(roomActivityKey(roomId));
         invalidate(roomBalanceKey(roomId));
         invalidate(roomMemberBalancesKey(roomId));
         // Also update rooms list so balance shows correctly on the list page

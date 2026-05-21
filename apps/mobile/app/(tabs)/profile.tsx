@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  RefreshControl,
   ScrollView,
   Switch,
   Text,
@@ -103,13 +104,23 @@ function RoomRow({
 export default function ProfileScreen() {
   const router = useRouter();
   const { session } = useAuth();
-  const { data: profile, isLoading } = useProfile();
+  const { data: profile, isLoading, refetch: refetchProfile } = useProfile();
   const updateProfile = useUpdateProfile();
-  const { data: historyRooms } = useRooms('history');
+  const { data: historyRooms, refetch: refetchRooms } = useRooms('history');
 
   const [displayName, setDisplayName] = useState('');
   const [isEditing, setIsEditing] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const handleRefresh = useCallback(async () => {
+    setIsRefreshing(true);
+    try {
+      await Promise.all([refetchProfile(), refetchRooms()]);
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, [refetchProfile, refetchRooms]);
 
   const {
     soundEnabled,
@@ -181,7 +192,16 @@ export default function ProfileScreen() {
   return (
     <View className="flex-1 bg-background">
       <ScreenHeader title="Profile" />
-      <ScrollView contentContainerClassName="pb-12">
+      <ScrollView
+        contentContainerClassName="pb-12"
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefreshing}
+            onRefresh={handleRefresh}
+            tintColor={colors.primary}
+          />
+        }
+      >
         {/* Avatar + identity */}
         <View className="items-center px-5 pt-2">
           <Avatar

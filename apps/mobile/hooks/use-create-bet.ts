@@ -3,7 +3,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import type { Database } from '@cha-ching/types';
 
-import { roomBalanceKey, roomBetsKey } from '@/hooks/use-activity-feed';
+import { roomActivityKey, roomBalanceKey, roomBetsKey } from '@/hooks/use-activity-feed';
 import { useFeedback } from '@/providers/feedback';
 
 type Bet = Database['public']['Tables']['bets']['Row'];
@@ -63,6 +63,7 @@ export function useCreateBet() {
     },
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: roomBetsKey(variables.p_room_id) });
+      queryClient.invalidateQueries({ queryKey: roomActivityKey(variables.p_room_id) });
       // Creator now immediately has a BET ledger entry locking their stake.
       queryClient.invalidateQueries({ queryKey: roomBalanceKey(variables.p_room_id) });
       queryClient.invalidateQueries({ queryKey: ['rooms'] });

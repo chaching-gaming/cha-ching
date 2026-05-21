@@ -2,10 +2,9 @@ import { Text, TouchableOpacity, View } from 'react-native';
 
 import type { NotificationRow, NotificationType } from '@/hooks/use-notifications-feed';
 
-export type NotificationFilter = 'all' | 'results' | 'activity';
+export type NotificationFilter = 'results' | 'activity';
 
 const OPTIONS: { key: NotificationFilter; label: string }[] = [
-  { key: 'all', label: 'All' },
   { key: 'results', label: 'Results' },
   { key: 'activity', label: 'Activity' },
 ];
@@ -60,7 +59,6 @@ export function notificationMatchesFilter(
   notification: NotificationRow,
   filter: NotificationFilter,
 ): boolean {
-  if (filter === 'all') return true;
   if (filter === 'results') return RESULT_TYPES.includes(notification.type);
   if (filter === 'activity') return ACTIVITY_TYPES.includes(notification.type);
   return true;
