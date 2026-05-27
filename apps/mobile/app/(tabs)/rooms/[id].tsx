@@ -35,8 +35,21 @@ import {
 } from '@/hooks/use-activity-feed';
 import { useWinnerCelebration } from '@/hooks/use-winner-celebration';
 
+/** Split room name like "Sunday golf - 2026-05-10" into { name, date } */
+function parseRoomName(fullName: string): { name: string; date: string | null } {
+  const separator = ' - ';
+  const lastIndex = fullName.lastIndexOf(separator);
+  if (lastIndex === -1) {
+    return { name: fullName, date: null };
+  }
+  return {
+    name: fullName.slice(0, lastIndex),
+    date: fullName.slice(lastIndex + separator.length),
+  };
+}
+
 const EMPTY_STATE_COPY: Record<BetFilter, { title: string; subtitle: string }> = {
-  all: { title: 'No bets yet', subtitle: 'Tap Create Bet to start the action.' },
+  active: { title: 'No active bets', subtitle: 'Create a bet or wait for action.' },
   open: { title: 'No open bets', subtitle: 'Create a new bet or wait for one to open.' },
   matched: { title: 'No matched bets', subtitle: 'Bets show up here once both sides are staked.' },
   settled: { title: 'No settled bets', subtitle: 'Finished bets will appear here.' },
@@ -97,6 +110,12 @@ export default function RoomDetailScreen() {
 
   const myBalance = balance ?? 0;
 
+  // Parse room name into display name and date
+  const { name: roomDisplayName, date: roomDate } = useMemo(
+    () => parseRoomName(room?.name ?? ''),
+    [room?.name],
+  );
+
   // Current user's open chip request (for header progress + cancel)
   const myOpenChipRequest = useMemo(() => {
     if (!currentUserId) return null;
@@ -110,7 +129,7 @@ export default function RoomDetailScreen() {
   }, [activityItems, currentUserId]);
 
   const [refreshing, setRefreshing] = useState(false);
-  const [filter, setFilter] = useState<BetFilter>('all');
+  const [filter, setFilter] = useState<BetFilter>('active');
   const [myBetsOnly, setMyBetsOnly] = useState(false);
   const [chipRequestsSheetOpen, setChipRequestsSheetOpen] = useState(false);
 
@@ -125,12 +144,12 @@ export default function RoomDetailScreen() {
 
   const feedItems = useMemo(() => activityItems ?? [], [activityItems]);
 
-  // Chip requests only show in "all" tab; bet filters apply to bet items only.
+  // Only show bets in the main feed (chip requests moved to dedicated sheet)
   // When myBetsOnly is enabled, only show bets where the current user has a stake.
   const visibleItems = useMemo(
     () =>
       feedItems.filter((item) => {
-        if (item.type === 'chip_request') return filter === 'all' && !myBetsOnly;
+        if (item.type === 'chip_request') return false; // Chip requests shown in sheet only
         if (!betMatchesFilter(item.bet, filter)) return false;
         if (myBetsOnly && !betInvolvesUser(item.bet, currentUserId)) return false;
         return true;
@@ -138,16 +157,19 @@ export default function RoomDetailScreen() {
     [feedItems, filter, myBetsOnly, currentUserId],
   );
 
-  // Open chip requests for the header badge and bottom sheet
-  const openChipRequests = useMemo(
+  // All chip requests for the bottom sheet (includes all statuses)
+  const allChipRequests = useMemo(
     () =>
       feedItems
-        .filter(
-          (item) =>
-            item.type === 'chip_request' && item.chipRequest.status === 'OPEN',
-        )
+        .filter((item) => item.type === 'chip_request')
         .map((item) => (item as Extract<typeof item, { type: 'chip_request' }>).chipRequest),
     [feedItems],
+  );
+
+  // Count of open chip requests for badge display
+  const openChipRequestCount = useMemo(
+    () => allChipRequests.filter((r) => r.status === 'OPEN').length,
+    [allChipRequests],
   );
 
   const openSettings = useCallback(() => {
@@ -179,27 +201,32 @@ export default function RoomDetailScreen() {
   return (
     <View className="flex-1 bg-background">
       <ScreenHeader
-        title={room.name}
+        title={roomDisplayName}
+        subtitle={roomDate ?? undefined}
         showBack
         titleClassName="text-xl font-bold text-white"
         backIconSize={28}
         right={
           <View className="flex-row items-center gap-4">
-            {openChipRequests.length > 0 && (
-              <TouchableOpacity
-                onPress={() => setChipRequestsSheetOpen(true)}
-                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                accessibilityLabel={`${openChipRequests.length} open chip requests`}
-                className="relative"
-              >
-                <HandHeart size={26} color={colors.primary} weight="fill" />
+            <TouchableOpacity
+              onPress={() => setChipRequestsSheetOpen(true)}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              accessibilityLabel={
+                openChipRequestCount > 0
+                  ? `${openChipRequestCount} open chip requests`
+                  : 'View chip requests'
+              }
+              className="relative"
+            >
+              <HandHeart size={26} color={colors.primary} weight="fill" />
+              {openChipRequestCount > 0 && (
                 <View className="absolute -right-1.5 -top-1 min-w-[18px] items-center justify-center rounded-full bg-error px-1 py-0.5">
                   <Text className="text-[10px] font-bold text-white">
-                    {openChipRequests.length}
+                    {openChipRequestCount}
                   </Text>
                 </View>
-              </TouchableOpacity>
-            )}
+              )}
+            </TouchableOpacity>
             <TouchableOpacity
               onPress={openSettings}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
@@ -311,7 +338,7 @@ export default function RoomDetailScreen() {
       <ChipRequestsSheet
         visible={chipRequestsSheetOpen}
         onClose={() => setChipRequestsSheetOpen(false)}
-        chipRequests={openChipRequests}
+        chipRequests={allChipRequests}
         currentUserId={currentUserId}
         roomId={id}
         roomActive={isActive}

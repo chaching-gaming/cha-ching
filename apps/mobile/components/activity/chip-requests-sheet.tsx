@@ -1,17 +1,16 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { FlatList, Text, TouchableOpacity, View } from 'react-native';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   BottomSheetBackdrop,
   type BottomSheetBackdropProps,
   BottomSheetModal,
-  BottomSheetView,
+  BottomSheetScrollView,
 } from '@gorhom/bottom-sheet';
 import { Coins, HandCoins, HandHeart, X } from 'phosphor-react-native';
 
 import { colors } from '@/constants/colors';
 import { Avatar } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
 import { DonateChipsSheet } from '@/components/activity/donate-chips-sheet';
 import type { ChipRequestWithProfile } from '@/hooks/use-activity-feed';
 
@@ -37,6 +36,16 @@ export function ChipRequestsSheet({
   const safeInsets = useSafeAreaInsets();
   const sheetRef = useRef<BottomSheetModal>(null);
   const [selectedRequest, setSelectedRequest] = useState<ChipRequestWithProfile | null>(null);
+
+  // Split chip requests into active (OPEN) and completed (FULFILLED, CANCELLED)
+  const activeRequests = useMemo(
+    () => chipRequests.filter((r) => r.status === 'OPEN'),
+    [chipRequests],
+  );
+  const completedRequests = useMemo(
+    () => chipRequests.filter((r) => r.status !== 'OPEN'),
+    [chipRequests],
+  );
 
   useEffect(() => {
     if (visible) sheetRef.current?.present();
@@ -78,16 +87,15 @@ export function ChipRequestsSheet({
         backdropComponent={renderBackdrop}
         maxDynamicContentSize={500}
       >
-        <BottomSheetView
-          style={{ paddingHorizontal: 20, paddingTop: 4, paddingBottom: bottomInset }}
+        <BottomSheetScrollView
+          style={{ paddingHorizontal: 20, paddingTop: 4 }}
+          contentContainerStyle={{ paddingBottom: bottomInset }}
         >
+          {/* Header */}
           <View className="mb-4 flex-row items-center justify-between">
             <View className="flex-row items-center gap-2">
               <HandHeart size={22} color={colors.primary} weight="fill" />
               <Text className="text-xl font-bold text-white">Chip Requests</Text>
-              <View className="ml-1 rounded-full bg-primary/20 px-2 py-0.5">
-                <Text className="text-xs font-bold text-primary">{chipRequests.length}</Text>
-              </View>
             </View>
             <TouchableOpacity
               onPress={onClose}
@@ -97,28 +105,56 @@ export function ChipRequestsSheet({
             </TouchableOpacity>
           </View>
 
+          {/* Empty state */}
           {chipRequests.length === 0 ? (
             <View className="items-center py-8">
-              <Text className="text-base text-text-secondary">No open chip requests</Text>
+              <Text className="text-base text-text-secondary">No chip requests yet</Text>
             </View>
           ) : (
-            <FlatList
-              data={chipRequests}
-              keyExtractor={(item) => item.id}
-              scrollEnabled={false}
-              renderItem={({ item }) => (
-                <ChipRequestRow
-                  chipRequest={item}
-                  currentUserId={currentUserId}
-                  roomActive={roomActive}
-                  currentUserBalance={currentUserBalance}
-                  onDonate={() => handleDonate(item)}
-                />
+            <>
+              {/* Active Requests Section */}
+              {activeRequests.length > 0 && (
+                <View className="mb-4">
+                  <Text className="mb-2 text-sm font-semibold uppercase tracking-wide text-primary">
+                    Active Requests ({activeRequests.length})
+                  </Text>
+                  {activeRequests.map((item, index) => (
+                    <View key={item.id} className={index > 0 ? 'mt-3' : ''}>
+                      <ChipRequestRow
+                        chipRequest={item}
+                        currentUserId={currentUserId}
+                        roomActive={roomActive}
+                        currentUserBalance={currentUserBalance}
+                        onDonate={() => handleDonate(item)}
+                      />
+                    </View>
+                  ))}
+                </View>
               )}
-              ItemSeparatorComponent={() => <View className="h-3" />}
-            />
+
+              {/* Completed Requests Section */}
+              {completedRequests.length > 0 && (
+                <View>
+                  <Text className="mb-2 text-sm font-semibold uppercase tracking-wide text-text-muted">
+                    Completed ({completedRequests.length})
+                  </Text>
+                  {completedRequests.map((item, index) => (
+                    <View key={item.id} className={index > 0 ? 'mt-3' : ''}>
+                      <ChipRequestRow
+                        chipRequest={item}
+                        currentUserId={currentUserId}
+                        roomActive={roomActive}
+                        currentUserBalance={currentUserBalance}
+                        onDonate={() => handleDonate(item)}
+                        dimmed
+                      />
+                    </View>
+                  ))}
+                </View>
+              )}
+            </>
           )}
-        </BottomSheetView>
+        </BottomSheetScrollView>
       </BottomSheetModal>
 
       {selectedRequest && (
@@ -140,12 +176,14 @@ function ChipRequestRow({
   roomActive,
   currentUserBalance,
   onDonate,
+  dimmed = false,
 }: {
   chipRequest: ChipRequestWithProfile;
   currentUserId: string | null;
   roomActive: boolean;
   currentUserBalance: number;
   onDonate: () => void;
+  dimmed?: boolean;
 }) {
   const requesterName = chipRequest.requested_by_profile?.display_name ?? 'Someone';
   const requested = chipRequest.requested_amount;
@@ -155,15 +193,37 @@ function ChipRequestRow({
     requested > 0 ? Math.min(100, Math.round((fulfilled / requested) * 100)) : 0;
 
   const isRequester = !!currentUserId && chipRequest.requested_by === currentUserId;
+  const isOpen = chipRequest.status === 'OPEN';
   const canDonate =
     roomActive &&
+    isOpen &&
     !!currentUserId &&
     !isRequester &&
     remaining > 0 &&
     currentUserBalance > 0;
 
+  // Status badge for completed requests
+  const statusBadge = !isOpen && (
+    <View
+      className={`ml-2 rounded-full px-2 py-0.5 ${
+        chipRequest.status === 'FULFILLED' ? 'bg-success/20' : 'bg-text-muted/20'
+      }`}
+    >
+      <Text
+        className={`text-[10px] font-bold uppercase ${
+          chipRequest.status === 'FULFILLED' ? 'text-success' : 'text-text-muted'
+        }`}
+      >
+        {chipRequest.status === 'FULFILLED' ? 'Fulfilled' : 'Cancelled'}
+      </Text>
+    </View>
+  );
+
   return (
-    <View className="rounded-xl border border-border bg-surface px-4 py-3">
+    <View
+      className="rounded-xl border border-border bg-surface px-4 py-3"
+      style={dimmed ? { opacity: 0.6 } : undefined}
+    >
       <View className="flex-row items-center gap-3">
         <Avatar
           uri={chipRequest.requested_by_profile?.avatar_url}
@@ -171,12 +231,15 @@ function ChipRequestRow({
           size="md"
         />
         <View className="min-w-0 flex-1">
-          <Text className="text-base font-semibold text-white" numberOfLines={1}>
-            {requesterName}
-            {isRequester ? (
-              <Text className="text-text-secondary"> (you)</Text>
-            ) : null}
-          </Text>
+          <View className="flex-row items-center">
+            <Text className="text-base font-semibold text-white" numberOfLines={1}>
+              {requesterName}
+              {isRequester ? (
+                <Text className="text-text-secondary"> (you)</Text>
+              ) : null}
+            </Text>
+            {statusBadge}
+          </View>
           {chipRequest.message ? (
             <Text className="mt-0.5 text-sm text-text-secondary" numberOfLines={2}>
               &ldquo;{chipRequest.message}&rdquo;

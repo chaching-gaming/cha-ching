@@ -191,7 +191,7 @@ export default function NotificationsScreen() {
     },
     activity: {
       title: 'No activity yet',
-      subtitle: 'Matched bets, chip donations, and other activity will appear here.',
+      subtitle: 'Your matched bets, chip donations, and other activity will appear here.',
     },
   };
 

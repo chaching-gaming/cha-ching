@@ -112,7 +112,7 @@ export function RoomSelectionSheet({ visible, onClose, onSelectRoom }: Props) {
   );
 
   const listHeader = useMemo(
-    () => <Text className="mb-2 text-xl font-bold text-white">Choose a room</Text>,
+    () => <Text className="mb-2 text-xl font-bold text-white">Choose a room to create bet</Text>,
     [],
   );
 

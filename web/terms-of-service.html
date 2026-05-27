@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Terms of Service — Cha-Ching Game</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter+Tight:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #011E22;
+    --surface: #02353C;
+    --surface-light: #054550;
+    --ink: #FFFFFF;
+    --ink-soft: #A8D5D0;
+    --ink-mute: #6B9E99;
+    --accent: #2EAF7D;
+    --accent-bright: #3FD0C9;
+    --accent-pale: #C1F6ED;
+    --accent-soft: rgba(46, 175, 125, 0.12);
+    --rule: #086568;
+    --rule-soft: #054550;
+    --max-width: 760px;
+  }
+
+  * { box-sizing: border-box; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: 'Inter Tight', -apple-system, sans-serif;
+    font-size: 16px;
+    line-height: 1.7;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    background-image:
+      radial-gradient(circle at 20% 10%, rgba(63, 208, 201, 0.08) 0%, transparent 45%),
+      radial-gradient(circle at 80% 90%, rgba(46, 175, 125, 0.06) 0%, transparent 45%);
+    z-index: 0;
+  }
+
+  .container {
+    position: relative;
+    max-width: var(--max-width);
+    margin: 0 auto;
+    padding: 80px 32px 120px;
+    z-index: 1;
+  }
+
+  header {
+    border-bottom: 1px solid var(--rule);
+    padding-bottom: 48px;
+    margin-bottom: 56px;
+  }
+
+  .eyebrow {
+    font-family: 'Inter Tight', sans-serif;
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--accent-bright);
+    margin-bottom: 24px;
+  }
+
+  h1 {
+    font-family: 'Fraunces', Georgia, serif;
+    font-weight: 500;
+    font-size: clamp(2.5rem, 6vw, 4rem);
+    line-height: 1.05;
+    letter-spacing: -0.02em;
+    margin: 0 0 24px;
+    font-variation-settings: "opsz" 144;
+  }
+
+  h1 em {
+    font-style: italic;
+    color: var(--accent-bright);
+    font-weight: 400;
+  }
+
+  .meta {
+    color: var(--ink-mute);
+    font-size: 14px;
+    display: flex;
+    gap: 24px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+
+  .meta strong {
+    color: var(--ink-soft);
+    font-weight: 500;
+  }
+
+  .meta-divider {
+    width: 4px;
+    height: 4px;
+    background: var(--ink-mute);
+    border-radius: 50%;
+  }
+
+  h2 {
+    font-family: 'Fraunces', Georgia, serif;
+    font-weight: 500;
+    font-size: 1.75rem;
+    line-height: 1.2;
+    letter-spacing: -0.01em;
+    margin: 64px 0 20px;
+    color: var(--ink);
+    scroll-margin-top: 24px;
+  }
+
+  h2 .num {
+    color: var(--accent-bright);
+    font-style: italic;
+    margin-right: 12px;
+    font-weight: 400;
+  }
+
+  h3 {
+    font-family: 'Fraunces', Georgia, serif;
+    font-weight: 600;
+    font-size: 1.15rem;
+    letter-spacing: -0.005em;
+    margin: 32px 0 12px;
+    color: var(--ink);
+  }
+
+  .toc {
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    padding: 32px 36px;
+    margin: 48px 0;
+  }
+
+  .toc-title {
+    font-family: 'Fraunces', serif;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink-mute);
+    margin-bottom: 20px;
+  }
+
+  .toc ol {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    counter-reset: toc-counter;
+    columns: 1;
+  }
+
+  @media (min-width: 600px) {
+    .toc ol { columns: 2; column-gap: 32px; }
+  }
+
+  .toc li {
+    counter-increment: toc-counter;
+    padding: 6px 0;
+    break-inside: avoid;
+    font-size: 14px;
+  }
+
+  .toc li::before {
+    content: counter(toc-counter, decimal-leading-zero);
+    color: var(--accent-bright);
+    font-family: 'Fraunces', serif;
+    font-style: italic;
+    margin-right: 12px;
+    font-size: 13px;
+  }
+
+  .toc a {
+    color: var(--ink-soft);
+    text-decoration: none;
+    transition: color 0.2s ease;
+  }
+
+  .toc a:hover {
+    color: var(--accent-bright);
+  }
+
+  p { margin: 0 0 20px; color: var(--ink-soft); }
+
+  a {
+    color: var(--accent-bright);
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 3px;
+    transition: opacity 0.2s ease;
+  }
+
+  a:hover { opacity: 0.7; }
+
+  strong { color: var(--ink); font-weight: 600; }
+
+  .in-short {
+    background: var(--accent-soft);
+    border-left: 2px solid var(--accent-bright);
+    padding: 18px 24px;
+    margin: 20px 0 28px;
+    font-size: 15px;
+    color: var(--ink-soft);
+    border-radius: 0 4px 4px 0;
+  }
+
+  .in-short strong { color: var(--accent-pale); }
+
+  ul {
+    padding-left: 0;
+    list-style: none;
+    margin: 0 0 24px;
+  }
+
+  ul li {
+    position: relative;
+    padding-left: 24px;
+    margin-bottom: 12px;
+    color: var(--ink-soft);
+  }
+
+  ul li::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 12px;
+    width: 12px;
+    height: 1px;
+    background: var(--accent-bright);
+  }
+
+  .contact-block {
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    padding: 28px 32px;
+    margin-top: 24px;
+    font-size: 15px;
+  }
+
+  .contact-block p { margin: 0; }
+  .contact-block .name {
+    font-family: 'Fraunces', serif;
+    font-weight: 600;
+    color: var(--ink);
+    font-size: 1.1rem;
+    margin-bottom: 6px;
+  }
+
+  .back-to-top {
+    display: inline-block;
+    margin-top: 64px;
+    padding: 10px 20px;
+    border: 1px solid var(--rule);
+    border-radius: 999px;
+    color: var(--ink-soft);
+    text-decoration: none;
+    font-size: 13px;
+    transition: all 0.2s ease;
+  }
+
+  .back-to-top:hover {
+    background: var(--accent);
+    color: var(--bg);
+    border-color: var(--accent);
+    opacity: 1;
+  }
+
+  footer {
+    margin-top: 80px;
+    padding-top: 32px;
+    border-top: 1px solid var(--rule);
+    font-size: 13px;
+    color: var(--ink-mute);
+    text-align: center;
+  }
+
+  footer a {
+    color: var(--ink-mute);
+    margin: 0 12px;
+  }
+
+  @media (max-width: 600px) {
+    .container { padding: 48px 20px 80px; }
+    h2 { font-size: 1.4rem; margin-top: 48px; }
+    .toc { padding: 24px 22px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+
+  <header id="top">
+    <div class="eyebrow">Legal · Visual Globe LLC</div>
+    <h1>Terms of <em>Service</em></h1>
+    <div class="meta">
+      <span><strong>Last updated</strong> May 13, 2026</span>
+      <span class="meta-divider"></span>
+      <span>Cha-Ching Game</span>
+    </div>
+  </header>
+
+  <p>Welcome to Cha-Ching! These Terms of Service ("Terms") govern your use of the Cha-Ching mobile application ("App") operated by <strong>Visual Globe LLC</strong> ("we," "our," or "us"). By using our App, you agree to these Terms.</p>
+
+  <div class="toc">
+    <div class="toc-title">Table of Contents</div>
+    <ol>
+      <li><a href="#description">Description of Service</a></li>
+      <li><a href="#eligibility">Eligibility</a></li>
+      <li><a href="#account">Account Registration</a></li>
+      <li><a href="#virtual">Virtual Currency</a></li>
+      <li><a href="#conduct">User Conduct</a></li>
+      <li><a href="#rooms">Room Administration</a></li>
+      <li><a href="#ip">Intellectual Property</a></li>
+      <li><a href="#disclaimer">Disclaimer</a></li>
+      <li><a href="#liability">Limitation of Liability</a></li>
+      <li><a href="#termination">Account Termination</a></li>
+      <li><a href="#changes">Changes to Terms</a></li>
+      <li><a href="#contact">Contact Us</a></li>
+    </ol>
+  </div>
+
+  <h2 id="description"><span class="num">01</span>Description of Service</h2>
+  <div class="in-short"><strong>In Short:</strong> Cha-Ching is a social betting app for friends using virtual chips — no real money involved.</div>
+  <p>Cha-Ching is a social app that allows friends to create and track friendly wagers using virtual chips. The App is designed for entertainment purposes only. No real money is involved in any bets or transactions within the App.</p>
+
+  <h2 id="eligibility"><span class="num">02</span>Eligibility</h2>
+  <p>You must be at least 18 years old to use this App. By using the App, you represent and warrant that you meet this age requirement.</p>
+
+  <h2 id="account"><span class="num">03</span>Account Registration</h2>
+  <p>To use the App, you must create an account using Google Sign-In or Apple Sign-In. You are responsible for maintaining the confidentiality of your account and for all activities that occur under your account.</p>
+
+  <h2 id="virtual"><span class="num">04</span>Virtual Currency</h2>
+  <div class="in-short"><strong>In Short:</strong> Chips are for fun only and have no real-world value.</div>
+  <p>The App uses virtual "chips" as a scoring mechanism. These chips:</p>
+  <ul>
+    <li>Have no real-world monetary value</li>
+    <li>Cannot be exchanged for real money or goods</li>
+    <li>Cannot be transferred outside of the App</li>
+    <li>Are provided for entertainment purposes only</li>
+  </ul>
+
+  <h2 id="conduct"><span class="num">05</span>User Conduct</h2>
+  <p>You agree not to:</p>
+  <ul>
+    <li>Use the App for any illegal purpose</li>
+    <li>Harass, abuse, or harm other users</li>
+    <li>Create bets involving illegal activities</li>
+    <li>Attempt to manipulate or cheat the system</li>
+    <li>Share inappropriate or offensive content</li>
+    <li>Impersonate other users or entities</li>
+  </ul>
+
+  <h2 id="rooms"><span class="num">06</span>Room Administration</h2>
+  <p>Room administrators have the authority to manage their rooms, including inviting members, settling bets, and removing users. Administrators are responsible for ensuring fair play within their rooms.</p>
+
+  <h2 id="ip"><span class="num">07</span>Intellectual Property</h2>
+  <p>The App and its original content, features, and functionality are owned by Visual Globe LLC and are protected by international copyright, trademark, and other intellectual property laws.</p>
+
+  <h2 id="disclaimer"><span class="num">08</span>Disclaimer</h2>
+  <p><strong>THE APP IS PROVIDED "AS IS" WITHOUT WARRANTIES OF ANY KIND.</strong> We do not guarantee that the App will be uninterrupted, error-free, or secure.</p>
+
+  <h2 id="liability"><span class="num">09</span>Limitation of Liability</h2>
+  <p>To the maximum extent permitted by law, Visual Globe LLC shall not be liable for any indirect, incidental, special, consequential, or punitive damages arising from your use of the App.</p>
+
+  <h2 id="termination"><span class="num">10</span>Account Termination</h2>
+  <p>You may delete your account at any time through the Profile section of the App. We reserve the right to suspend or terminate accounts that violate these Terms. For more information, visit our <a href="delete-account.html">Account Deletion page</a>.</p>
+
+  <h2 id="changes"><span class="num">11</span>Changes to Terms</h2>
+  <p>We may update these Terms from time to time. We will notify you of any changes by posting the new Terms on this page. Continued use of the App after changes constitutes acceptance of the new Terms.</p>
+
+  <h2 id="contact"><span class="num">12</span>Contact Us</h2>
+  <p>If you have any questions about these Terms, please contact us:</p>
+
+  <div class="contact-block">
+    <p class="name">Visual Globe LLC</p>
+    <p>10472 White Pine Dr</p>
+    <p>Parker, CO 80134-2509</p>
+    <p>United States</p>
+    <p style="margin-top: 12px;">Email: <a href="mailto:info@visual-globe.com">info@visual-globe.com</a></p>
+  </div>
+
+  <a href="#top" class="back-to-top">↑ Back to top</a>
+
+  <footer>
+    <p>© 2026 Visual Globe LLC · All rights reserved</p>
+    <p>
+      <a href="privacy-policy.html">Privacy Policy</a>
+      <a href="delete-account.html">Delete Account</a>
+    </p>
+  </footer>
+
+</div>
+
+</body>
+</html>

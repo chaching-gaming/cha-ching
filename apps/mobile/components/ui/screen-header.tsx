@@ -1,6 +1,7 @@
 import { Text, TouchableOpacity, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { CaretLeft } from 'phosphor-react-native';
+import * as Haptics from 'expo-haptics';
 
 import { colors } from '@/constants/colors';
 
@@ -40,7 +41,17 @@ export function ScreenHeader({
     <View className="flex-row items-center bg-background px-5 pb-4 pt-16">
       {/* Left slot */}
       <View className="w-12 items-start">
-        <TouchableOpacity onPress={() => router.back()} activeOpacity={0.7}>
+        <TouchableOpacity
+          onPress={() => router.back()}
+          onLongPress={() => {
+            void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+            router.replace('/(tabs)/rooms');
+          }}
+          delayLongPress={400}
+          activeOpacity={0.7}
+          accessibilityLabel="Go back"
+          accessibilityHint="Long press to go home"
+        >
           <CaretLeft size={backIconSize} color={colors.textPrimary} weight="bold" />
         </TouchableOpacity>
       </View>

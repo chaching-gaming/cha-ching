@@ -1,12 +1,14 @@
 import { Text, TouchableOpacity, View } from 'react-native';
+import { CheckSquare, Square } from 'phosphor-react-native';
 
 import { getEffectiveBetStatus } from '@/lib/effective-bet-status';
+import { colors } from '@/constants/colors';
 import type { BetWithProfiles } from '@/hooks/use-activity-feed';
 
-export type BetFilter = 'all' | 'open' | 'matched' | 'settled';
+export type BetFilter = 'active' | 'open' | 'matched' | 'settled';
 
 const OPTIONS: { key: BetFilter; label: string }[] = [
-  { key: 'all', label: 'All' },
+  { key: 'active', label: 'Active' },
   { key: 'open', label: 'Open' },
   { key: 'matched', label: 'Matched' },
   { key: 'settled', label: 'Settled' },
@@ -26,9 +28,9 @@ export function BetFeedStatusFilter({
   onMyBetsChange,
 }: BetFeedStatusFilterProps) {
   return (
-    <View className="mb-3 flex-row items-center">
+    <View className="mb-3">
       {/* Status filters */}
-      <View className="flex-1 flex-row gap-2">
+      <View className="flex-row gap-2">
         {OPTIONS.map((o) => {
           const active = o.key === value;
           return (
@@ -50,22 +52,25 @@ export function BetFeedStatusFilter({
         })}
       </View>
 
-      {/* My Bets toggle - separated */}
+      {/* My Bets checkbox */}
       {onMyBetsChange ? (
         <TouchableOpacity
           onPress={() => onMyBetsChange(!myBetsOnly)}
-          activeOpacity={0.8}
-          accessibilityRole="button"
-          accessibilityState={{ selected: myBetsOnly }}
+          activeOpacity={0.7}
+          accessibilityRole="checkbox"
+          accessibilityState={{ checked: myBetsOnly }}
           accessibilityLabel="Show only my bets"
-          className={`ml-3 items-center justify-center rounded-xl px-3 py-2.5 ${
-            myBetsOnly ? 'bg-primary' : 'border border-border bg-surface-light'
-          }`}
+          className="mt-3 flex-row items-center gap-2"
         >
+          {myBetsOnly ? (
+            <CheckSquare size={22} color={colors.primary} weight="fill" />
+          ) : (
+            <Square size={22} color={colors.textMuted} />
+          )}
           <Text
-            className={`text-sm font-bold ${myBetsOnly ? 'text-white' : 'text-text-secondary'}`}
+            className={`text-sm font-medium ${myBetsOnly ? 'text-white' : 'text-text-secondary'}`}
           >
-            Me
+            Show only my bets
           </Text>
         </TouchableOpacity>
       ) : null}
@@ -74,8 +79,17 @@ export function BetFeedStatusFilter({
 }
 
 export function betMatchesFilter(bet: BetWithProfiles, filter: BetFilter): boolean {
-  if (filter === 'all') return true;
   const effectiveStatus = getEffectiveBetStatus(bet);
+
+  if (filter === 'active') {
+    // All non-terminal bets: OPEN, MATCHED, PENDING_RESULT, DISPUTED
+    return (
+      effectiveStatus === 'OPEN' ||
+      effectiveStatus === 'PENDING_RESULT' ||
+      effectiveStatus === 'DISPUTED' ||
+      bet.status === 'MATCHED'
+    );
+  }
   if (filter === 'open') return effectiveStatus === 'OPEN';
   if (filter === 'matched') {
     // Includes bets that are matched/pending/disputed in DB,

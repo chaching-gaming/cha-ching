@@ -25,13 +25,7 @@ type Props = {
   donorBalance: number;
 };
 
-export function DonateChipsSheet({
-  visible,
-  onClose,
-  chipRequest,
-  roomId,
-  donorBalance,
-}: Props) {
+export function DonateChipsSheet({ visible, onClose, chipRequest, roomId, donorBalance }: Props) {
   const safeInsets = useSafeAreaInsets();
   const sheetRef = useRef<BottomSheetModal>(null);
   const donateChips = useDonateChips();
@@ -121,9 +115,9 @@ export function DonateChipsSheet({
     );
   }, [amountValid, balanceAfter, chipRequest.id, donateChips, parsedAmount, roomId]);
 
-  // On Android with fillParent keyboard behavior, use smaller padding since the sheet
-  // sits directly above the keyboard. On iOS, use safe area inset.
-  const bottomInset = Platform.OS === 'android' ? 16 : Math.max(safeInsets.bottom, 20);
+  // On Android, use safe area inset for navigation bar clearance.
+  // On iOS, use safe area inset as well.
+  const bottomInset = Math.max(safeInsets.bottom, 20);
 
   return (
     <BottomSheetModal

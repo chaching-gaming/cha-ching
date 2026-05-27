@@ -11,7 +11,7 @@ import {
   View,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { CaretRight, SignOut } from 'phosphor-react-native';
+import { CaretRight, SignOut, Trash } from 'phosphor-react-native';
 import * as ImagePicker from 'expo-image-picker';
 
 import { useProfile, useUpdateProfile } from '@/hooks/use-profile';
@@ -112,6 +112,7 @@ export default function ProfileScreen() {
   const [isEditing, setIsEditing] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const handleRefresh = useCallback(async () => {
     setIsRefreshing(true);
@@ -173,6 +174,56 @@ export default function ProfileScreen() {
   async function handleSignOut() {
     const { error } = await supabase.auth.signOut();
     if (error) Alert.alert('Error', error.message);
+  }
+
+  function handleDeleteAccount() {
+    Alert.alert(
+      'Delete Account',
+      'Are you sure you want to delete your account? This action is permanent and cannot be undone. All your data will be permanently removed.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: confirmDeleteAccount,
+        },
+      ]
+    );
+  }
+
+  async function confirmDeleteAccount() {
+    if (!session?.access_token) {
+      Alert.alert('Error', 'You must be logged in to delete your account');
+      return;
+    }
+
+    setIsDeleting(true);
+    try {
+      const response = await fetch(
+        `${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1/delete-account`,
+        {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to delete account');
+      }
+
+      // Sign out locally after successful deletion
+      await supabase.auth.signOut();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to delete account';
+      Alert.alert('Error', message);
+    } finally {
+      setIsDeleting(false);
+    }
   }
 
   if (isLoading) {
@@ -323,6 +374,28 @@ export default function ProfileScreen() {
             <SignOut size={20} color={colors.error} />
             <Text className="text-base font-semibold text-error">Sign Out</Text>
           </TouchableOpacity>
+        </View>
+
+        {/* Delete account */}
+        <View className="mt-4 px-5">
+          <TouchableOpacity
+            className="min-h-[44px] flex-row items-center justify-center gap-2 rounded-xl bg-error/10 px-6 py-3.5"
+            onPress={handleDeleteAccount}
+            activeOpacity={0.7}
+            disabled={isDeleting}
+          >
+            {isDeleting ? (
+              <ActivityIndicator size="small" color={colors.error} />
+            ) : (
+              <>
+                <Trash size={20} color={colors.error} />
+                <Text className="text-base font-semibold text-error">Delete Account</Text>
+              </>
+            )}
+          </TouchableOpacity>
+          <Text className="mt-2 text-center text-xs text-text-muted">
+            Permanently delete your account and all associated data
+          </Text>
         </View>
       </ScrollView>
     </View>

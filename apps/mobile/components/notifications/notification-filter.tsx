@@ -6,7 +6,7 @@ export type NotificationFilter = 'results' | 'activity';
 
 const OPTIONS: { key: NotificationFilter; label: string }[] = [
   { key: 'results', label: 'Results' },
-  { key: 'activity', label: 'Activity' },
+  { key: 'activity', label: 'My Activity' },
 ];
 
 // Notification types that represent bet outcomes (wins/losses)

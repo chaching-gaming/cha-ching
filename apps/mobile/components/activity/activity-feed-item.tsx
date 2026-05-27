@@ -242,7 +242,7 @@ function BetActivityCard({
   // Header section with question - tappable for navigation when canJoin
   const headerContent = (
     <>
-      <View className="mb-3 flex-row items-center justify-between gap-2">
+      <View className="mb-2 flex-row items-center justify-between gap-2">
         <Text
           className="shrink text-xs font-semibold uppercase tracking-widest text-text-muted"
           numberOfLines={1}
@@ -257,7 +257,7 @@ function BetActivityCard({
         />
       </View>
 
-      <Text className="text-lg font-bold leading-6 text-white" numberOfLines={4}>
+      <Text className="text-base font-bold leading-5 text-white" numberOfLines={2}>
         {bet.question}
       </Text>
     </>
@@ -265,7 +265,7 @@ function BetActivityCard({
 
   return (
     <View
-      className={`mb-3 rounded-2xl border border-border bg-surface px-4 py-3.5 ${dimmed ? 'opacity-60' : ''}`}
+      className={`mb-3 rounded-2xl border border-border bg-surface px-4 py-3 ${dimmed ? 'opacity-60' : ''}`}
     >
       {canJoin && onNavigate ? (
         <TouchableOpacity activeOpacity={0.7} onPress={onNavigate}>
@@ -291,7 +291,7 @@ function BetActivityCard({
       ) : null}
 
       {showSubmissionStatus ? (
-        <View className="mt-3 flex-row items-center gap-3 rounded-xl border border-border bg-surface-light px-3 py-2.5">
+        <View className="mt-2 flex-row items-center gap-3 rounded-xl border border-border bg-surface-light px-3 py-2">
           <View className="min-w-0 flex-1">
             <Text className="text-sm font-semibold text-white">
               {submittedCount}/{totalParticipants} submitted
@@ -306,7 +306,7 @@ function BetActivityCard({
       ) : null}
 
       {showWaitingForClose && isParticipant ? (
-        <View className="mt-3 flex-row items-center gap-3 rounded-xl border border-border bg-surface-light px-3 py-2.5">
+        <View className="mt-2 flex-row items-center gap-3 rounded-xl border border-border bg-surface-light px-3 py-2">
           <Timer size={20} color={colors.warning} weight="bold" />
           <Text className="flex-1 text-sm font-medium text-text-secondary">
             Waiting for bet to close before outcomes can be submitted
@@ -314,7 +314,7 @@ function BetActivityCard({
         </View>
       ) : null}
 
-      <View className="mt-3 flex-row flex-wrap items-center justify-between gap-x-3 gap-y-2">
+      <View className="mt-2 flex-row flex-wrap items-center justify-between gap-x-3 gap-y-2">
         <View className="flex-row items-center gap-1.5">
           <Coins size={20} color={colors.chipsIcon} weight="fill" />
           <Text className="text-base font-semibold text-white">
@@ -354,7 +354,7 @@ function BetActivityCard({
         ) : null}
       </View>
 
-      <Text className="mt-2 text-xs text-text-muted">{formatRelativeActivityTime(timestamp)}</Text>
+      <Text className="mt-1.5 text-xs text-text-muted">{formatRelativeActivityTime(timestamp)}</Text>
 
       {canJoin ? (
         <SwipeToConfirmButton
@@ -510,7 +510,7 @@ function PoolTally({
   const isSubject = !!currentUserId && !!subjectUserId && currentUserId === subjectUserId;
 
   return (
-    <View className="mt-3 flex-row items-stretch gap-2">
+    <View className="mt-2.5 flex-row items-stretch gap-2">
       {options.map((option, idx) => {
         const list = stakesByPick[option] ?? [];
         const tone = idx === 0 ? 'primary' : 'error';
@@ -572,18 +572,19 @@ function PoolSide({
   }, [onPress, option]);
 
   // Determine border and background based on state
+  // Winner state takes priority over disabled state (for settled bets)
   let borderClass: string;
   let bgClass: string;
 
-  if (isDisabled) {
+  if (isWinner) {
+    borderClass = 'border-primary';
+    bgClass = 'bg-primary/10';
+  } else if (isDisabled) {
     borderClass = 'border-border';
     bgClass = 'bg-surface-light opacity-40';
   } else if (isSelected) {
     borderClass = tone === 'primary' ? 'border-primary' : 'border-error';
     bgClass = tone === 'primary' ? 'bg-primary/15' : 'bg-error/15';
-  } else if (isWinner) {
-    borderClass = 'border-primary';
-    bgClass = 'bg-primary/10';
   } else if (canJoin) {
     // Tappable but not selected - show subtle hint
     borderClass = tone === 'primary' ? 'border-primary/50' : 'border-error/50';
@@ -593,11 +594,14 @@ function PoolSide({
     bgClass = 'bg-surface-light';
   }
 
-  const labelClass = isDisabled
-    ? 'text-text-muted'
-    : tone === 'primary'
-      ? 'text-primary'
-      : 'text-error';
+  // Winner shows primary color regardless of disabled state
+  const labelClass = isWinner
+    ? 'text-primary'
+    : isDisabled
+      ? 'text-text-muted'
+      : tone === 'primary'
+        ? 'text-primary'
+        : 'text-error';
 
   const content = (
     <>
@@ -608,12 +612,12 @@ function PoolSide({
         >
           {label}
         </Text>
-        {isDisabled ? (
+        {isWinner ? (
+          <Trophy size={14} color={colors.primary} weight="fill" />
+        ) : isDisabled ? (
           <Lock size={14} color={colors.textMuted} weight="bold" />
         ) : isSelected ? (
           <Check size={14} color={tone === 'primary' ? colors.primary : colors.error} weight="bold" />
-        ) : isWinner ? (
-          <Trophy size={14} color={colors.primary} weight="fill" />
         ) : null}
       </View>
       <Text className="mt-1 text-xs text-text-secondary">
@@ -634,7 +638,7 @@ function PoolSide({
       <TouchableOpacity
         onPress={handlePress}
         activeOpacity={0.7}
-        className={`min-w-0 flex-1 rounded-xl border-2 ${borderClass} ${bgClass} px-3 py-2.5`}
+        className={`min-w-0 flex-1 rounded-xl border-2 ${borderClass} ${bgClass} px-3 py-2`}
       >
         {content}
       </TouchableOpacity>
@@ -642,7 +646,7 @@ function PoolSide({
   }
 
   return (
-    <View className={`min-w-0 flex-1 rounded-xl border-2 ${borderClass} ${bgClass} px-3 py-2.5`}>
+    <View className={`min-w-0 flex-1 rounded-xl border-2 ${borderClass} ${bgClass} px-3 py-2`}>
       {content}
     </View>
   );

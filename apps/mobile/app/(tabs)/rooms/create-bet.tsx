@@ -146,7 +146,7 @@ export default function CreateBetScreen() {
       templateId: null as string | null,
       writeInOpen: false,
       writeInBody: '',
-      stake: '200',
+      stake: '100',
       expiryIndex: 0,
       offeredPick: '',
       isCustomExpiry: false,
