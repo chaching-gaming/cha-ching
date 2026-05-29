@@ -20,6 +20,7 @@ import { ArrowLeft, ArrowRight, Coins, PencilSimple, X } from 'phosphor-react-na
 import { z } from 'zod';
 
 import { colors } from '@/constants/colors';
+import { useAuth } from '@/providers/auth';
 import { Avatar } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { DiagonalOptionCard } from '@/components/form/diagonal-option-card';
@@ -116,6 +117,8 @@ export default function CreateBetScreen() {
   const { id: roomId } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const safeInsets = useSafeAreaInsets();
+  const { session } = useAuth();
+  const currentUserId = session?.user?.id;
   const { data: room, isLoading: roomLoading } = useRoomDetail(roomId);
   const { data: members, isLoading: membersLoading } = useRoomMembers(roomId);
   const { data: templates, isLoading: templatesLoading } = useQuestionTemplates('golf');
@@ -255,9 +258,17 @@ export default function CreateBetScreen() {
       }
     }
 
+    // Prevent betting against yourself
+    if (values.memberId && values.memberId === currentUserId) {
+      form.setErrorMap({
+        onSubmit: { fields: {}, form: "You can't bet against yourself on this question" },
+      });
+      return;
+    }
+
     form.setErrorMap({});
     setStep(2);
-  }, [form, templates]);
+  }, [form, templates, currentUserId]);
 
   const handlePrevStep = useCallback(() => {
     form.setErrorMap({});
@@ -481,6 +492,13 @@ export default function CreateBetScreen() {
                               }}
                             />
                           )}
+                          {memberId && memberId === currentUserId && (
+                            <View className="mt-2 rounded-xl bg-warning/15 px-3 py-2">
+                              <Text className="text-sm text-warning">
+                                You can't bet against yourself on this question
+                              </Text>
+                            </View>
+                          )}
                         </>
                       );
                     }}
@@ -700,6 +718,13 @@ export default function CreateBetScreen() {
                                 );
                               }}
                             />
+                          )}
+                          {memberId && memberId === currentUserId && (
+                            <View className="mt-2 rounded-xl bg-warning/15 px-3 py-2">
+                              <Text className="text-sm text-warning">
+                                You can't bet against yourself on this question
+                              </Text>
+                            </View>
                           )}
                         </>
                       );

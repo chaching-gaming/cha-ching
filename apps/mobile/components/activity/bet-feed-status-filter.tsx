@@ -82,10 +82,11 @@ export function betMatchesFilter(bet: BetWithProfiles, filter: BetFilter): boole
   const effectiveStatus = getEffectiveBetStatus(bet);
 
   if (filter === 'active') {
-    // All non-terminal bets: OPEN, MATCHED, PENDING_RESULT, DISPUTED
+    // All non-terminal bets: OPEN, MATCHED, PENDING_RESULT, PENDING_DISPUTE, DISPUTED
     return (
       effectiveStatus === 'OPEN' ||
       effectiveStatus === 'PENDING_RESULT' ||
+      bet.status === 'PENDING_DISPUTE' ||
       effectiveStatus === 'DISPUTED' ||
       bet.status === 'MATCHED'
     );
@@ -96,6 +97,7 @@ export function betMatchesFilter(bet: BetWithProfiles, filter: BetFilter): boole
     // or OPEN in DB but effectively PENDING_RESULT (matched + expired)
     return (
       effectiveStatus === 'PENDING_RESULT' ||
+      bet.status === 'PENDING_DISPUTE' ||
       effectiveStatus === 'DISPUTED' ||
       bet.status === 'MATCHED'
     );

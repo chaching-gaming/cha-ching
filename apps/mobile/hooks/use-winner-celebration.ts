@@ -3,6 +3,24 @@ import { useEffect, useRef, useState } from 'react';
 import type { ActivityItem, BetWithProfiles } from '@/hooks/use-activity-feed';
 import { useFeedback } from '@/providers/feedback';
 
+/**
+ * Global set of bet IDs that have been celebrated.
+ * Module-level to persist across component mounts/navigation.
+ * This prevents showing the same celebration twice when navigating
+ * between bet detail and room pages.
+ */
+const globalCelebratedBets = new Set<string>();
+
+/** Mark a bet as celebrated (called from any page that shows celebration) */
+export function markBetCelebrated(betId: string): void {
+  globalCelebratedBets.add(betId);
+}
+
+/** Check if a bet has already been celebrated */
+export function hasBetBeenCelebrated(betId: string): boolean {
+  return globalCelebratedBets.has(betId);
+}
+
 function didUserWin(bet: BetWithProfiles, userId: string | null): boolean {
   const outcomeKey = bet.outcome?.trim().toLowerCase() ?? '';
   if (!userId || !outcomeKey) return false;
@@ -69,7 +87,8 @@ export function useWinnerCelebration(
 
     const newlySettled: BetWithProfiles[] = [];
     for (const bet of settledBets) {
-      if (seenSettled.current.has(bet.id)) continue;
+      // Skip if already seen in this session OR already celebrated globally
+      if (seenSettled.current.has(bet.id) || globalCelebratedBets.has(bet.id)) continue;
       seenSettled.current.add(bet.id);
       newlySettled.push(bet);
     }
@@ -89,9 +108,11 @@ export function useWinnerCelebration(
     }
 
     if (winBet) {
+      globalCelebratedBets.add(winBet.id); // Mark globally to prevent duplicate celebrations
       setCelebratingBet(winBet);
       trigger('bet_won');
     } else if (lossBet) {
+      globalCelebratedBets.add(lossBet.id); // Mark globally even for losses
       trigger('bet_lost');
     }
   }, [items, currentUserId, isLoading, isFetchingNextPage, trigger]);

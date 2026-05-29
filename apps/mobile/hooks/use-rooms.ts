@@ -268,12 +268,14 @@ export function useCreateRoom() {
       p_name: string;
       p_session_date: string;
       p_starting_chips?: number;
+      p_outcome_submission_window_seconds?: number;
     }) => {
       const { data, error } = await supabase.rpc('create_room', {
         p_name: params.p_name,
         p_session_date: params.p_session_date,
         p_starting_chips: params.p_starting_chips ?? 1000,
-      });
+        p_outcome_submission_window_seconds: params.p_outcome_submission_window_seconds ?? 30,
+      } as Parameters<typeof supabase.rpc<'create_room'>>[1]);
       if (error) throw error;
       return data as unknown as Room;
     },
@@ -385,6 +387,26 @@ export function useLeaveRoom() {
       if (error) throw error;
     },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ROOMS_KEY });
+    },
+  });
+}
+
+export function useUpdateRoomSettings() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (params: {
+      p_room_id: string;
+      p_outcome_submission_window_seconds?: number;
+    }) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data, error } = await (supabase.rpc as any)('update_room_settings', params);
+      if (error) throw error;
+      return data as unknown as Room;
+    },
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: roomDetailKey(variables.p_room_id) });
       queryClient.invalidateQueries({ queryKey: ROOMS_KEY });
     },
   });

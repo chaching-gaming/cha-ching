@@ -32,8 +32,18 @@ import type {
   BetWithProfiles,
   ChipRequestWithProfile,
 } from '@/hooks/use-activity-feed';
-import { formatBetCountdown, formatRelativeActivityTime } from '@/lib/date-format';
-import { getEffectiveBetStatus } from '@/lib/effective-bet-status';
+import { formatBetCountdown, formatRelativeActivityTime, parseApiTimestamp } from '@/lib/date-format';
+import {
+  getEffectiveBetStatus,
+  getOutcomeWindowRemaining,
+  getDisputeWindowRemaining,
+  hasOutcomeWindowSet,
+  hasDisputeWindowSet,
+} from '@/lib/effective-bet-status';
+import {
+  useProcessOutcomeWindow,
+  useProcessDisputeWindow,
+} from '@/hooks/use-process-settlement-windows';
 
 function formatStakeChips(stake: number): string {
   return `${stake.toLocaleString('en-US')} chips`;
@@ -50,6 +60,8 @@ function getBetStatusPill(status: string | null | undefined): {
       return { label: 'MATCHED', variant: 'matched' };
     case 'PENDING_RESULT':
       return { label: 'AWAITING OUTCOMES', variant: 'attestor' };
+    case 'PENDING_DISPUTE':
+      return { label: 'CONFIRMING RESULT', variant: 'attestor' };
     case 'SETTLED':
       return { label: 'SETTLED', variant: 'default' };
     case 'EXPIRED':
@@ -75,6 +87,7 @@ function BetActivityCard({
   onSelectPick,
   onJoinSuccess,
   onNavigate,
+  outcomeSubmissionWindowSeconds = 30,
 }: {
   bet: BetWithProfiles;
   timestamp: string;
@@ -87,6 +100,7 @@ function BetActivityCard({
   onSelectPick?: (pick: string) => void;
   onJoinSuccess?: () => void;
   onNavigate?: () => void;
+  outcomeSubmissionWindowSeconds?: number;
 }) {
   const [tick, setTick] = useState(0);
   const [submitSheetOpen, setSubmitSheetOpen] = useState(false);
@@ -94,14 +108,19 @@ function BetActivityCard({
   const [voidSheetOpen, setVoidSheetOpen] = useState(false);
   const dbStatus = bet.status ?? '';
   const processExpiredBet = useProcessExpiredBet();
+  const processOutcomeWindow = useProcessOutcomeWindow();
+  const processDisputeWindow = useProcessDisputeWindow();
   const processedRef = useRef<string | null>(null);
+  const outcomeProcessedRef = useRef<string | null>(null);
+  const disputeProcessedRef = useRef<string | null>(null);
 
   // Auto-process expired bets immediately (eliminates 0-60s cron lag)
   // Handles client/server clock skew by retrying until server processes the bet
   useEffect(() => {
     if (!roomId) return;
     if (processExpiredBet.isPending) return;
-    if (dbStatus !== 'OPEN') return;
+    // Process both OPEN and MATCHED bets when they expire
+    if (dbStatus !== 'OPEN' && dbStatus !== 'MATCHED') return;
     if (!bet.expires_at) return;
 
     // Client-side expiry check
@@ -118,7 +137,7 @@ function BetActivityCard({
       { betId, roomId: roomIdValue },
       {
         onSuccess: (result) => {
-          if (result.status === 'OPEN') {
+          if (result.status === 'OPEN' || result.status === 'MATCHED') {
             // Server clock hasn't reached expiry yet - schedule retry
             setTimeout(() => {
               processedRef.current = null; // Allow retry on next render
@@ -133,12 +152,97 @@ function BetActivityCard({
     );
   }, [bet.id, bet.expires_at, dbStatus, roomId, processExpiredBet]);
 
+  // Auto-process outcome window when it expires (eliminates cron delay)
+  useEffect(() => {
+    if (!roomId) return;
+    if (processOutcomeWindow.isPending) return;
+    if (dbStatus !== 'PENDING_RESULT') return;
+    if (outcomeProcessedRef.current === bet.id) return;
+
+    // CRITICAL: Only process if outcome_window_ends_at is set and expired
+    // If NULL, the server hasn't set it yet - let the cron handle it
+    if (!bet.outcome_window_ends_at) return;
+
+    const remaining = getOutcomeWindowRemaining(bet, outcomeSubmissionWindowSeconds);
+    if (remaining > 0) return; // Window still open
+
+    console.log('[ActivityFeed] Processing outcome window for bet:', bet.id);
+    outcomeProcessedRef.current = bet.id;
+    processOutcomeWindow.mutate(
+      { p_bet_id: bet.id, roomId },
+      {
+        onSuccess: (result) => {
+          console.log('[ActivityFeed] process_outcome_window result:', result);
+        },
+        onError: (error) => {
+          console.error('[ActivityFeed] process_outcome_window error:', error);
+          outcomeProcessedRef.current = null;
+        },
+      },
+    );
+  }, [bet.id, bet.outcome_window_ends_at, dbStatus, roomId, processOutcomeWindow.isPending, tick, outcomeSubmissionWindowSeconds]);
+
+  // Auto-process dispute window when it expires (eliminates cron delay)
+  useEffect(() => {
+    if (!roomId) return;
+    if (processDisputeWindow.isPending) return;
+    if (dbStatus !== 'PENDING_DISPUTE') return;
+
+    // IMPORTANT: Only process if dispute_window_ends_at is set and expired
+    // If it's null, the server hasn't set it yet - wait for refetch
+    if (!bet.dispute_window_ends_at) return;
+
+    // Don't call RPC again if already processed
+    if (disputeProcessedRef.current === bet.id) return;
+
+    const remaining = getDisputeWindowRemaining(bet);
+    if (remaining > 0) return; // Window still open
+
+    const betId = bet.id;
+    const roomIdValue = roomId;
+
+    disputeProcessedRef.current = betId; // Mark before calling to prevent duplicate calls
+    processDisputeWindow.mutate(
+      { p_bet_id: betId, roomId: roomIdValue },
+      {
+        onError: () => {
+          disputeProcessedRef.current = null; // Allow retry on error
+        },
+      },
+    );
+  }, [bet.id, bet.dispute_window_ends_at, dbStatus, roomId, processDisputeWindow.isPending, tick]);
+
   // Get template for contextual labels
   const { data: templates } = useQuestionTemplates('golf');
   const betTemplate = useMemo(() => {
     if (!bet.template_id || !templates) return null;
     return templates.find((t) => t.id === bet.template_id) ?? null;
   }, [bet.template_id, templates]);
+
+  // Debug logging for outcome timer issues
+  useEffect(() => {
+    if (!bet.expires_at) return;
+    const expiresAt = parseApiTimestamp(bet.expires_at);
+    if (!expiresAt) return;
+    const now = new Date();
+    const isExpired = expiresAt <= now;
+    const stakesCount = bet.stakes?.length ?? 0;
+    const distinctPicks = new Set((bet.stakes ?? []).map((s) => s.pick.trim().toLowerCase())).size;
+
+    if (isExpired && dbStatus === 'MATCHED') {
+      console.log('[OutcomeTimer Debug]', {
+        betId: bet.id,
+        dbStatus,
+        isExpired,
+        stakesCount,
+        distinctPicks,
+        effectiveStatus: distinctPicks >= 2 ? 'PENDING_RESULT' : 'EXPIRED',
+        expiresAt: expiresAt.toISOString(),
+        now: now.toISOString(),
+        outcomeWindowEndsAt: bet.outcome_window_ends_at,
+      });
+    }
+  }, [bet.id, bet.expires_at, bet.stakes, bet.outcome_window_ends_at, dbStatus, tick]);
 
   const getDisplayLabel = useCallback(
     (rawOption: string): string => {
@@ -151,11 +255,23 @@ function BetActivityCard({
     [betTemplate]
   );
 
+  // Tick every second for countdowns (OPEN, MATCHED, PENDING_RESULT, PENDING_DISPUTE)
+  // MATCHED bets need ticking so the outcome timer shows immediately when expires_at passes
   useEffect(() => {
-    if (dbStatus !== 'OPEN' || !bet.expires_at) return;
+    const needsTick =
+      (dbStatus === 'OPEN' && bet.expires_at) ||
+      (dbStatus === 'MATCHED' && bet.expires_at) ||
+      dbStatus === 'PENDING_RESULT' ||
+      dbStatus === 'PENDING_DISPUTE';
+
+    if (dbStatus === 'MATCHED' && bet.expires_at) {
+      console.log('[Tick Effect] Starting tick for MATCHED bet:', bet.id, { needsTick, dbStatus, expiresAt: bet.expires_at });
+    }
+
+    if (!needsTick) return;
     const id = setInterval(() => setTick((t) => t + 1), 1000);
     return () => clearInterval(id);
-  }, [dbStatus, bet.expires_at]);
+  }, [dbStatus, bet.expires_at, bet.id]);
 
   void tick;
 
@@ -180,8 +296,61 @@ function BetActivityCard({
   const subjectName = bet.subject_profile?.display_name ?? null;
   const offererName = bet.offered_by_profile?.display_name ?? 'Someone';
 
+  // Check if bet has actually expired (expires_at <= now)
+  // Use parseApiTimestamp to handle timestamps without timezone (treats as UTC)
+  const hasBetExpired = useMemo(() => {
+    if (!bet.expires_at) return false;
+    const expiresAt = parseApiTimestamp(bet.expires_at);
+    if (!expiresAt) return false;
+    return expiresAt <= new Date();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bet.expires_at, tick]);
+
+  // Show countdown for OPEN and MATCHED bets that haven't expired yet
+  // (MATCHED means someone joined but not all members, so still waiting for expiry)
   const countdown =
-    effectiveStatus === 'OPEN' ? formatBetCountdown(bet.expires_at, new Date()) : null;
+    (effectiveStatus === 'OPEN' || effectiveStatus === 'MATCHED') && !hasBetExpired
+      ? formatBetCountdown(bet.expires_at, new Date())
+      : null;
+
+  // Debug: Log ALL status changes and countdown state
+  useEffect(() => {
+    console.log('[Bet Status Debug]', {
+      betId: bet.id,
+      dbStatus,
+      effectiveStatus,
+      hasBetExpired,
+      countdown: countdown ?? 'NULL',
+      expiresAt: bet.expires_at,
+      stakesCount: bet.stakes?.length ?? 0,
+      distinctPicks: new Set((bet.stakes ?? []).map((s) => s.pick.trim().toLowerCase())).size,
+    });
+  }, [bet.id, dbStatus, effectiveStatus, hasBetExpired, countdown, bet.expires_at, bet.stakes]);
+
+  // Outcome window countdown for PENDING_RESULT status (or expired MATCHED that is effectively PENDING_RESULT)
+  // Only show once bet has actually expired (not when processed early by server)
+  const outcomeWindowRemaining = effectiveStatus === 'PENDING_RESULT' && hasBetExpired ? getOutcomeWindowRemaining(bet, outcomeSubmissionWindowSeconds) : 0;
+
+  // Debug: Log when timer SHOULD show but doesn't render with expected value
+  useEffect(() => {
+    if (effectiveStatus === 'PENDING_RESULT' && hasBetExpired) {
+      const remaining = getOutcomeWindowRemaining(bet, outcomeSubmissionWindowSeconds);
+      console.log('[OutcomeTimer Render]', {
+        betId: bet.id,
+        effectiveStatus,
+        hasBetExpired,
+        remaining,
+        outcomeSubmissionWindowSeconds,
+        hasOutcomeWindow: hasOutcomeWindowSet(bet),
+        dbStatus,
+        expiresAt: bet.expires_at,
+        outcomeWindowEndsAt: bet.outcome_window_ends_at,
+      });
+    }
+  }, [bet.id, effectiveStatus, hasBetExpired, bet, outcomeSubmissionWindowSeconds, dbStatus, tick]);
+
+  // Dispute window countdown for PENDING_DISPUTE status
+  const disputeWindowRemaining = dbStatus === 'PENDING_DISPUTE' ? getDisputeWindowRemaining(bet) : 0;
 
   // Winners = stakes whose pick matches bet.outcome. Per-winner payout is the
   // pool split evenly (integer division; remainder truncated server-side too).
@@ -219,15 +388,24 @@ function BetActivityCard({
   const isParticipant = !!currentUserId && stakes.some((s) => s.user_id === currentUserId);
 
   // Only allow outcome submission when PENDING_RESULT (after expiry) - use effectiveStatus for immediate detection
+  // Check if window has expired (using client-side calculation if outcome_window_ends_at not set)
+  const outcomeWindowExpired =
+    hasOutcomeWindowSet(bet) && getOutcomeWindowRemaining(bet, outcomeSubmissionWindowSeconds) <= 0;
   const canSubmitOutcome =
-    !!roomActive && !!roomId && isParticipant && !mySubmission && effectiveStatus === 'PENDING_RESULT';
+    !!roomActive &&
+    !!roomId &&
+    isParticipant &&
+    !mySubmission &&
+    effectiveStatus === 'PENDING_RESULT' &&
+    !outcomeWindowExpired;
 
-  // Allow resolve for DISPUTED bets always, or PENDING_RESULT when ALL participants have submitted
+  // Allow resolve only for DISPUTED bets (attestor/admin manual resolution)
+  // PENDING_RESULT and PENDING_DISPUTE are handled automatically by timed windows
   const allSubmitted = totalParticipants > 0 && submittedCount === totalParticipants;
   const canResolve =
     !!roomId &&
     (currentUserRole === 'ATTESTOR' || currentUserRole === 'ADMIN') &&
-    (dbStatus === 'DISPUTED' || (effectiveStatus === 'PENDING_RESULT' && allSubmitted));
+    dbStatus === 'DISPUTED';
 
   const canVoid = !!roomId && currentUserRole === 'ADMIN' && dbStatus !== 'VOID';
 
@@ -305,6 +483,22 @@ function BetActivityCard({
         </View>
       ) : null}
 
+      {dbStatus === 'PENDING_DISPUTE' && bet.preliminary_outcome ? (
+        <View className="mt-2 flex-row items-center gap-3 rounded-xl border border-primary/30 bg-primary/10 px-3 py-2">
+          <Trophy size={20} color={colors.primary} weight="fill" />
+          <View className="min-w-0 flex-1">
+            <Text className="text-sm font-semibold text-primary">
+              Result: {getDisplayLabel(bet.preliminary_outcome)}
+            </Text>
+            {hasDisputeWindowSet(bet) && getDisputeWindowRemaining(bet) > 0 ? (
+              <Text className="mt-0.5 text-xs text-text-secondary">
+                {getDisputeWindowRemaining(bet)}s to dispute
+              </Text>
+            ) : null}
+          </View>
+        </View>
+      ) : null}
+
       {showWaitingForClose && isParticipant ? (
         <View className="mt-2 flex-row items-center gap-3 rounded-xl border border-border bg-surface-light px-3 py-2">
           <Timer size={20} color={colors.warning} weight="bold" />
@@ -314,47 +508,65 @@ function BetActivityCard({
         </View>
       ) : null}
 
-      <View className="mt-2 flex-row flex-wrap items-center justify-between gap-x-3 gap-y-2">
-        <View className="flex-row items-center gap-1.5">
-          <Coins size={20} color={colors.chipsIcon} weight="fill" />
-          <Text className="text-base font-semibold text-white">
-            {formatStakeChips(bet.stake)} · pool {pool.toLocaleString('en-US')}
-          </Text>
-        </View>
-
+      <View className="mt-2 flex-row flex-wrap items-center gap-x-2 gap-y-1">
+        <Coins size={16} color={colors.chipsIcon} weight="fill" />
+        <Text className="text-sm font-medium text-text-secondary">
+          {bet.stake} chips · pool {pool}
+        </Text>
         {countdown ? (
-          <View className="flex-row items-center gap-1.5">
-            <Timer size={18} color={colors.warning} weight="bold" />
+          <>
+            <Timer size={14} color={colors.warning} weight="bold" />
             <Text className="text-sm font-semibold text-warning">{countdown}</Text>
-          </View>
+          </>
         ) : null}
-
+        {effectiveStatus === 'PENDING_RESULT' && hasBetExpired ? (
+          <>
+            <Timer size={14} color={colors.primary} weight="bold" />
+            <Text className="text-sm font-semibold text-primary">
+              {!hasOutcomeWindowSet(bet)
+                ? 'Waiting...'
+                : outcomeWindowRemaining > 0
+                  ? `${outcomeWindowRemaining}s to submit`
+                  : 'Processing...'}
+            </Text>
+          </>
+        ) : null}
+        {dbStatus === 'PENDING_DISPUTE' ? (
+          <>
+            <Timer size={14} color={colors.warning} weight="bold" />
+            <Text className="text-sm font-semibold text-warning">
+              {!hasDisputeWindowSet(bet)
+                ? 'Waiting...'
+                : disputeWindowRemaining > 0
+                  ? `${disputeWindowRemaining}s to dispute`
+                  : 'Confirming...'}
+            </Text>
+          </>
+        ) : null}
         {dbStatus === 'SETTLED' && bet.outcome ? (
-          <View className="flex-row items-center gap-1.5">
-            <Trophy size={18} color={colors.primary} weight="fill" />
+          <>
+            <Trophy size={14} color={colors.primary} weight="fill" />
             <Text className="text-sm font-semibold text-primary">
               {getDisplayLabel(bet.outcome).toUpperCase()}
-              {perWinnerPayout > 0
-                ? ` · +${perWinnerPayout.toLocaleString('en-US')}${
-                    winningStakes.length > 1 ? ' each' : ''
-                  }`
-                : ''}
-              {currentUserWon ? ' · you won' : ''}
+              {perWinnerPayout > 0 ? ` +${perWinnerPayout}` : ''}
+              {currentUserWon ? ' · won' : ''}
             </Text>
-          </View>
+          </>
         ) : null}
-
-        {dbStatus === 'VOID' ? <VoidFooter voidLog={bet.void_logs?.[0] ?? null} /> : null}
-
+        {dbStatus === 'VOID' ? (
+          <>
+            <Warning size={14} color={colors.textMuted} weight="fill" />
+            <Text className="text-sm text-text-muted">Voided</Text>
+          </>
+        ) : null}
         {dbStatus === 'DISPUTED' ? (
-          <View className="flex-row items-center gap-1.5">
-            <Warning size={18} color={colors.warning} weight="fill" />
-            <Text className="text-sm font-semibold text-warning">Needs review</Text>
-          </View>
+          <>
+            <Warning size={14} color={colors.warning} weight="fill" />
+            <Text className="text-sm font-semibold text-warning">Disputed</Text>
+          </>
         ) : null}
+        <Text className="text-xs text-text-muted">· {formatRelativeActivityTime(timestamp)}</Text>
       </View>
-
-      <Text className="mt-1.5 text-xs text-text-muted">{formatRelativeActivityTime(timestamp)}</Text>
 
       {canJoin ? (
         <SwipeToConfirmButton
@@ -419,6 +631,8 @@ function BetActivityCard({
           onClose={() => setDisputeSheetOpen(false)}
           bet={bet}
           roomId={roomId}
+          positiveLabel={betTemplate?.positive_label}
+          negativeLabel={betTemplate?.negative_label}
         />
       ) : null}
 
@@ -691,6 +905,8 @@ interface ActivityFeedItemProps {
   roomId?: string;
   /** Current user's balance — forwarded to the donate sheet for validation. */
   currentUserBalance?: number;
+  /** Room's outcome submission window in seconds — for countdown calculation. */
+  outcomeSubmissionWindowSeconds?: number;
 }
 
 export function ActivityFeedItem({
@@ -700,6 +916,7 @@ export function ActivityFeedItem({
   roomActive,
   roomId,
   currentUserBalance,
+  outcomeSubmissionWindowSeconds,
 }: ActivityFeedItemProps) {
   if (item.type === 'bet') {
     return (
@@ -709,6 +926,7 @@ export function ActivityFeedItem({
         currentUserRole={currentUserRole}
         roomActive={roomActive}
         roomId={roomId}
+        outcomeSubmissionWindowSeconds={outcomeSubmissionWindowSeconds}
       />
     );
   }
@@ -731,12 +949,14 @@ function BetActivityFeedItem({
   currentUserRole,
   roomActive,
   roomId,
+  outcomeSubmissionWindowSeconds,
 }: {
   item: Extract<ActivityItem, { type: 'bet' }>;
   currentUserId?: string | null;
   currentUserRole?: 'PLAYER' | 'ATTESTOR' | 'ADMIN' | string | null;
   roomActive?: boolean;
   roomId?: string;
+  outcomeSubmissionWindowSeconds?: number;
 }) {
   const router = useRouter();
   const [selectedPick, setSelectedPick] = useState<string | null>(null);
@@ -779,6 +999,7 @@ function BetActivityFeedItem({
         onSelectPick={handleSelectPick}
         onJoinSuccess={handleJoinSuccess}
         onNavigate={handleBetPress}
+        outcomeSubmissionWindowSeconds={outcomeSubmissionWindowSeconds}
       />
     );
   }
@@ -792,6 +1013,7 @@ function BetActivityFeedItem({
         currentUserRole={currentUserRole}
         roomActive={roomActive}
         roomId={roomId}
+        outcomeSubmissionWindowSeconds={outcomeSubmissionWindowSeconds}
       />
     </TouchableOpacity>
   );

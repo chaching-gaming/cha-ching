@@ -2,9 +2,14 @@ import { useCallback, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Keyboard,
+  Modal,
+  Platform,
   ScrollView,
   Text,
+  TextInput,
   TouchableOpacity,
+  TouchableWithoutFeedback,
   View,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -35,6 +40,7 @@ import {
   useRoomDetail,
   useRoomMembers,
   useUpdateMemberRole,
+  useUpdateRoomSettings,
 } from '@/hooks/use-rooms';
 
 type MemberRole = 'PLAYER' | 'ATTESTOR' | 'ADMIN';
@@ -156,12 +162,15 @@ export default function RoomSettingsScreen() {
   const updateMemberRole = useUpdateMemberRole();
   const removeMember = useRemoveMember();
   const leaveRoom = useLeaveRoom();
+  const updateRoomSettings = useUpdateRoomSettings();
 
   const currentMember = members?.find((m) => m.user_id === authSession?.user.id);
   const isAdmin = currentMember?.role === 'ADMIN';
   const isActive = room?.is_active ?? false;
 
   const [roleSheetTarget, setRoleSheetTarget] = useState<RoleSheetTarget | null>(null);
+  const [outcomeTimeoutModalVisible, setOutcomeTimeoutModalVisible] = useState(false);
+  const [outcomeTimeoutInput, setOutcomeTimeoutInput] = useState('');
 
   const handleCopyInviteCode = useCallback(async () => {
     if (!room?.invite_code) return;
@@ -293,6 +302,65 @@ export default function RoomSettingsScreen() {
     );
   }, [id, leaveRoom, router]);
 
+  const handleChangeOutcomeTimeout = useCallback(() => {
+    const currentValue = room?.outcome_submission_window_seconds ?? 30;
+
+    if (Platform.OS === 'ios') {
+      // iOS supports Alert.prompt
+      Alert.prompt(
+        'Outcome Timeout',
+        'Enter the time (in seconds) participants have to submit their outcome after a bet expires. (10-300)',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Save',
+            onPress: async (value: string | undefined) => {
+              const seconds = parseInt(value ?? '', 10);
+              if (isNaN(seconds) || seconds < 10 || seconds > 300) {
+                Alert.alert('Invalid value', 'Please enter a number between 10 and 300.');
+                return;
+              }
+              try {
+                await updateRoomSettings.mutateAsync({
+                  p_room_id: id,
+                  p_outcome_submission_window_seconds: seconds,
+                });
+                Alert.alert('Saved', 'Outcome timeout updated successfully.');
+              } catch (err) {
+                Alert.alert('Error', getRpcErrorMessage(err));
+              }
+            },
+          },
+        ],
+        'plain-text',
+        String(currentValue),
+        'number-pad',
+      );
+    } else {
+      // Android: use custom modal
+      setOutcomeTimeoutInput(String(currentValue));
+      setOutcomeTimeoutModalVisible(true);
+    }
+  }, [id, room, updateRoomSettings]);
+
+  const handleSaveOutcomeTimeout = useCallback(async () => {
+    const seconds = parseInt(outcomeTimeoutInput, 10);
+    if (isNaN(seconds) || seconds < 10 || seconds > 300) {
+      Alert.alert('Invalid value', 'Please enter a number between 10 and 300.');
+      return;
+    }
+    try {
+      await updateRoomSettings.mutateAsync({
+        p_room_id: id,
+        p_outcome_submission_window_seconds: seconds,
+      });
+      setOutcomeTimeoutModalVisible(false);
+      Alert.alert('Saved', 'Outcome timeout updated successfully.');
+    } catch (err) {
+      Alert.alert('Error', getRpcErrorMessage(err));
+    }
+  }, [id, outcomeTimeoutInput, updateRoomSettings]);
+
   if (roomLoading) {
     return (
       <View className="flex-1 items-center justify-center bg-background">
@@ -310,6 +378,7 @@ export default function RoomSettingsScreen() {
   }
 
   const startingChipsValue = (room.starting_chips ?? 1000).toLocaleString('en-US');
+  const outcomeTimeoutValue = `${room.outcome_submission_window_seconds ?? 30}s`;
 
   return (
     <View className="flex-1 bg-background">
@@ -322,6 +391,11 @@ export default function RoomSettingsScreen() {
           <View className="overflow-hidden rounded-2xl border border-border bg-surface">
             <SettingsRow label="Room Name" value={room.name} />
             <SettingsRow label="Starting Chips" value={startingChipsValue} />
+            <SettingsRow
+              label="Outcome Timeout"
+              value={outcomeTimeoutValue}
+              onPress={isAdmin && isActive ? handleChangeOutcomeTimeout : undefined}
+            />
             <SettingsRow
               label="Invite Code"
               value={room.invite_code ?? '—'}
@@ -436,6 +510,49 @@ export default function RoomSettingsScreen() {
         options={roleOptions}
         selectedKey={roleSheetTarget?.currentRole}
       />
+
+      {/* Android-only: Custom modal for outcome timeout input */}
+      <Modal
+        visible={outcomeTimeoutModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setOutcomeTimeoutModalVisible(false)}
+      >
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+          <View className="flex-1 items-center justify-center bg-black/60 px-6">
+            <View className="w-full max-w-sm rounded-2xl bg-surface p-5">
+              <Text className="text-lg font-bold text-white">Outcome Timeout</Text>
+              <Text className="mt-2 text-sm text-text-secondary">
+                Enter the time (in seconds) participants have to submit their outcome after a bet
+                expires. (10-300)
+              </Text>
+              <TextInput
+                className="mt-4 rounded-xl border border-border bg-background px-4 py-3 text-base text-white"
+                value={outcomeTimeoutInput}
+                onChangeText={setOutcomeTimeoutInput}
+                keyboardType="number-pad"
+                placeholder="30"
+                placeholderTextColor={colors.textMuted}
+                autoFocus
+              />
+              <View className="mt-4 flex-row justify-end gap-3">
+                <TouchableOpacity
+                  onPress={() => setOutcomeTimeoutModalVisible(false)}
+                  className="rounded-xl px-4 py-2.5"
+                >
+                  <Text className="text-base font-semibold text-text-secondary">Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={handleSaveOutcomeTimeout}
+                  className="rounded-xl bg-primary px-4 py-2.5"
+                >
+                  <Text className="text-base font-semibold text-white">Save</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </TouchableWithoutFeedback>
+      </Modal>
     </View>
   );
 }

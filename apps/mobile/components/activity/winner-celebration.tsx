@@ -66,7 +66,7 @@ function WinnerContent({
         ))}
       </View>
 
-      <View className="items-center gap-4 px-8">
+      <View className="items-center gap-4 px-8" onStartShouldSetResponder={() => true}>
         <Text className="text-sm font-bold tracking-[4px] text-primary">WINNER</Text>
 
         <View className="relative">
