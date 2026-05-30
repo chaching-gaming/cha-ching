@@ -307,6 +307,57 @@ export function useRealtimeRoomsList() {
   }, [currentUserId, queryClient, roomIdsKey]);
 }
 
+/**
+ * Realtime subscription for history rooms to detect room status changes.
+ * This ensures the Rejoin button hides when a room session ends after a user has left.
+ */
+export function useRealtimeHistoryRooms() {
+  const queryClient = useQueryClient();
+  const { session } = useAuth();
+  const currentUserId = session?.user.id;
+  const { data: historyRooms } = useRooms('history');
+
+  const invalidatorRef = useRef<ReturnType<typeof createDebouncedInvalidator> | null>(null);
+  if (!invalidatorRef.current) {
+    invalidatorRef.current = createDebouncedInvalidator(queryClient);
+  }
+  const invalidate = invalidatorRef.current;
+
+  // Get room IDs from history rooms (only active ones where rejoin is possible)
+  const activeHistoryRoomIds =
+    historyRooms?.filter((r) => r.room.is_active).map((r) => r.room.id) ?? [];
+  const roomIdsKey = activeHistoryRoomIds.join(',');
+
+  useEffect(() => {
+    if (!currentUserId || activeHistoryRoomIds.length === 0) return;
+
+    const token = realtimeTopicToken();
+
+    // Subscribe to rooms table changes for active history rooms
+    const roomChannels = activeHistoryRoomIds.map((roomId) =>
+      supabase
+        .channel(`cc-history-rooms:${roomId}:${token}`)
+        .on(
+          'postgres_changes',
+          {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'rooms',
+            filter: `id=eq.${roomId}`,
+          },
+          () => {
+            invalidate(roomsKey('history'));
+          }
+        )
+        .subscribe()
+    );
+
+    return () => {
+      roomChannels.forEach((ch) => void supabase.removeChannel(ch));
+    };
+  }, [currentUserId, roomIdsKey]);
+}
+
 export function useRoomDetail(roomId: string) {
   const { session } = useAuth();
 

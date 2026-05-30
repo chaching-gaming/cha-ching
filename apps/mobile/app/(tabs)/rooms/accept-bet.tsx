@@ -112,7 +112,7 @@ export default function AcceptBetScreen() {
 
   return (
     <View className="flex-1 bg-background">
-      <ScreenHeader title="Join Bet" showBack />
+      <ScreenHeader title="Join Bet" showBack showHome />
 
       <View className="flex-1 items-center px-6 pt-6">
         {/* Subject is the hero — the player the bet is about. */}

@@ -44,6 +44,7 @@ import {
   useProcessOutcomeWindow,
   useProcessDisputeWindow,
 } from '@/hooks/use-process-settlement-windows';
+import { useServerTimeTick } from '@/providers/time';
 
 function formatStakeChips(stake: number): string {
   return `${stake.toLocaleString('en-US')} chips`;
@@ -102,7 +103,7 @@ function BetActivityCard({
   onNavigate?: () => void;
   outcomeSubmissionWindowSeconds?: number;
 }) {
-  const [tick, setTick] = useState(0);
+  const serverNow = useServerTimeTick();
   const [submitSheetOpen, setSubmitSheetOpen] = useState(false);
   const [disputeSheetOpen, setDisputeSheetOpen] = useState(false);
   const [voidSheetOpen, setVoidSheetOpen] = useState(false);
@@ -123,9 +124,9 @@ function BetActivityCard({
     if (dbStatus !== 'OPEN' && dbStatus !== 'MATCHED') return;
     if (!bet.expires_at) return;
 
-    // Client-side expiry check
+    // Client-side expiry check using server-synced time
     const expiresAt = new Date(bet.expires_at);
-    if (expiresAt > new Date()) return;
+    if (expiresAt > serverNow) return;
 
     // Don't call RPC again if we're already waiting for retry
     if (processedRef.current === bet.id) return;
@@ -150,7 +151,7 @@ function BetActivityCard({
         },
       }
     );
-  }, [bet.id, bet.expires_at, dbStatus, roomId, processExpiredBet]);
+  }, [bet.id, bet.expires_at, dbStatus, roomId, processExpiredBet, serverNow]);
 
   // Auto-process outcome window when it expires (eliminates cron delay)
   useEffect(() => {
@@ -175,7 +176,7 @@ function BetActivityCard({
         },
       },
     );
-  }, [bet.id, bet.outcome_window_ends_at, dbStatus, roomId, processOutcomeWindow.isPending, tick, outcomeSubmissionWindowSeconds]);
+  }, [bet.id, bet.outcome_window_ends_at, dbStatus, roomId, processOutcomeWindow.isPending, serverNow, outcomeSubmissionWindowSeconds]);
 
   // Auto-process dispute window when it expires (eliminates cron delay)
   useEffect(() => {
@@ -205,7 +206,7 @@ function BetActivityCard({
         },
       },
     );
-  }, [bet.id, bet.dispute_window_ends_at, dbStatus, roomId, processDisputeWindow.isPending, tick]);
+  }, [bet.id, bet.dispute_window_ends_at, dbStatus, roomId, processDisputeWindow.isPending, serverNow]);
 
   // Get template for contextual labels
   const { data: templates } = useQuestionTemplates('golf');
@@ -225,26 +226,10 @@ function BetActivityCard({
     [betTemplate]
   );
 
-  // Tick every second for countdowns (OPEN, MATCHED, PENDING_RESULT, PENDING_DISPUTE)
-  // MATCHED bets need ticking so the outcome timer shows immediately when expires_at passes
-  useEffect(() => {
-    const needsTick =
-      (dbStatus === 'OPEN' && bet.expires_at) ||
-      (dbStatus === 'MATCHED' && bet.expires_at) ||
-      dbStatus === 'PENDING_RESULT' ||
-      dbStatus === 'PENDING_DISPUTE';
-
-    if (!needsTick) return;
-    const id = setInterval(() => setTick((t) => t + 1), 1000);
-    return () => clearInterval(id);
-  }, [dbStatus, bet.expires_at, bet.id]);
-
-  void tick;
 
   const effectiveStatus = useMemo(
-    () => getEffectiveBetStatus(bet, new Date()),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [bet, tick],
+    () => getEffectiveBetStatus(bet, serverNow),
+    [bet, serverNow],
   );
 
   const options = useMemo(() => {
@@ -268,15 +253,14 @@ function BetActivityCard({
     if (!bet.expires_at) return false;
     const expiresAt = parseApiTimestamp(bet.expires_at);
     if (!expiresAt) return false;
-    return expiresAt <= new Date();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [bet.expires_at, tick]);
+    return expiresAt <= serverNow;
+  }, [bet.expires_at, serverNow]);
 
   // Show countdown for OPEN and MATCHED bets that haven't expired yet
   // (MATCHED means someone joined but not all members, so still waiting for expiry)
   const countdown =
     (effectiveStatus === 'OPEN' || effectiveStatus === 'MATCHED') && !hasBetExpired
-      ? formatBetCountdown(bet.expires_at, new Date())
+      ? formatBetCountdown(bet.expires_at, serverNow)
       : null;
 
   // Outcome window countdown for PENDING_RESULT status (or expired MATCHED that is effectively PENDING_RESULT)
@@ -901,7 +885,7 @@ function BetActivityFeedItem({
     roomActive &&
     !!roomId &&
     !!currentUserId &&
-    item.bet.status === 'OPEN' &&
+    (item.bet.status === 'OPEN' || item.bet.status === 'MATCHED') &&
     !alreadyStaked &&
     getEffectiveBetStatus(item.bet) !== 'EXPIRED';
 

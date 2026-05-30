@@ -4,20 +4,23 @@ import { AuthProvider } from './auth';
 import { FeedbackProvider } from './feedback';
 import { NotificationProvider } from './notifications';
 import { PreferencesProvider } from './preferences';
+import { TimeProvider } from './time';
 import { ToastProvider } from './toast';
 
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <PreferencesProvider>
-          <NotificationProvider>
-            <FeedbackProvider>
-              <ToastProvider>{children}</ToastProvider>
-            </FeedbackProvider>
-          </NotificationProvider>
-        </PreferencesProvider>
-      </AuthProvider>
+      <TimeProvider>
+        <AuthProvider>
+          <PreferencesProvider>
+            <NotificationProvider>
+              <FeedbackProvider>
+                <ToastProvider>{children}</ToastProvider>
+              </FeedbackProvider>
+            </NotificationProvider>
+          </PreferencesProvider>
+        </AuthProvider>
+      </TimeProvider>
     </QueryClientProvider>
   );
 }

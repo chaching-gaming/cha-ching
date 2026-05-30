@@ -146,6 +146,7 @@ export default function LedgerScreen() {
           title="Wager Ledger"
           subtitle={room.name}
           showBack
+          showHome
           backIconSize={28}
         />
         <View className="flex-1 items-center justify-center px-5">

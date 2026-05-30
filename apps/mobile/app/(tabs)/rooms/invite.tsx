@@ -56,7 +56,7 @@ export default function InviteScreen() {
 
   return (
     <View className="flex-1 bg-background">
-      <ScreenHeader title="Invite Friends" showBack />
+      <ScreenHeader title="Invite Friends" showBack showHome />
 
       <View className="flex-1 items-center px-5 pt-4">
         {/* Room name & member count */}

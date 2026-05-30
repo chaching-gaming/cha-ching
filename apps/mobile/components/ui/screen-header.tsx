@@ -1,6 +1,6 @@
 import { Text, TouchableOpacity, View } from 'react-native';
 import { useRouter } from 'expo-router';
-import { CaretLeft } from 'phosphor-react-native';
+import { CaretLeft, House } from 'phosphor-react-native';
 import * as Haptics from 'expo-haptics';
 
 import { colors } from '@/constants/colors';
@@ -10,6 +10,8 @@ interface ScreenHeaderProps {
   /** Optional line under title (e.g. room name on sub-pages) */
   subtitle?: string;
   showBack?: boolean;
+  /** Show a home button alongside back for quick navigation to rooms list */
+  showHome?: boolean;
   right?: React.ReactNode;
   /** Override default title typography (default: text-xl font-bold) */
   titleClassName?: string;
@@ -20,11 +22,19 @@ export function ScreenHeader({
   title,
   subtitle,
   showBack = false,
+  showHome = false,
   right,
   titleClassName = 'text-xl font-bold text-white',
   backIconSize = 24,
 }: ScreenHeaderProps) {
   const router = useRouter();
+
+  const handleGoHome = () => {
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    // dismissAll clears the entire stack, leaving only the root screen
+    // This prevents the native back gesture from returning to intermediate screens
+    router.dismissAll();
+  };
 
   // Main tab pages (no back button): left-aligned title
   // Sub-pages (with back button): center-aligned title
@@ -39,14 +49,11 @@ export function ScreenHeader({
 
   return (
     <View className="flex-row items-center bg-background px-5 pb-4 pt-16">
-      {/* Left slot */}
-      <View className="w-12 items-start">
+      {/* Left slot - back button and optional home */}
+      <View className={`flex-row items-center ${showHome ? 'min-w-16 gap-3' : 'w-12'}`}>
         <TouchableOpacity
           onPress={() => router.back()}
-          onLongPress={() => {
-            void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-            router.replace('/(tabs)/rooms');
-          }}
+          onLongPress={handleGoHome}
           delayLongPress={400}
           activeOpacity={0.7}
           accessibilityLabel="Go back"
@@ -54,6 +61,16 @@ export function ScreenHeader({
         >
           <CaretLeft size={backIconSize} color={colors.textPrimary} weight="bold" />
         </TouchableOpacity>
+        {showHome && (
+          <TouchableOpacity
+            onPress={handleGoHome}
+            activeOpacity={0.7}
+            accessibilityLabel="Go to rooms"
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <House size={18} color={colors.textMuted} weight="fill" />
+          </TouchableOpacity>
+        )}
       </View>
 
       {/* Center title */}
@@ -71,8 +88,8 @@ export function ScreenHeader({
         ) : null}
       </View>
 
-      {/* Right slot */}
-      <View className="min-w-12 items-end">{right ?? null}</View>
+      {/* Right slot - matches left width to keep title centered */}
+      <View className={`items-end ${showHome ? 'min-w-16' : 'min-w-12'}`}>{right ?? null}</View>
     </View>
   );
 }

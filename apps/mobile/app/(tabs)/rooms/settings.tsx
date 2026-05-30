@@ -388,7 +388,7 @@ export default function RoomSettingsScreen() {
 
   return (
     <View className="flex-1 bg-background">
-      <ScreenHeader title="Room Settings" showBack titleClassName="text-xl font-bold text-white" />
+      <ScreenHeader title="Room Settings" showBack showHome titleClassName="text-xl font-bold text-white" />
 
       <ScrollView contentContainerClassName="pb-12">
         {/* Room settings */}

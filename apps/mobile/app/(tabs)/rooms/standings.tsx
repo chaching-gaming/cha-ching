@@ -48,7 +48,7 @@ export default function StandingsScreen() {
   if (roomLoading) {
     return (
       <View className="flex-1 bg-background">
-        <ScreenHeader title="Standings" showBack titleClassName="text-xl font-bold text-white" backIconSize={28} />
+        <ScreenHeader title="Standings" showBack showHome titleClassName="text-xl font-bold text-white" backIconSize={28} />
         <View>
           {Array.from({ length: 8 }).map((_, i) => (
             <SkeletonListItem key={i} />

@@ -35,6 +35,7 @@ import { SubmitOutcomeSheet } from '@/components/activity/submit-outcome-sheet';
 import { VoidBetSheet } from '@/components/activity/void-bet-sheet';
 import { WinnerCelebration } from '@/components/activity/winner-celebration';
 import { useFeedback } from '@/providers/feedback';
+import { useServerTimeTick } from '@/providers/time';
 import { betDetailKey, roomBalanceKey, useBetDetail, type BetStakeWithProfile } from '@/hooks/use-activity-feed';
 import { useRoomDetail, useRoomMembers, getRpcErrorMessage } from '@/hooks/use-rooms';
 import { useJoinBet } from '@/hooks/use-join-bet';
@@ -130,7 +131,7 @@ export default function BetDetailScreen() {
     [betTemplate],
   );
 
-  const [tick, setTick] = useState(0);
+  const serverNow = useServerTimeTick();
   const [submitSheetOpen, setSubmitSheetOpen] = useState(false);
   const [disputeSheetOpen, setDisputeSheetOpen] = useState(false);
   const [voidSheetOpen, setVoidSheetOpen] = useState(false);
@@ -193,10 +194,9 @@ export default function BetDetailScreen() {
     if (dbStatus !== 'OPEN' && dbStatus !== 'MATCHED') return;
     if (!bet.expires_at) return;
 
-    // Client-side expiry check - if client clock is ahead of server,
-    // the RPC will return without processing, and we'll retry
+    // Client-side expiry check using server-synced time
     const expiresAt = new Date(bet.expires_at);
-    if (expiresAt > new Date()) return;
+    if (expiresAt > serverNow) return;
 
     // Don't call RPC again if we're already waiting for retry
     if (processedBetRef.current === bet.id) return;
@@ -229,20 +229,8 @@ export default function BetDetailScreen() {
         processedBetRef.current = null;
       }
     })();
-  }, [bet, dbStatus, isLoading, processExpiredBet, queryClient]);
+  }, [bet, dbStatus, isLoading, processExpiredBet, queryClient, serverNow]);
 
-  // Tick every second for countdowns (OPEN, MATCHED, PENDING_RESULT, PENDING_DISPUTE)
-  // MATCHED bets need ticking so the outcome timer shows immediately when expires_at passes
-  useEffect(() => {
-    const needsTick =
-      (dbStatus === 'OPEN' && bet?.expires_at) ||
-      (dbStatus === 'MATCHED' && bet?.expires_at) ||
-      dbStatus === 'PENDING_RESULT' ||
-      dbStatus === 'PENDING_DISPUTE';
-    if (!needsTick) return;
-    const interval = setInterval(() => setTick((t) => t + 1), 1000);
-    return () => clearInterval(interval);
-  }, [dbStatus, bet?.expires_at]);
 
   // Auto-process outcome window when it expires (eliminates cron delay)
   useEffect(() => {
@@ -266,7 +254,7 @@ export default function BetDetailScreen() {
         },
       },
     );
-  }, [dbStatus, bet?.id, bet?.room_id, bet?.outcome_window_ends_at, tick, processOutcomeWindow.isPending]);
+  }, [dbStatus, bet?.id, bet?.room_id, bet?.outcome_window_ends_at, serverNow, processOutcomeWindow.isPending]);
 
   // Auto-process dispute window when it expires (eliminates cron delay)
   useEffect(() => {
@@ -284,7 +272,7 @@ export default function BetDetailScreen() {
     // Window expired, trigger processing
     disputeProcessedRef.current = bet.id;
     processDisputeWindow.mutate({ p_bet_id: bet.id, roomId: bet.room_id });
-  }, [dbStatus, bet?.id, bet?.room_id, bet?.dispute_window_ends_at, tick, processDisputeWindow.isPending]);
+  }, [dbStatus, bet?.id, bet?.room_id, bet?.dispute_window_ends_at, serverNow, processDisputeWindow.isPending]);
 
   // Realtime subscription for bet updates
   useEffect(() => {
@@ -329,12 +317,9 @@ export default function BetDetailScreen() {
     };
   }, [id, bet?.room_id, queryClient]);
 
-  void tick;
-
   const effectiveStatus = useMemo(
-    () => (bet ? getEffectiveBetStatus(bet, new Date()) : ''),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [bet, tick],
+    () => (bet ? getEffectiveBetStatus(bet, serverNow) : ''),
+    [bet, serverNow],
   );
 
   // Check if bet has actually expired (expires_at <= now)
@@ -344,9 +329,8 @@ export default function BetDetailScreen() {
     if (!bet?.expires_at) return false;
     const expiresAt = parseApiTimestamp(bet.expires_at);
     if (!expiresAt) return false;
-    return expiresAt <= new Date();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [bet?.expires_at, tick]);
+    return expiresAt <= serverNow;
+  }, [bet?.expires_at, serverNow]);
 
   const options = useMemo(() => {
     if (!bet) return [] as string[];
@@ -368,7 +352,7 @@ export default function BetDetailScreen() {
   // (MATCHED means someone joined but not all members, so still waiting for expiry)
   const countdown =
     (effectiveStatus === 'OPEN' || effectiveStatus === 'MATCHED') && !hasBetExpired
-      ? formatBetCountdown(bet?.expires_at, new Date())
+      ? formatBetCountdown(bet?.expires_at, serverNow)
       : null;
 
   // Winners calculation
@@ -442,7 +426,7 @@ export default function BetDetailScreen() {
     isActive &&
     !!bet?.room_id &&
     !!currentUserId &&
-    bet?.status === 'OPEN' &&
+    (bet?.status === 'OPEN' || bet?.status === 'MATCHED') &&
     !alreadyStaked &&
     effectiveStatus !== 'EXPIRED';
 
@@ -532,7 +516,7 @@ export default function BetDetailScreen() {
 
   return (
     <View className="flex-1 bg-background">
-      <ScreenHeader title="Bet Details" showBack />
+      <ScreenHeader title="Bet Details" showBack showHome />
 
       <ScrollView
         className="flex-1"

@@ -28,7 +28,7 @@ import { ScreenHeader } from '@/components/ui/screen-header';
 import { useForm } from '@/hooks/use-form';
 import { useCreateBet } from '@/hooks/use-create-bet';
 import { useQuestionTemplates } from '@/hooks/use-question-templates';
-import { useMyRoomBalance } from '@/hooks/use-activity-feed';
+import { useMyRoomBalance, useRealtimeActivityFeed } from '@/hooks/use-activity-feed';
 import {
   getRpcErrorMessage,
   useRoomDetail,
@@ -124,6 +124,9 @@ export default function CreateBetScreen() {
   const { data: templates, isLoading: templatesLoading } = useQuestionTemplates('golf');
   const { data: balance } = useMyRoomBalance(roomId ?? '');
   const createBet = useCreateBet();
+
+  // Subscribe to realtime updates for members and balance
+  useRealtimeActivityFeed(roomId ?? '');
 
   const scrollViewRef = useRef<KeyboardAwareScrollView>(null);
 
@@ -367,6 +370,7 @@ export default function CreateBetScreen() {
         title="Create Bet"
         subtitle={room.name}
         showBack
+        showHome
         right={
           <View className="flex-row items-center gap-1.5 rounded-full bg-primary/20 px-3 py-1.5">
             <Coins size={16} color={colors.chipsIcon} weight="fill" />

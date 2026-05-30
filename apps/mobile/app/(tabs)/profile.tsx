@@ -17,7 +17,13 @@ import * as ImagePicker from 'expo-image-picker';
 import { useProfile, useUpdateProfile } from '@/hooks/use-profile';
 import { useAuth } from '@/providers/auth';
 import { usePreferences } from '@/providers/preferences';
-import { useRooms, useJoinRoom, type RoomWithMembership, type MembershipStatus } from '@/hooks/use-rooms';
+import {
+  useRooms,
+  useJoinRoom,
+  useRealtimeHistoryRooms,
+  type RoomWithMembership,
+  type MembershipStatus,
+} from '@/hooks/use-rooms';
 import { uploadAvatar } from '@/lib/storage';
 import { supabase } from '@/lib/supabase';
 import { Avatar, Button } from '@/components/ui';
@@ -149,6 +155,9 @@ export default function ProfileScreen() {
   const updateProfile = useUpdateProfile();
   const { data: historyRooms, refetch: refetchRooms } = useRooms('history');
   const joinRoom = useJoinRoom();
+
+  // Subscribe to room status changes so Rejoin button hides when session ends
+  useRealtimeHistoryRooms();
 
   const [displayName, setDisplayName] = useState('');
   const [isEditing, setIsEditing] = useState(false);
