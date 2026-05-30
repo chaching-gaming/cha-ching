@@ -45,15 +45,12 @@ export default function SignInScreen() {
   async function handleOAuth(provider: 'google' | 'apple') {
     try {
       setOauthLoading(true);
-      console.log(`[SignIn] Starting ${provider} OAuth...`);
       if (provider === 'google') {
         await signInWithGoogle();
       } else {
         await signInWithApple();
       }
-      console.log(`[SignIn] ${provider} OAuth success`);
     } catch (error) {
-      console.error(`[SignIn] ${provider} OAuth error:`, error);
       const message = error instanceof Error ? error.message : 'OAuth sign-in failed';
       toast.show({ type: 'error', message });
     } finally {

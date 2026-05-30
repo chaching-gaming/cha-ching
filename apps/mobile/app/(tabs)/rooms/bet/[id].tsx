@@ -211,7 +211,6 @@ export default function BetDetailScreen() {
         // Check if RPC actually processed the bet (status changed from OPEN/MATCHED)
         if (result.status === 'OPEN' || result.status === 'MATCHED') {
           // Server clock hasn't reached expiry yet - schedule retry
-          console.log('[process_expired_bet] Server not ready, scheduling retry');
           setTimeout(() => {
             processedBetRef.current = null; // Allow retry
             // Trigger re-render to retry
@@ -226,8 +225,7 @@ export default function BetDetailScreen() {
             queryClient.refetchQueries({ queryKey: roomBalanceKey(roomId) }),
           ]);
         }
-      } catch (err) {
-        console.error('[process_expired_bet] RPC failed:', err);
+      } catch {
         processedBetRef.current = null;
       }
     })();
@@ -259,16 +257,11 @@ export default function BetDetailScreen() {
     const remaining = getOutcomeWindowRemaining(bet, room?.outcome_submission_window_seconds ?? 30);
     if (remaining > 0) return; // Window still open
 
-    console.log('[BetDetail] Processing outcome window for bet:', bet.id);
     outcomeProcessedRef.current = bet.id;
     processOutcomeWindow.mutate(
       { p_bet_id: bet.id, roomId: bet.room_id },
       {
-        onSuccess: (result) => {
-          console.log('[BetDetail] process_outcome_window result:', result);
-        },
-        onError: (error) => {
-          console.error('[BetDetail] process_outcome_window error:', error);
+        onError: () => {
           outcomeProcessedRef.current = null;
         },
       },
@@ -343,34 +336,6 @@ export default function BetDetailScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [bet, tick],
   );
-
-  // Debug logging for outcome timer issues
-  useEffect(() => {
-    if (!bet?.expires_at) return;
-    const expiresAt = parseApiTimestamp(bet.expires_at);
-    if (!expiresAt) return;
-    const now = new Date();
-    const isExpired = expiresAt <= now;
-    const stakesCount = bet.stakes?.length ?? 0;
-    const distinctPicks = new Set((bet.stakes ?? []).map((s) => s.pick.trim().toLowerCase())).size;
-
-    if (isExpired && dbStatus === 'MATCHED') {
-      console.log('[BetDetail OutcomeTimer Debug]', {
-        betId: bet.id,
-        dbStatus,
-        isExpired,
-        stakesCount,
-        distinctPicks,
-        calculatedEffectiveStatus: distinctPicks >= 2 ? 'PENDING_RESULT' : 'EXPIRED',
-        actualEffectiveStatus: effectiveStatus,
-        hasBetExpired,
-        expiresAt: expiresAt.toISOString(),
-        now: now.toISOString(),
-        outcomeWindowEndsAt: bet.outcome_window_ends_at,
-        outcomeWindowSeconds: room?.outcome_submission_window_seconds ?? 30,
-      });
-    }
-  }, [bet, dbStatus, effectiveStatus, hasBetExpired, tick, room?.outcome_submission_window_seconds]);
 
   // Check if bet has actually expired (expires_at <= now)
   // Used to delay showing outcome countdown until expiry, even if server processed early

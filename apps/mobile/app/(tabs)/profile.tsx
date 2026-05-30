@@ -17,7 +17,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { useProfile, useUpdateProfile } from '@/hooks/use-profile';
 import { useAuth } from '@/providers/auth';
 import { usePreferences } from '@/providers/preferences';
-import { useRooms, type RoomWithMembership } from '@/hooks/use-rooms';
+import { useRooms, useJoinRoom, type RoomWithMembership, type MembershipStatus } from '@/hooks/use-rooms';
 import { uploadAvatar } from '@/lib/storage';
 import { supabase } from '@/lib/supabase';
 import { Avatar, Button } from '@/components/ui';
@@ -32,6 +32,19 @@ const ROLE_BADGES: Record<string, RoleBadge> = {
   PLAYER: { variant: 'player', label: 'Player' },
   ATTESTOR: { variant: 'attestor', label: 'Attestor' },
 };
+
+function getMembershipStatusText(status: MembershipStatus): string {
+  switch (status) {
+    case 'left':
+      return 'You left';
+    case 'removed':
+      return 'Removed by admin';
+    case 'room_closed':
+      return 'Session ended';
+    default:
+      return '';
+  }
+}
 
 function SectionLabel({ children }: { children: string }) {
   return (
@@ -73,22 +86,50 @@ function RoomRow({
   item,
   isLast,
   onPress,
+  onRejoin,
+  isRejoining,
 }: {
   item: RoomWithMembership;
   isLast: boolean;
   onPress: () => void;
+  onRejoin?: () => void;
+  isRejoining?: boolean;
 }) {
   const badge = ROLE_BADGES[item.role ?? ''];
+  const statusText = getMembershipStatusText(item.membershipStatus);
+  const canRejoin = item.room.is_active && item.membershipStatus !== 'active';
+
   return (
     <TouchableOpacity
       onPress={onPress}
       activeOpacity={0.75}
       className={`flex-row items-center gap-3 px-4 py-4 ${isLast ? '' : 'border-b border-border'}`}
     >
-      <Text className="flex-1 text-base font-semibold text-white" numberOfLines={1}>
-        {item.room.name}
-      </Text>
-      {badge ? (
+      <View className="min-w-0 flex-1">
+        <Text className="text-base font-semibold text-white" numberOfLines={1}>
+          {item.room.name}
+        </Text>
+        {statusText ? (
+          <Text className="mt-0.5 text-xs text-text-muted">{statusText}</Text>
+        ) : null}
+      </View>
+      {canRejoin && onRejoin ? (
+        <TouchableOpacity
+          onPress={(e) => {
+            e.stopPropagation();
+            onRejoin();
+          }}
+          disabled={isRejoining}
+          className="rounded-lg bg-primary/20 px-3 py-1.5"
+          activeOpacity={0.7}
+        >
+          {isRejoining ? (
+            <ActivityIndicator size="small" color={colors.primary} />
+          ) : (
+            <Text className="text-sm font-semibold text-primary">Rejoin</Text>
+          )}
+        </TouchableOpacity>
+      ) : badge ? (
         <Badge
           variant={badge.variant}
           label={badge.label}
@@ -107,12 +148,30 @@ export default function ProfileScreen() {
   const { data: profile, isLoading, refetch: refetchProfile } = useProfile();
   const updateProfile = useUpdateProfile();
   const { data: historyRooms, refetch: refetchRooms } = useRooms('history');
+  const joinRoom = useJoinRoom();
 
   const [displayName, setDisplayName] = useState('');
   const [isEditing, setIsEditing] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [rejoiningRoomId, setRejoiningRoomId] = useState<string | null>(null);
+
+  const handleRejoin = useCallback(
+    async (inviteCode: string, roomId: string) => {
+      setRejoiningRoomId(roomId);
+      try {
+        await joinRoom.mutateAsync({ p_invite_code: inviteCode });
+        router.push(`/(tabs)/rooms/${roomId}`);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Failed to rejoin room';
+        Alert.alert('Error', message);
+      } finally {
+        setRejoiningRoomId(null);
+      }
+    },
+    [joinRoom, router]
+  );
 
   const handleRefresh = useCallback(async () => {
     setIsRefreshing(true);
@@ -358,6 +417,12 @@ export default function ProfileScreen() {
                   item={item}
                   isLast={idx === historyRooms.length - 1}
                   onPress={() => router.push(`/(tabs)/rooms/${item.room.id}`)}
+                  onRejoin={
+                    item.room.is_active && item.room.invite_code
+                      ? () => handleRejoin(item.room.invite_code!, item.room.id)
+                      : undefined
+                  }
+                  isRejoining={rejoiningRoomId === item.room.id}
                 />
               ))}
             </View>

@@ -48,12 +48,39 @@ export type MemberPreview = {
   avatar_url: string | null;
 };
 
+export type MembershipStatus = 'active' | 'left' | 'removed' | 'room_closed';
+
 export type RoomWithMembership = {
   role: RoomMember['role'];
   room: Room & { member_count: number };
   memberPreviews: MemberPreview[];
   balance: number;
+  // For past rooms tracking
+  membershipStatus: MembershipStatus;
+  leftAt: string | null;
+  leftReason: string | null;
 };
+
+function getMembershipStatus(
+  leftAt: string | null,
+  leftReason: string | null,
+  roomIsActive: boolean
+): MembershipStatus {
+  if (!leftAt) {
+    // Still a member but room is closed
+    return roomIsActive ? 'active' : 'room_closed';
+  }
+  switch (leftReason) {
+    case 'VOLUNTARY':
+      return 'left';
+    case 'REMOVED':
+      return 'removed';
+    case 'ROOM_CLOSED':
+      return 'room_closed';
+    default:
+      return 'left';
+  }
+}
 
 export function useRooms(filter: 'active' | 'history' = 'active') {
   const { session } = useAuth();
@@ -63,28 +90,49 @@ export function useRooms(filter: 'active' | 'history' = 'active') {
     queryFn: async (): Promise<RoomWithMembership[]> => {
       const userId = session!.user.id;
 
+      // Fetch memberships WITH left_at and left_reason for soft-delete tracking
       const { data: memberships, error: memErr } = await supabase
         .from('room_members')
-        .select('role, room_id')
+        .select('role, room_id, left_at, left_reason')
         .eq('user_id', userId)
         .order('joined_at', { ascending: false });
 
       if (memErr) throw memErr;
       if (!memberships?.length) return [];
 
-      const roomIds = memberships.map((m) => m.room_id).filter(Boolean) as string[];
+      // Filter memberships based on active vs history
+      // Active: left_at IS NULL (still a member)
+      // History: left_at IS NOT NULL (left/removed) - room status doesn't matter
+      const relevantMemberships = memberships.filter((m) => {
+        if (filter === 'active') {
+          return m.left_at === null;
+        } else {
+          // History: user has left/been removed
+          return m.left_at !== null;
+        }
+      });
+
+      if (!relevantMemberships.length) return [];
+
+      const roomIds = relevantMemberships.map((m) => m.room_id).filter(Boolean) as string[];
 
       // Fetch rooms, member previews, and balances in parallel
+      // For active filter, only show active rooms
+      // For history filter, show any room (could be active or closed)
+      const roomsQuery = supabase.from('rooms').select('*, room_members!inner(count)').in('id', roomIds);
+
+      if (filter === 'active') {
+        roomsQuery.eq('is_active', true);
+      }
+
       const [roomsResult, membersResult, balancesResult] = await Promise.all([
-        supabase
-          .from('rooms')
-          .select('*, room_members(count)')
-          .in('id', roomIds)
-          .eq('is_active', filter === 'active'),
+        roomsQuery,
+        // Only count ACTIVE members (left_at IS NULL)
         supabase
           .from('room_members')
-          .select('room_id, profiles(display_name, avatar_url)')
+          .select('room_id, left_at, profiles(display_name, avatar_url)')
           .in('room_id', roomIds)
+          .is('left_at', null)
           .order('joined_at', { ascending: true }),
         supabase
           .from('ledger_entries')
@@ -95,20 +143,15 @@ export function useRooms(filter: 'active' | 'history' = 'active') {
 
       if (roomsResult.error) throw roomsResult.error;
 
-      const roomMap = new Map(
-        (roomsResult.data ?? []).map((r) => {
-          const count =
-            Array.isArray(r.room_members) && r.room_members.length > 0
-              ? (r.room_members[0] as { count: number }).count
-              : 0;
-          return [r.id, { ...r, member_count: count }];
-        }),
-      );
-
-      // Group member previews by room (first 3 per room)
+      // Group member previews by room (first 3 per room, only active members)
+      // Also count active members per room for accurate overflow display
       const previewMap = new Map<string, MemberPreview[]>();
+      const activeMemberCountMap = new Map<string, number>();
       for (const row of membersResult.data ?? []) {
         if (!row.room_id) continue;
+        // Count active members
+        activeMemberCountMap.set(row.room_id, (activeMemberCountMap.get(row.room_id) ?? 0) + 1);
+        // Build preview list (max 3)
         const list = previewMap.get(row.room_id) ?? [];
         if (list.length < 3) {
           const p = row.profiles as unknown as MemberPreview | null;
@@ -117,6 +160,14 @@ export function useRooms(filter: 'active' | 'history' = 'active') {
         previewMap.set(row.room_id, list);
       }
 
+      const roomMap = new Map(
+        (roomsResult.data ?? []).map((r) => {
+          // Use active member count instead of total count
+          const count = activeMemberCountMap.get(r.id) ?? 0;
+          return [r.id, { ...r, member_count: count }];
+        }),
+      );
+
       // Sum balances by room
       const balanceMap = new Map<string, number>();
       for (const row of balancesResult.data ?? []) {
@@ -124,14 +175,20 @@ export function useRooms(filter: 'active' | 'history' = 'active') {
         balanceMap.set(row.room_id, (balanceMap.get(row.room_id) ?? 0) + Number(row.amount));
       }
 
-      return memberships
+      return relevantMemberships
         .filter((m) => m.room_id && roomMap.has(m.room_id))
-        .map((m) => ({
-          role: m.role,
-          room: roomMap.get(m.room_id!)!,
-          memberPreviews: previewMap.get(m.room_id!) ?? [],
-          balance: balanceMap.get(m.room_id!) ?? 0,
-        }));
+        .map((m) => {
+          const room = roomMap.get(m.room_id!)!;
+          return {
+            role: m.role,
+            room,
+            memberPreviews: previewMap.get(m.room_id!) ?? [],
+            balance: balanceMap.get(m.room_id!) ?? 0,
+            membershipStatus: getMembershipStatus(m.left_at, m.left_reason, room.is_active),
+            leftAt: m.left_at,
+            leftReason: m.left_reason,
+          };
+        });
     },
     enabled: !!session?.user.id,
   });
@@ -139,12 +196,14 @@ export function useRooms(filter: 'active' | 'history' = 'active') {
 
 /**
  * Realtime subscription for rooms list - listens to ledger_entries changes
- * for the current user to update balances across all rooms in realtime.
+ * for the current user to update balances across all rooms in realtime,
+ * and room_members changes to detect when other users join/leave/rejoin.
  */
 export function useRealtimeRoomsList() {
   const queryClient = useQueryClient();
   const { session } = useAuth();
   const currentUserId = session?.user.id;
+  const { data: rooms } = useRooms('active');
 
   // Create a stable debounced invalidator to batch rapid realtime events
   const invalidatorRef = useRef<ReturnType<typeof createDebouncedInvalidator> | null>(null);
@@ -152,6 +211,10 @@ export function useRealtimeRoomsList() {
     invalidatorRef.current = createDebouncedInvalidator(queryClient);
   }
   const invalidate = invalidatorRef.current;
+
+  // Get stable room IDs string for dependency comparison
+  const roomIds = rooms?.map((r) => r.room.id) ?? [];
+  const roomIdsKey = roomIds.join(',');
 
   useEffect(() => {
     if (!currentUserId) return;
@@ -195,31 +258,53 @@ export function useRealtimeRoomsList() {
       )
       .subscribe();
 
-    // Subscribe to room_members changes for the current user (to detect being removed)
-    const membersChannel = supabase
-      .channel(`cc-rooms-list:members:${token}`)
+    // Subscribe to room_members changes for the current user (to detect own soft-delete/rejoin)
+    const ownMemberChannel = supabase
+      .channel(`cc-rooms-list:own-member:${token}`)
       .on(
         'postgres_changes',
         {
-          event: 'DELETE',
+          event: 'UPDATE',
           schema: 'public',
           table: 'room_members',
           filter: `user_id=eq.${currentUserId}`,
         },
         () => {
-          // When removed from a room, refresh the rooms list
+          // When left_at changes (soft-delete or rejoin), refresh the rooms list
           invalidate(roomsKey('active'));
           invalidate(roomsKey('history'));
         },
       )
       .subscribe();
 
+    // Subscribe to room_members changes for ALL rooms the user is in
+    // This catches when OTHER users join/leave/rejoin, updating member count and avatars
+    const roomMemberChannels = roomIds.map((roomId) =>
+      supabase
+        .channel(`cc-rooms-list:room-members:${roomId}:${token}`)
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'room_members',
+            filter: `room_id=eq.${roomId}`,
+          },
+          () => {
+            invalidate(roomsKey('active'));
+            invalidate(roomsKey('history'));
+          },
+        )
+        .subscribe()
+    );
+
     return () => {
       void supabase.removeChannel(ledgerChannel);
       void supabase.removeChannel(chipRequestsChannel);
-      void supabase.removeChannel(membersChannel);
+      void supabase.removeChannel(ownMemberChannel);
+      roomMemberChannels.forEach((ch) => void supabase.removeChannel(ch));
     };
-  }, [currentUserId, queryClient]);
+  }, [currentUserId, queryClient, roomIdsKey]);
 }
 
 export function useRoomDetail(roomId: string) {
@@ -251,10 +336,45 @@ export function useRoomMembers(roomId: string) {
         .from('room_members')
         .select('*, profiles(*)')
         .eq('room_id', roomId)
+        .is('left_at', null) // Only active members
         .order('joined_at');
 
       if (error) throw error;
       return data as unknown as RoomMemberWithProfile[];
+    },
+    enabled: !!session?.user.id && !!roomId,
+  });
+}
+
+export type RoomMemberStatus = 'active' | 'left' | 'removed';
+
+export type RoomMemberWithStatus = RoomMemberWithProfile & {
+  membershipStatus: RoomMemberStatus;
+};
+
+export function useRoomMembersWithHistory(roomId: string) {
+  const { session } = useAuth();
+
+  return useQuery({
+    queryKey: [...roomMembersKey(roomId), 'history'],
+    queryFn: async (): Promise<RoomMemberWithStatus[]> => {
+      const { data, error } = await supabase
+        .from('room_members')
+        .select('*, profiles(*)')
+        .eq('room_id', roomId)
+        .order('left_at', { ascending: true, nullsFirst: true })
+        .order('joined_at');
+
+      if (error) throw error;
+
+      return (data as unknown as RoomMemberWithProfile[]).map((m) => ({
+        ...m,
+        membershipStatus: !m.left_at
+          ? 'active'
+          : m.left_reason === 'REMOVED'
+            ? 'removed'
+            : 'left',
+      }));
     },
     enabled: !!session?.user.id && !!roomId,
   });

@@ -49,7 +49,6 @@ export default function CreateRoomScreen() {
         router.replace(`/(tabs)/rooms/invite?id=${room.id}`);
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Failed to create room';
-        console.log({ err });
         formApi.setErrorMap({
           onSubmit: {
             fields: {},

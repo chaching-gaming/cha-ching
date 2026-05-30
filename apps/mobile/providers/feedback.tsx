@@ -48,8 +48,8 @@ export function FeedbackProvider({ children }: { children: React.ReactNode }) {
           playsInSilentModeIOS: false,
           staysActiveInBackground: false,
         });
-      } catch (err) {
-        console.warn('[Feedback] Failed to configure audio mode:', err);
+      } catch {
+        // Audio mode configuration failed - sounds may not play correctly
       }
 
       // Load each sound file
@@ -58,8 +58,8 @@ export function FeedbackProvider({ children }: { children: React.ReactNode }) {
         try {
           const { sound } = await Audio.Sound.createAsync(source, { shouldPlay: false });
           soundsRef.current.set(event as FeedbackEvent, sound);
-        } catch (err) {
-          console.warn(`[Feedback] Failed to load sound for ${event}:`, err);
+        } catch {
+          // Sound loading failed - this feedback event will be silent
         }
       }
     };
@@ -83,8 +83,8 @@ export function FeedbackProvider({ children }: { children: React.ReactNode }) {
       // Reset to beginning and play
       await sound.setPositionAsync(0);
       await sound.playAsync();
-    } catch (err) {
-      console.warn(`[Feedback] Failed to play sound for ${event}:`, err);
+    } catch {
+      // Sound playback failed
     }
   }, []);
 

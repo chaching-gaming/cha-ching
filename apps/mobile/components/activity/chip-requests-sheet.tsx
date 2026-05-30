@@ -22,6 +22,8 @@ type Props = {
   roomId: string;
   roomActive: boolean;
   currentUserBalance: number;
+  /** Whether the current user is an active member (not left/removed). */
+  isActiveMember?: boolean;
 };
 
 export function ChipRequestsSheet({
@@ -32,6 +34,7 @@ export function ChipRequestsSheet({
   roomId,
   roomActive,
   currentUserBalance,
+  isActiveMember = true,
 }: Props) {
   const safeInsets = useSafeAreaInsets();
   const sheetRef = useRef<BottomSheetModal>(null);
@@ -125,6 +128,7 @@ export function ChipRequestsSheet({
                         currentUserId={currentUserId}
                         roomActive={roomActive}
                         currentUserBalance={currentUserBalance}
+                        isActiveMember={isActiveMember}
                         onDonate={() => handleDonate(item)}
                       />
                     </View>
@@ -145,6 +149,7 @@ export function ChipRequestsSheet({
                         currentUserId={currentUserId}
                         roomActive={roomActive}
                         currentUserBalance={currentUserBalance}
+                        isActiveMember={isActiveMember}
                         onDonate={() => handleDonate(item)}
                         dimmed
                       />
@@ -175,6 +180,7 @@ function ChipRequestRow({
   currentUserId,
   roomActive,
   currentUserBalance,
+  isActiveMember = true,
   onDonate,
   dimmed = false,
 }: {
@@ -182,6 +188,7 @@ function ChipRequestRow({
   currentUserId: string | null;
   roomActive: boolean;
   currentUserBalance: number;
+  isActiveMember?: boolean;
   onDonate: () => void;
   dimmed?: boolean;
 }) {
@@ -196,6 +203,7 @@ function ChipRequestRow({
   const isOpen = chipRequest.status === 'OPEN';
   const canDonate =
     roomActive &&
+    isActiveMember &&
     isOpen &&
     !!currentUserId &&
     !isRequester &&

@@ -1,5 +1,10 @@
 import { useEffect, useMemo, useRef, useCallback } from 'react';
-import { useQuery, useInfiniteQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
+import {
+  useQuery,
+  useInfiniteQuery,
+  useQueryClient,
+  type QueryClient,
+} from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import type { Database } from '@cha-ching/types';
 import { useAuth } from '@/providers/auth';
@@ -212,9 +217,7 @@ export function useRoomActivityFeedPaginated(roomId: string) {
       return data as unknown as BetWithProfiles[];
     },
     getNextPageParam: (lastPage, allPages) =>
-      lastPage.length === ACTIVITY_PAGE_SIZE
-        ? allPages.length * ACTIVITY_PAGE_SIZE
-        : undefined,
+      lastPage.length === ACTIVITY_PAGE_SIZE ? allPages.length * ACTIVITY_PAGE_SIZE : undefined,
     enabled: !!session?.user.id && !!roomId,
   });
 
@@ -277,10 +280,7 @@ function createDebouncedInvalidator(queryClient: QueryClient, delay = 150) {
   };
 }
 
-export function useRealtimeActivityFeed(
-  roomId: string,
-  options?: RealtimeActivityFeedOptions,
-) {
+export function useRealtimeActivityFeed(roomId: string, options?: RealtimeActivityFeedOptions) {
   const queryClient = useQueryClient();
   const { session } = useAuth();
   const currentUserId = session?.user.id;

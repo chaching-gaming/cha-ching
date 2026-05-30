@@ -43,9 +43,9 @@ if (Platform.OS === 'android') {
     importance: Notifications.AndroidImportance.MAX,
     vibrationPattern: [0, 250, 250, 250],
     lightColor: '#2EAF7D',
-  })
-    .then(() => console.log('[Push] ✓ Android notification channel created'))
-    .catch((err) => console.error('[Push] ❌ Failed to create channel:', err));
+  }).catch(() => {
+    // Channel creation failed - notifications may not work properly
+  });
 }
 
 type NotificationData = {
@@ -90,8 +90,8 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
         setUnreadCount(data);
         await Notifications.setBadgeCountAsync(data);
       }
-    } catch (err) {
-      console.error('Failed to fetch unread count:', err);
+    } catch {
+      // Failed to fetch unread count
     }
   }, [session?.user.id]);
 
@@ -109,8 +109,8 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
           // Refresh count after marking as read
           await refreshUnreadCount();
         }
-      } catch (err) {
-        console.error('Failed to mark notifications as read:', err);
+      } catch {
+        // Failed to mark notifications as read
       }
     },
     [session?.user.id, refreshUnreadCount],
@@ -127,8 +127,8 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
         // Refresh count after marking all as read
         await refreshUnreadCount();
       }
-    } catch (err) {
-      console.error('Failed to mark all notifications as read:', err);
+    } catch {
+      // Failed to mark all notifications as read
     }
   }, [session?.user.id, refreshUnreadCount]);
 
@@ -143,8 +143,8 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
           p_expo_push_token: token,
           p_platform: platform,
         });
-      } catch (err) {
-        console.error('Failed to register device:', err);
+      } catch {
+        // Failed to register device
       }
     },
     [session?.user.id],
@@ -159,8 +159,8 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
         await supabase.rpc('unregister_device', {
           p_expo_push_token: token,
         });
-      } catch (err) {
-        console.error('Failed to unregister device:', err);
+      } catch {
+        // Failed to unregister device
       }
     },
     [session?.user.id],
@@ -168,49 +168,36 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
 
   // Request notification permissions and get token
   const requestPermissions = useCallback(async (): Promise<boolean> => {
-    console.log('[Push] Starting permission request...');
-
     if (!Device.isDevice) {
-      console.log('[Push] ❌ Not a physical device');
       return false;
     }
-    console.log('[Push] ✓ Physical device detected');
 
     try {
       const { status: existingStatus } = await Notifications.getPermissionsAsync();
-      console.log('[Push] Existing permission status:', existingStatus);
       let finalStatus = existingStatus;
 
       if (existingStatus !== 'granted') {
         const { status } = await Notifications.requestPermissionsAsync();
         finalStatus = status;
-        console.log('[Push] Requested permission, new status:', finalStatus);
       }
 
       if (finalStatus !== 'granted') {
-        console.log('[Push] ❌ Permission not granted');
         return false;
       }
-      console.log('[Push] ✓ Permission granted');
 
       // Get Expo push token
-      console.log('[Push] Getting token with projectId:', env.expoProjectId);
       const tokenData = await Notifications.getExpoPushTokenAsync({
         projectId: env.expoProjectId || undefined,
       });
 
       const token = tokenData.data;
-      console.log('[Push] ✓ Token received:', token);
       setExpoPushToken(token);
 
       // Register with backend
-      console.log('[Push] Registering with backend...');
       await registerDevice(token);
-      console.log('[Push] ✓ Registered with backend');
 
       return true;
-    } catch (err) {
-      console.error('[Push] ❌ Failed to get push token:', err);
+    } catch {
       return false;
     }
   }, [registerDevice]);
@@ -226,8 +213,8 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       if (notification_id) {
         try {
           await markAsRead([notification_id]);
-        } catch (err) {
-          console.error('Failed to mark notification as read:', err);
+        } catch {
+          // Failed to mark notification as read
         }
       }
 

@@ -38,9 +38,10 @@ import {
   useLeaveRoom,
   useRemoveMember,
   useRoomDetail,
-  useRoomMembers,
+  useRoomMembersWithHistory,
   useUpdateMemberRole,
   useUpdateRoomSettings,
+  type RoomMemberWithStatus,
 } from '@/hooks/use-rooms';
 
 type MemberRole = 'PLAYER' | 'ATTESTOR' | 'ADMIN';
@@ -156,7 +157,11 @@ export default function RoomSettingsScreen() {
   const { session: authSession } = useAuth();
 
   const { data: room, isLoading: roomLoading } = useRoomDetail(id);
-  const { data: members } = useRoomMembers(id);
+  const { data: members } = useRoomMembersWithHistory(id);
+
+  // Split members into active and past groups
+  const activeMembers = members?.filter((m) => m.membershipStatus === 'active') ?? [];
+  const pastMembers = members?.filter((m) => m.membershipStatus !== 'active') ?? [];
 
   const endSession = useEndSession();
   const updateMemberRole = useUpdateMemberRole();
@@ -165,7 +170,8 @@ export default function RoomSettingsScreen() {
   const updateRoomSettings = useUpdateRoomSettings();
 
   const currentMember = members?.find((m) => m.user_id === authSession?.user.id);
-  const isAdmin = currentMember?.role === 'ADMIN';
+  const isCurrentUserActiveMember = currentMember?.membershipStatus === 'active';
+  const isAdmin = currentMember?.role === 'ADMIN' && isCurrentUserActiveMember;
   const isActive = room?.is_active ?? false;
 
   const [roleSheetTarget, setRoleSheetTarget] = useState<RoleSheetTarget | null>(null);
@@ -283,7 +289,7 @@ export default function RoomSettingsScreen() {
   const handleLeaveRoom = useCallback(() => {
     Alert.alert(
       'Leave Room',
-      'Are you sure you want to leave this room? You will lose access to it.',
+      'Are you sure you want to leave this room? Your chip balance will be preserved if you rejoin later.',
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -396,13 +402,16 @@ export default function RoomSettingsScreen() {
               value={outcomeTimeoutValue}
               onPress={isAdmin && isActive ? handleChangeOutcomeTimeout : undefined}
             />
-            <SettingsRow
-              label="Invite Code"
-              value={room.invite_code ?? '—'}
-              valueClassName="text-primary"
-              rightIcon={<Copy size={18} color={colors.primary} weight="bold" />}
-              onPress={room.invite_code ? handleCopyInviteCode : undefined}
-            />
+            {/* Only show invite code for active members */}
+            {isCurrentUserActiveMember ? (
+              <SettingsRow
+                label="Invite Code"
+                value={room.invite_code ?? '—'}
+                valueClassName="text-primary"
+                rightIcon={<Copy size={18} color={colors.primary} weight="bold" />}
+                onPress={room.invite_code ? handleCopyInviteCode : undefined}
+              />
+            ) : null}
           </View>
         </View>
 
@@ -436,22 +445,23 @@ export default function RoomSettingsScreen() {
           </View>
         ) : null}
 
-        {/* Members */}
+        {/* Active Members */}
         <View className="px-5">
-          <SectionLabel>{`Members (${members?.length ?? 0})`}</SectionLabel>
+          <SectionLabel>{`Members (${activeMembers.length})`}</SectionLabel>
           <View className="overflow-hidden rounded-2xl border border-border bg-surface">
-            {(members ?? []).map((member) => (
+            {activeMembers.map((member) => (
               <MemberRow
                 key={member.id}
                 member={member}
                 isAdmin={isAdmin}
                 isActive={isActive}
                 currentUserId={authSession?.user.id}
+                membershipStatus={member.membershipStatus}
                 onChangeRole={handleChangeRoleRequest}
                 onRemoveMember={handleRemoveMemberRequest}
               />
             ))}
-            {isActive ? (
+            {isActive && isCurrentUserActiveMember ? (
               <TouchableOpacity
                 onPress={() => router.push(`/(tabs)/rooms/invite?id=${id}`)}
                 activeOpacity={0.75}
@@ -467,6 +477,27 @@ export default function RoomSettingsScreen() {
             ) : null}
           </View>
         </View>
+
+        {/* Past Members */}
+        {pastMembers.length > 0 ? (
+          <View className="px-5">
+            <SectionLabel>{`Past Members (${pastMembers.length})`}</SectionLabel>
+            <View className="overflow-hidden rounded-2xl border border-border bg-surface">
+              {pastMembers.map((member) => (
+                <MemberRow
+                  key={member.id}
+                  member={member}
+                  isAdmin={isAdmin}
+                  isActive={isActive}
+                  currentUserId={authSession?.user.id}
+                  membershipStatus={member.membershipStatus}
+                  onChangeRole={handleChangeRoleRequest}
+                  onRemoveMember={handleRemoveMemberRequest}
+                />
+              ))}
+            </View>
+          </View>
+        ) : null}
 
         {/* Danger zone: end session (admin) or leave room (non-admin) */}
         {isAdmin && isActive ? (
@@ -485,8 +516,8 @@ export default function RoomSettingsScreen() {
           </View>
         ) : null}
 
-        {/* Leave room (non-admin only) */}
-        {!isAdmin ? (
+        {/* Leave room (non-admin active members only) */}
+        {!isAdmin && isCurrentUserActiveMember ? (
           <View className="px-5">
             <SectionLabel>Danger zone</SectionLabel>
             <View className="overflow-hidden rounded-2xl border border-border bg-surface">

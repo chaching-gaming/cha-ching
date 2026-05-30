@@ -166,16 +166,11 @@ function BetActivityCard({
     const remaining = getOutcomeWindowRemaining(bet, outcomeSubmissionWindowSeconds);
     if (remaining > 0) return; // Window still open
 
-    console.log('[ActivityFeed] Processing outcome window for bet:', bet.id);
     outcomeProcessedRef.current = bet.id;
     processOutcomeWindow.mutate(
       { p_bet_id: bet.id, roomId },
       {
-        onSuccess: (result) => {
-          console.log('[ActivityFeed] process_outcome_window result:', result);
-        },
-        onError: (error) => {
-          console.error('[ActivityFeed] process_outcome_window error:', error);
+        onError: () => {
           outcomeProcessedRef.current = null;
         },
       },
@@ -219,31 +214,6 @@ function BetActivityCard({
     return templates.find((t) => t.id === bet.template_id) ?? null;
   }, [bet.template_id, templates]);
 
-  // Debug logging for outcome timer issues
-  useEffect(() => {
-    if (!bet.expires_at) return;
-    const expiresAt = parseApiTimestamp(bet.expires_at);
-    if (!expiresAt) return;
-    const now = new Date();
-    const isExpired = expiresAt <= now;
-    const stakesCount = bet.stakes?.length ?? 0;
-    const distinctPicks = new Set((bet.stakes ?? []).map((s) => s.pick.trim().toLowerCase())).size;
-
-    if (isExpired && dbStatus === 'MATCHED') {
-      console.log('[OutcomeTimer Debug]', {
-        betId: bet.id,
-        dbStatus,
-        isExpired,
-        stakesCount,
-        distinctPicks,
-        effectiveStatus: distinctPicks >= 2 ? 'PENDING_RESULT' : 'EXPIRED',
-        expiresAt: expiresAt.toISOString(),
-        now: now.toISOString(),
-        outcomeWindowEndsAt: bet.outcome_window_ends_at,
-      });
-    }
-  }, [bet.id, bet.expires_at, bet.stakes, bet.outcome_window_ends_at, dbStatus, tick]);
-
   const getDisplayLabel = useCallback(
     (rawOption: string): string => {
       if (!betTemplate) return rawOption;
@@ -263,10 +233,6 @@ function BetActivityCard({
       (dbStatus === 'MATCHED' && bet.expires_at) ||
       dbStatus === 'PENDING_RESULT' ||
       dbStatus === 'PENDING_DISPUTE';
-
-    if (dbStatus === 'MATCHED' && bet.expires_at) {
-      console.log('[Tick Effect] Starting tick for MATCHED bet:', bet.id, { needsTick, dbStatus, expiresAt: bet.expires_at });
-    }
 
     if (!needsTick) return;
     const id = setInterval(() => setTick((t) => t + 1), 1000);
@@ -313,41 +279,9 @@ function BetActivityCard({
       ? formatBetCountdown(bet.expires_at, new Date())
       : null;
 
-  // Debug: Log ALL status changes and countdown state
-  useEffect(() => {
-    console.log('[Bet Status Debug]', {
-      betId: bet.id,
-      dbStatus,
-      effectiveStatus,
-      hasBetExpired,
-      countdown: countdown ?? 'NULL',
-      expiresAt: bet.expires_at,
-      stakesCount: bet.stakes?.length ?? 0,
-      distinctPicks: new Set((bet.stakes ?? []).map((s) => s.pick.trim().toLowerCase())).size,
-    });
-  }, [bet.id, dbStatus, effectiveStatus, hasBetExpired, countdown, bet.expires_at, bet.stakes]);
-
   // Outcome window countdown for PENDING_RESULT status (or expired MATCHED that is effectively PENDING_RESULT)
   // Only show once bet has actually expired (not when processed early by server)
   const outcomeWindowRemaining = effectiveStatus === 'PENDING_RESULT' && hasBetExpired ? getOutcomeWindowRemaining(bet, outcomeSubmissionWindowSeconds) : 0;
-
-  // Debug: Log when timer SHOULD show but doesn't render with expected value
-  useEffect(() => {
-    if (effectiveStatus === 'PENDING_RESULT' && hasBetExpired) {
-      const remaining = getOutcomeWindowRemaining(bet, outcomeSubmissionWindowSeconds);
-      console.log('[OutcomeTimer Render]', {
-        betId: bet.id,
-        effectiveStatus,
-        hasBetExpired,
-        remaining,
-        outcomeSubmissionWindowSeconds,
-        hasOutcomeWindow: hasOutcomeWindowSet(bet),
-        dbStatus,
-        expiresAt: bet.expires_at,
-        outcomeWindowEndsAt: bet.outcome_window_ends_at,
-      });
-    }
-  }, [bet.id, effectiveStatus, hasBetExpired, bet, outcomeSubmissionWindowSeconds, dbStatus, tick]);
 
   // Dispute window countdown for PENDING_DISPUTE status
   const disputeWindowRemaining = dbStatus === 'PENDING_DISPUTE' ? getDisputeWindowRemaining(bet) : 0;

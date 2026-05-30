@@ -29,15 +29,10 @@ export function isOpenBetPastExpiry(
  */
 function isBetMatched(stakes: Array<{ pick: string }> | undefined): boolean {
   if (!stakes || stakes.length < 2) {
-    console.log('[isBetMatched] Returning false - stakes length:', stakes?.length ?? 0);
     return false;
   }
   const distinctPicks = new Set(stakes.map((s) => s.pick.trim().toLowerCase()));
-  const result = distinctPicks.size >= 2;
-  if (!result) {
-    console.log('[isBetMatched] Returning false - distinctPicks:', distinctPicks.size, 'picks:', Array.from(distinctPicks));
-  }
-  return result;
+  return distinctPicks.size >= 2;
 }
 
 /**

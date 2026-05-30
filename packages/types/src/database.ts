@@ -516,6 +516,8 @@ export type Database = {
         Row: {
           id: string
           joined_at: string | null
+          left_at: string | null
+          left_reason: string | null
           role: string | null
           room_id: string | null
           user_id: string | null
@@ -523,6 +525,8 @@ export type Database = {
         Insert: {
           id?: string
           joined_at?: string | null
+          left_at?: string | null
+          left_reason?: string | null
           role?: string | null
           room_id?: string | null
           user_id?: string | null
@@ -530,6 +534,8 @@ export type Database = {
         Update: {
           id?: string
           joined_at?: string | null
+          left_at?: string | null
+          left_reason?: string | null
           role?: string | null
           room_id?: string | null
           user_id?: string | null

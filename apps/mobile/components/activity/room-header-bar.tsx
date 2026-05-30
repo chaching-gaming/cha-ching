@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react';
 import { Alert, Text, TouchableOpacity, View } from 'react-native';
-import { Coins, HandHeart, X } from 'phosphor-react-native';
+import { Coins, HandHeart, UsersThree, X } from 'phosphor-react-native';
 
 import { colors } from '@/constants/colors';
 import { Avatar } from '@/components/ui/avatar';
@@ -21,6 +21,8 @@ interface RoomHeaderBarProps {
   roomActive?: boolean;
   /** The current user's open chip request, if any. */
   myOpenChipRequest?: ChipRequestWithProfile | null;
+  /** Whether the current user is an active member (not left/removed). */
+  isActiveMember?: boolean;
 }
 
 const MAX_AVATARS = 5;
@@ -32,6 +34,7 @@ export function RoomHeaderBar({
   roomId,
   roomActive,
   myOpenChipRequest,
+  isActiveMember = true,
 }: RoomHeaderBarProps) {
   const [requestOpen, setRequestOpen] = useState(false);
   const cancelRequest = useCancelChipRequest();
@@ -39,10 +42,11 @@ export function RoomHeaderBar({
   const overflow = members.length - MAX_AVATARS;
 
   // Show request button when balance is 100 or below (fund me feature)
+  // Only active members can request chips
   const lowBalance = balance <= 100;
   const hasOpenRequest = !!myOpenChipRequest;
-  const showRequestButton = !!roomActive && lowBalance && !hasOpenRequest && !!roomId;
-  const showPendingStatus = !!roomActive && hasOpenRequest && !!roomId;
+  const showRequestButton = !!roomActive && isActiveMember && lowBalance && !hasOpenRequest && !!roomId;
+  const showPendingStatus = !!roomActive && isActiveMember && hasOpenRequest && !!roomId;
 
   // Progress calculation for open request
   const requested = myOpenChipRequest?.requested_amount ?? 0;
@@ -82,22 +86,30 @@ export function RoomHeaderBar({
           className="items-start"
         >
           <View className="flex-row items-center">
-            {visible.map((member, index) => (
-              <View
-                key={member.id}
-                className={`rounded-full border-2 border-background ${index > 0 ? '-ml-2.5' : ''}`}
-                style={{ zIndex: MAX_AVATARS - index }}
-              >
-                <Avatar
-                  uri={member.profiles?.avatar_url}
-                  fallback={member.profiles?.display_name ?? '?'}
-                  size="md"
-                />
-              </View>
-            ))}
-            {overflow > 0 && (
-              <View className="-ml-2.5 h-12 w-12 items-center justify-center rounded-full border-2 border-background bg-surface-light">
-                <Text className="text-sm font-semibold text-text-secondary">+{overflow}</Text>
+            {visible.length > 0 ? (
+              <>
+                {visible.map((member, index) => (
+                  <View
+                    key={member.id}
+                    className={`rounded-full border-2 border-background ${index > 0 ? '-ml-2.5' : ''}`}
+                    style={{ zIndex: MAX_AVATARS - index }}
+                  >
+                    <Avatar
+                      uri={member.profiles?.avatar_url}
+                      fallback={member.profiles?.display_name ?? '?'}
+                      size="md"
+                    />
+                  </View>
+                ))}
+                {overflow > 0 && (
+                  <View className="-ml-2.5 h-12 w-12 items-center justify-center rounded-full border-2 border-background bg-surface-light">
+                    <Text className="text-sm font-semibold text-text-secondary">+{overflow}</Text>
+                  </View>
+                )}
+              </>
+            ) : (
+              <View className="h-12 w-12 items-center justify-center rounded-full bg-surface-light">
+                <UsersThree size={22} color={colors.textMuted} weight="fill" />
               </View>
             )}
           </View>

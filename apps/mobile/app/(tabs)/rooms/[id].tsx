@@ -27,7 +27,7 @@ import { ChipRequestsSheet } from '@/components/activity/chip-requests-sheet';
 import { RoomHeaderBar } from '@/components/activity/room-header-bar';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/providers/auth';
-import { useRoomDetail, useRoomMembers } from '@/hooks/use-rooms';
+import { useRoomDetail, useRoomMembersWithHistory } from '@/hooks/use-rooms';
 import {
   useMyRoomBalance,
   useRealtimeActivityFeed,
@@ -63,8 +63,21 @@ export default function RoomDetailScreen() {
   const insets = useSafeAreaInsets();
 
   const { data: room, isLoading: roomLoading } = useRoomDetail(id);
-  const { data: members } = useRoomMembers(id);
+  const { data: allMembers } = useRoomMembersWithHistory(id);
   const { data: balance } = useMyRoomBalance(id);
+
+  // Filter to only active members for display
+  const members = useMemo(
+    () => allMembers?.filter((m) => m.membershipStatus === 'active') ?? [],
+    [allMembers],
+  );
+
+  // Check if current user is an active member (not left/removed)
+  const currentUserMembership = useMemo(
+    () => allMembers?.find((m) => m.user_id === authSession?.user.id),
+    [allMembers, authSession?.user.id],
+  );
+  const isCurrentUserActiveMember = currentUserMembership?.membershipStatus === 'active';
   const {
     data: activityItems,
     isLoading: feedLoading,
@@ -139,8 +152,10 @@ export default function RoomDetailScreen() {
     setRefreshing(false);
   }, [id, queryClient]);
 
-  const currentMember = members?.find((m) => m.user_id === authSession?.user.id);
+  const currentMember = currentUserMembership;
   const isActive = room?.is_active ?? false;
+  // Can create bets only if room is active AND user is an active member
+  const canCreateBet = isActive && isCurrentUserActiveMember;
 
   const feedItems = useMemo(() => activityItems ?? [], [activityItems]);
 
@@ -221,9 +236,7 @@ export default function RoomDetailScreen() {
               <HandHeart size={26} color={colors.primary} weight="fill" />
               {openChipRequestCount > 0 && (
                 <View className="absolute -right-1.5 -top-1 min-w-[18px] items-center justify-center rounded-full bg-error px-1 py-0.5">
-                  <Text className="text-[10px] font-bold text-white">
-                    {openChipRequestCount}
-                  </Text>
+                  <Text className="text-[10px] font-bold text-white">{openChipRequestCount}</Text>
                 </View>
               )}
             </TouchableOpacity>
@@ -273,6 +286,7 @@ export default function RoomDetailScreen() {
               roomId={id}
               roomActive={isActive}
               myOpenChipRequest={myOpenChipRequest}
+              isActiveMember={isCurrentUserActiveMember}
             />
             <BetFeedStatusFilter
               value={filter}
@@ -290,12 +304,10 @@ export default function RoomDetailScreen() {
           ) : (
             <View className="items-center px-2 py-12">
               <Text className="text-center text-xl font-semibold text-text-secondary">
-                {myBetsOnly ? 'No bets you\'re in' : EMPTY_STATE_COPY[filter].title}
+                {myBetsOnly ? "No bets you're in" : EMPTY_STATE_COPY[filter].title}
               </Text>
               <Text className="mt-2 max-w-sm text-center text-base leading-6 text-text-secondary">
-                {myBetsOnly
-                  ? 'Join a bet to see it here.'
-                  : EMPTY_STATE_COPY[filter].subtitle}
+                {myBetsOnly ? 'Join a bet to see it here.' : EMPTY_STATE_COPY[filter].subtitle}
               </Text>
             </View>
           )
@@ -309,7 +321,7 @@ export default function RoomDetailScreen() {
         }
       />
 
-      {isActive ? (
+      {canCreateBet ? (
         <TouchableOpacity
           onPress={() => router.push(`/(tabs)/rooms/create-bet?id=${id}`)}
           activeOpacity={0.85}
@@ -344,6 +356,7 @@ export default function RoomDetailScreen() {
         roomId={id}
         roomActive={isActive}
         currentUserBalance={myBalance}
+        isActiveMember={isCurrentUserActiveMember}
       />
     </View>
   );

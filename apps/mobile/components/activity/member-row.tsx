@@ -3,7 +3,7 @@ import { Swipeable } from 'react-native-gesture-handler';
 
 import { Avatar } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import type { RoomMemberWithProfile } from '@/hooks/use-rooms';
+import type { RoomMemberWithProfile, RoomMemberStatus } from '@/hooks/use-rooms';
 
 const ROLE_LABELS: Record<string, string> = {
   PLAYER: 'Player',
@@ -11,11 +11,18 @@ const ROLE_LABELS: Record<string, string> = {
   ADMIN: 'Admin',
 };
 
+const STATUS_LABELS: Record<RoomMemberStatus, string> = {
+  active: '',
+  left: 'Left',
+  removed: 'Removed',
+};
+
 interface MemberRowProps {
   member: RoomMemberWithProfile;
   isAdmin?: boolean;
   isActive?: boolean;
   currentUserId?: string | null;
+  membershipStatus?: RoomMemberStatus;
   onChangeRole?: (userId: string) => void;
   onRemoveMember?: (userId: string) => void;
 }
@@ -25,16 +32,28 @@ export function MemberRow({
   isAdmin,
   isActive,
   currentUserId,
+  membershipStatus = 'active',
   onChangeRole,
   onRemoveMember,
 }: MemberRowProps) {
   const role = member.role ?? 'PLAYER';
   const roleVariant = role.toLowerCase() as 'admin' | 'player' | 'attestor';
   const isSelf = member.user_id === currentUserId;
-  const canChangeRole = Boolean(isAdmin && isActive && onChangeRole);
-  const canSwipeRemove = Boolean(isAdmin && isActive && onRemoveMember && !isSelf);
+  const isPastMember = membershipStatus !== 'active';
 
-  const badge = (
+  // Disable interactions for past members
+  const canChangeRole = Boolean(isAdmin && isActive && onChangeRole && !isPastMember);
+  const canSwipeRemove = Boolean(isAdmin && isActive && onRemoveMember && !isSelf && !isPastMember);
+
+  // Show status badge for past members, role badge for active members
+  const badge = isPastMember ? (
+    <Badge
+      variant="default"
+      label={STATUS_LABELS[membershipStatus]}
+      className="bg-surface-alt px-4 py-2"
+      labelClassName="text-sm font-semibold text-text-muted"
+    />
+  ) : (
     <Badge
       variant={roleVariant}
       label={ROLE_LABELS[role] ?? role}
@@ -44,7 +63,9 @@ export function MemberRow({
   );
 
   const row = (
-    <View className="min-h-[56px] flex-row items-center border-b border-border bg-background px-5 py-4">
+    <View
+      className={`min-h-[56px] flex-row items-center border-b border-border bg-background px-5 py-4 ${isPastMember ? 'opacity-60' : ''}`}
+    >
       <Avatar
         uri={member.profiles?.avatar_url}
         fallback={member.profiles?.display_name ?? '?'}
