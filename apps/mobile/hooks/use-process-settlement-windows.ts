@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 import { supabase } from '@/lib/supabase';
-import { betDetailKey, roomBetsKey } from './use-activity-feed';
+import { betDetailKey, roomBetsKey, roomBalanceKey } from './use-activity-feed';
 
 /**
  * Hook to process the outcome window for a bet.
@@ -16,9 +16,12 @@ export function useProcessOutcomeWindow() {
       if (error) throw error;
       return data;
     },
-    onSuccess: (_, { roomId, p_bet_id }) => {
-      queryClient.invalidateQueries({ queryKey: roomBetsKey(roomId) });
-      queryClient.invalidateQueries({ queryKey: betDetailKey(p_bet_id) });
+    onSuccess: async (_, { roomId, p_bet_id }) => {
+      // Use refetchQueries for immediate update (not invalidateQueries which waits for background refetch)
+      await Promise.all([
+        queryClient.refetchQueries({ queryKey: betDetailKey(p_bet_id) }),
+        queryClient.refetchQueries({ queryKey: roomBetsKey(roomId) }),
+      ]);
     },
   });
 }
@@ -36,9 +39,13 @@ export function useProcessDisputeWindow() {
       if (error) throw error;
       return data;
     },
-    onSuccess: (_, { roomId, p_bet_id }) => {
-      queryClient.invalidateQueries({ queryKey: roomBetsKey(roomId) });
-      queryClient.invalidateQueries({ queryKey: betDetailKey(p_bet_id) });
+    onSuccess: async (_, { roomId, p_bet_id }) => {
+      // Use refetchQueries for immediate update to trigger celebration without delay
+      await Promise.all([
+        queryClient.refetchQueries({ queryKey: betDetailKey(p_bet_id) }),
+        queryClient.refetchQueries({ queryKey: roomBetsKey(roomId) }),
+        queryClient.refetchQueries({ queryKey: roomBalanceKey(roomId) }),
+      ]);
     },
   });
 }

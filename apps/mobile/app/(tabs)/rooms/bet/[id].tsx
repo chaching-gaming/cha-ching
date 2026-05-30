@@ -90,6 +90,19 @@ function formatStakeChips(stake: number): string {
   return `${stake.toLocaleString('en-US')} chips`;
 }
 
+function getSettlementMethodLabel(method: string | null | undefined): string {
+  switch (method) {
+    case 'CONSENSUS':
+      return 'consensus';
+    case 'MAJORITY_VOTE':
+      return 'majority vote';
+    case 'ATTESTOR':
+      return 'attestor decision';
+    default:
+      return method?.toLowerCase().replace(/_/g, ' ') ?? '';
+  }
+}
+
 export default function BetDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
@@ -242,19 +255,37 @@ export default function BetDetailScreen() {
     // If NULL, the server hasn't set it yet - let the cron handle it
     if (!bet.outcome_window_ends_at) return;
 
-    const remaining = getOutcomeWindowRemaining(bet, room?.outcome_submission_window_seconds ?? 30);
+    const remaining = getOutcomeWindowRemaining(bet, room?.outcome_submission_window_seconds ?? 30, serverNow);
     if (remaining > 0) return; // Window still open
 
-    outcomeProcessedRef.current = bet.id;
-    processOutcomeWindow.mutate(
-      { p_bet_id: bet.id, roomId: bet.room_id },
-      {
-        onError: () => {
-          outcomeProcessedRef.current = null;
-        },
-      },
-    );
-  }, [dbStatus, bet?.id, bet?.room_id, bet?.outcome_window_ends_at, serverNow, processOutcomeWindow.isPending]);
+    const betId = bet.id;
+    const roomId = bet.room_id;
+
+    outcomeProcessedRef.current = betId;
+
+    (async () => {
+      try {
+        const result = await processOutcomeWindow.mutateAsync({ p_bet_id: betId, roomId });
+
+        // Check if RPC actually processed the bet
+        if (result.status === 'PENDING_RESULT') {
+          // Server hasn't processed yet (clock skew) - schedule retry
+          setTimeout(() => {
+            outcomeProcessedRef.current = null;
+            queryClient.invalidateQueries({ queryKey: betDetailKey(betId) });
+          }, 2000);
+        } else {
+          // Successfully processed - force immediate refetch
+          await Promise.all([
+            queryClient.refetchQueries({ queryKey: betDetailKey(betId) }),
+            queryClient.refetchQueries({ queryKey: roomBalanceKey(roomId) }),
+          ]);
+        }
+      } catch {
+        outcomeProcessedRef.current = null;
+      }
+    })();
+  }, [dbStatus, bet?.id, bet?.room_id, bet?.outcome_window_ends_at, serverNow, processOutcomeWindow, queryClient, room?.outcome_submission_window_seconds]);
 
   // Auto-process dispute window when it expires (eliminates cron delay)
   useEffect(() => {
@@ -266,13 +297,38 @@ export default function BetDetailScreen() {
     // If it's null, the server hasn't set it yet - wait for refetch
     if (!bet.dispute_window_ends_at) return;
 
-    const remaining = getDisputeWindowRemaining(bet);
+    const remaining = getDisputeWindowRemaining(bet, serverNow);
     if (remaining > 0) return; // Window still open
 
+    const betId = bet.id;
+    const roomId = bet.room_id;
+
     // Window expired, trigger processing
-    disputeProcessedRef.current = bet.id;
-    processDisputeWindow.mutate({ p_bet_id: bet.id, roomId: bet.room_id });
-  }, [dbStatus, bet?.id, bet?.room_id, bet?.dispute_window_ends_at, serverNow, processDisputeWindow.isPending]);
+    disputeProcessedRef.current = betId;
+
+    (async () => {
+      try {
+        const result = await processDisputeWindow.mutateAsync({ p_bet_id: betId, roomId });
+
+        // Check if RPC actually processed the bet
+        if (result.status === 'PENDING_DISPUTE') {
+          // Server hasn't processed yet (clock skew) - schedule retry
+          setTimeout(() => {
+            disputeProcessedRef.current = null;
+            queryClient.invalidateQueries({ queryKey: betDetailKey(betId) });
+          }, 2000);
+        } else {
+          // Successfully processed - force immediate refetch for celebration
+          await Promise.all([
+            queryClient.refetchQueries({ queryKey: betDetailKey(betId) }),
+            queryClient.refetchQueries({ queryKey: roomBalanceKey(roomId) }),
+          ]);
+        }
+      } catch {
+        disputeProcessedRef.current = null;
+      }
+    })();
+  }, [dbStatus, bet?.id, bet?.room_id, bet?.dispute_window_ends_at, serverNow, processDisputeWindow, queryClient]);
 
   // Realtime subscription for bet updates
   useEffect(() => {
@@ -629,7 +685,7 @@ export default function BetDetailScreen() {
                 {bet.settlement_method && (
                   <Text className="text-text-muted">
                     {' '}
-                    · via {bet.settlement_method.toLowerCase()}
+                    · via {getSettlementMethodLabel(bet.settlement_method)}
                   </Text>
                 )}
               </Text>
@@ -746,6 +802,9 @@ export default function BetDetailScreen() {
             const isWinner =
               !!bet.outcome && option.trim().toLowerCase() === bet.outcome.trim().toLowerCase();
             const isLosingOption = dbStatus === 'SETTLED' && !!bet.outcome && !isWinner;
+            // Check if current user is on this side and lost
+            const userOnThisSide = optionStakes.some((s) => s.user_id === currentUserId);
+            const userLostHere = isLosingOption && userOnThisSide;
             const submissions = submissionsByOption[option] ?? [];
             const voteCount = submissions.length;
             const isLeft = idx === 0;
@@ -760,35 +819,43 @@ export default function BetDetailScreen() {
                 }
               : {};
 
+            // Card styling: winner = green, user lost here = red tint, other losing = muted
+            const cardStyle = isWinner
+              ? 'border-primary bg-primary/5'
+              : userLostHere
+                ? 'border-error/50 bg-error/10'
+                : isLosingOption
+                  ? 'border-border opacity-60'
+                  : canTapToJoin
+                    ? `border-2 ${isLeft ? 'border-primary' : 'border-error'}`
+                    : 'border-border';
+
             return (
               <CardWrapper
                 key={option}
                 {...cardProps}
-                className={`flex-1 rounded-2xl border bg-surface p-3 ${
-                  isWinner
-                    ? 'border-primary'
-                    : isLosingOption
-                      ? 'border-border opacity-60'
-                      : canTapToJoin
-                        ? `border-2 ${isLeft ? 'border-primary' : 'border-error'}`
-                        : 'border-border'
-                }`}
+                className={`flex-1 rounded-2xl border bg-surface p-3 ${cardStyle}`}
               >
                 {/* Option Header */}
-                <View className={`mb-3 items-center ${isLeft ? '' : ''}`}>
-                  <Text
-                    className={`text-base font-bold uppercase ${
-                      isWinner
-                        ? 'text-primary'
-                        : isLosingOption
-                          ? 'text-text-muted'
-                          : isLeft
-                            ? 'text-primary'
-                            : 'text-error'
-                    }`}
-                  >
-                    {getDisplayLabel(option)}
-                  </Text>
+                <View className="mb-3 items-center">
+                  <View className="flex-row items-center gap-1.5">
+                    {userLostHere && <X size={16} color={colors.error} weight="bold" />}
+                    <Text
+                      className={`text-base font-bold uppercase ${
+                        isWinner
+                          ? 'text-primary'
+                          : userLostHere
+                            ? 'text-error/80'
+                            : isLosingOption
+                              ? 'text-text-muted'
+                              : isLeft
+                                ? 'text-primary'
+                                : 'text-error'
+                      }`}
+                    >
+                      {getDisplayLabel(option)}
+                    </Text>
+                  </View>
                   {isWinner && (
                     <View className="mt-1 flex-row items-center gap-1">
                       <Trophy size={12} color={colors.primary} weight="fill" />
@@ -808,6 +875,7 @@ export default function BetDetailScreen() {
                     {optionStakes.map((stake) => {
                       const submission = getUserSubmission(stake.user_id);
                       const isCurrentUser = stake.user_id === currentUserId;
+                      const thisUserLost = isLosingOption && isCurrentUser;
 
                       return (
                         <View key={stake.id} className="items-center">
@@ -817,16 +885,28 @@ export default function BetDetailScreen() {
                             size="md"
                           />
                           <Text
-                            className={`mt-1 text-center text-xs font-medium ${isCurrentUser ? 'text-primary' : 'text-white'}`}
+                            className={`mt-1 text-center text-xs font-medium ${
+                              thisUserLost
+                                ? 'text-error/80'
+                                : isCurrentUser
+                                  ? 'text-primary'
+                                  : 'text-white'
+                            }`}
                             numberOfLines={1}
                           >
                             {stake.user?.display_name ?? 'Unknown'}
-                            {isCurrentUser ? ' (you)' : ''}
+                            {thisUserLost ? ' (you) · lost' : isCurrentUser ? ' (you)' : ''}
                           </Text>
                           {/* Payout for winners */}
                           {isWinner && dbStatus === 'SETTLED' && (
                             <Text className="text-xs font-bold text-primary">
                               +{perWinnerPayout.toLocaleString('en-US')}
+                            </Text>
+                          )}
+                          {/* Loss amount for losers */}
+                          {thisUserLost && (
+                            <Text className="text-xs font-bold text-error/80">
+                              -{bet.stake.toLocaleString('en-US')}
                             </Text>
                           )}
                           {/* Submission status for all participants */}

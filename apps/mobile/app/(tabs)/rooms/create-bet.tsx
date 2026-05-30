@@ -261,12 +261,18 @@ export default function CreateBetScreen() {
       }
     }
 
-    // Prevent betting against yourself
+    // Prevent betting against yourself (only when picking the negative option)
     if (values.memberId && values.memberId === currentUserId) {
-      form.setErrorMap({
-        onSubmit: { fields: {}, form: "You can't bet against yourself on this question" },
-      });
-      return;
+      const tpl = templates?.find((t) => t.id === values.templateId);
+      const isNegativePick = tpl
+        ? values.offeredPick === tpl.negative_label
+        : values.writeInOpen && values.offeredPick === 'No';
+      if (isNegativePick) {
+        form.setErrorMap({
+          onSubmit: { fields: {}, form: "You can't bet against yourself on this question" },
+        });
+        return;
+      }
     }
 
     form.setErrorMap({});
@@ -430,11 +436,16 @@ export default function CreateBetScreen() {
                 {/* Players (required for templates with {player}, optional for custom) */}
                 <View className="mb-4">
                   <form.Subscribe
-                    selector={(state) => [state.values.memberId, state.values.templateId] as const}
+                    selector={(state) => [state.values.memberId, state.values.templateId, state.values.offeredPick, state.values.writeInOpen] as const}
                   >
-                    {([memberId, templateId]) => {
+                    {([memberId, templateId, offeredPick, writeInOpen]) => {
                       const tpl = templates?.find((t) => t.id === templateId);
                       const isPlayerRequired = tpl && templateRequiresPlayer(tpl.question_text);
+                      // Show warning only when user selects themselves AND picks the negative option
+                      const isNegativePick = tpl
+                        ? offeredPick === tpl.negative_label
+                        : writeInOpen && offeredPick === 'No';
+                      const showSelfBetWarning = memberId === currentUserId && isNegativePick;
                       return (
                         <>
                           <Text className="mb-2 text-sm font-medium text-text-secondary">
@@ -496,7 +507,7 @@ export default function CreateBetScreen() {
                               }}
                             />
                           )}
-                          {memberId && memberId === currentUserId && (
+                          {showSelfBetWarning && (
                             <View className="mt-2 rounded-xl bg-warning/15 px-3 py-2">
                               <Text className="text-sm text-warning">
                                 You can't bet against yourself on this question
@@ -657,11 +668,16 @@ export default function CreateBetScreen() {
                 {/* Players (required for templates with {player}, optional for custom) */}
                 <View className="mb-4">
                   <form.Subscribe
-                    selector={(state) => [state.values.memberId, state.values.templateId] as const}
+                    selector={(state) => [state.values.memberId, state.values.templateId, state.values.offeredPick, state.values.writeInOpen] as const}
                   >
-                    {([memberId, templateId]) => {
+                    {([memberId, templateId, offeredPick, writeInOpen]) => {
                       const tpl = templates?.find((t) => t.id === templateId);
                       const isPlayerRequired = tpl && templateRequiresPlayer(tpl.question_text);
+                      // Show warning only when user selects themselves AND picks the negative option
+                      const isNegativePick = tpl
+                        ? offeredPick === tpl.negative_label
+                        : writeInOpen && offeredPick === 'No';
+                      const showSelfBetWarning = memberId === currentUserId && isNegativePick;
                       return (
                         <>
                           <Text className="mb-2 text-sm font-medium text-text-secondary">
@@ -723,7 +739,7 @@ export default function CreateBetScreen() {
                               }}
                             />
                           )}
-                          {memberId && memberId === currentUserId && (
+                          {showSelfBetWarning && (
                             <View className="mt-2 rounded-xl bg-warning/15 px-3 py-2">
                               <Text className="text-sm text-warning">
                                 You can't bet against yourself on this question

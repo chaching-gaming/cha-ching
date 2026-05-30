@@ -11,6 +11,7 @@ import {
   Timer,
   Trophy,
   Warning,
+  X,
 } from 'phosphor-react-native';
 
 import { colors } from '@/constants/colors';
@@ -164,7 +165,7 @@ function BetActivityCard({
     // If NULL, the server hasn't set it yet - let the cron handle it
     if (!bet.outcome_window_ends_at) return;
 
-    const remaining = getOutcomeWindowRemaining(bet, outcomeSubmissionWindowSeconds);
+    const remaining = getOutcomeWindowRemaining(bet, outcomeSubmissionWindowSeconds, serverNow);
     if (remaining > 0) return; // Window still open
 
     outcomeProcessedRef.current = bet.id;
@@ -191,7 +192,7 @@ function BetActivityCard({
     // Don't call RPC again if already processed
     if (disputeProcessedRef.current === bet.id) return;
 
-    const remaining = getDisputeWindowRemaining(bet);
+    const remaining = getDisputeWindowRemaining(bet, serverNow);
     if (remaining > 0) return; // Window still open
 
     const betId = bet.id;
@@ -280,6 +281,13 @@ function BetActivityCard({
 
   const perWinnerPayout = winningStakes.length > 0 ? Math.floor(pool / winningStakes.length) : 0;
   const currentUserWon = !!currentUserId && winningStakes.some((s) => s.user_id === currentUserId);
+
+  // Check if user participated and lost
+  const currentUserStake = useMemo(() => {
+    if (!currentUserId) return null;
+    return stakes.find((s) => s.user_id === currentUserId) ?? null;
+  }, [currentUserId, stakes]);
+  const currentUserLost = !!currentUserStake && !currentUserWon && dbStatus === 'SETTLED';
 
   // Check if both sides are staked (for "waiting" message when OPEN)
   const distinctPicksStaked = useMemo(() => {
@@ -376,6 +384,7 @@ function BetActivityCard({
           options={options}
           stakesByPick={stakesByPick}
           winningPick={dbStatus === 'SETTLED' ? bet.outcome : null}
+          isSettled={dbStatus === 'SETTLED'}
           currentUserId={currentUserId ?? null}
           getDisplayLabel={getDisplayLabel}
           canJoin={canJoin}
@@ -462,14 +471,33 @@ function BetActivityCard({
           </>
         ) : null}
         {dbStatus === 'SETTLED' && bet.outcome ? (
-          <>
-            <Trophy size={14} color={colors.primary} weight="fill" />
-            <Text className="text-sm font-semibold text-primary">
-              {getDisplayLabel(bet.outcome).toUpperCase()}
-              {perWinnerPayout > 0 ? ` +${perWinnerPayout}` : ''}
-              {currentUserWon ? ' · won' : ''}
-            </Text>
-          </>
+          currentUserWon ? (
+            // User won - show their winnings prominently
+            <>
+              <Trophy size={14} color={colors.primary} weight="fill" />
+              <Text className="text-sm font-semibold text-primary">
+                You won +{perWinnerPayout}
+              </Text>
+            </>
+          ) : currentUserLost ? (
+            // User lost - show their loss clearly
+            <>
+              <Text className="text-sm font-medium text-error">
+                You lost {bet.stake}
+              </Text>
+              <Text className="text-sm text-text-muted">
+                · {getDisplayLabel(bet.outcome)} won
+              </Text>
+            </>
+          ) : (
+            // User didn't participate - show outcome neutrally
+            <>
+              <Trophy size={14} color={colors.primary} weight="fill" />
+              <Text className="text-sm font-semibold text-primary">
+                {getDisplayLabel(bet.outcome).toUpperCase()} +{perWinnerPayout}
+              </Text>
+            </>
+          )
         ) : null}
         {dbStatus === 'VOID' ? (
           <>
@@ -617,6 +645,7 @@ function PoolTally({
   options,
   stakesByPick,
   winningPick,
+  isSettled,
   currentUserId,
   getDisplayLabel,
   canJoin,
@@ -628,6 +657,7 @@ function PoolTally({
   options: string[];
   stakesByPick: Record<string, BetStakeWithProfile[]>;
   winningPick: string | null;
+  isSettled?: boolean;
   currentUserId: string | null;
   getDisplayLabel: (option: string) => string;
   canJoin?: boolean;
@@ -652,6 +682,8 @@ function PoolTally({
         const isSelected = canJoin && selectedPick === option;
         const isDisabled =
           isSubject && subjectPositiveOption !== null && option !== subjectPositiveOption;
+        // User lost if bet is settled, user is on this side, and this side didn't win
+        const youLost = !!isSettled && youOnThisSide && !isWinner;
 
         return (
           <PoolSide
@@ -663,6 +695,7 @@ function PoolTally({
             tone={tone}
             isWinner={isWinner}
             youOnThisSide={youOnThisSide}
+            youLost={youLost}
             canJoin={canJoin && !isDisabled}
             isSelected={isSelected}
             isDisabled={isDisabled}
@@ -682,6 +715,7 @@ function PoolSide({
   tone,
   isWinner,
   youOnThisSide,
+  youLost,
   canJoin,
   isSelected,
   isDisabled,
@@ -694,6 +728,7 @@ function PoolSide({
   tone: 'primary' | 'error';
   isWinner: boolean;
   youOnThisSide: boolean;
+  youLost?: boolean;
   canJoin?: boolean;
   isSelected?: boolean;
   isDisabled?: boolean;
@@ -711,6 +746,10 @@ function PoolSide({
   if (isWinner) {
     borderClass = 'border-primary';
     bgClass = 'bg-primary/10';
+  } else if (youLost) {
+    // User lost on this side - subtle red tint
+    borderClass = 'border-error/50';
+    bgClass = 'bg-error/10';
   } else if (isDisabled) {
     borderClass = 'border-border';
     bgClass = 'bg-surface-light opacity-40';
@@ -726,14 +765,16 @@ function PoolSide({
     bgClass = 'bg-surface-light';
   }
 
-  // Winner shows primary color regardless of disabled state
+  // Winner shows primary color, loser shows muted
   const labelClass = isWinner
     ? 'text-primary'
-    : isDisabled
-      ? 'text-text-muted'
-      : tone === 'primary'
-        ? 'text-primary'
-        : 'text-error';
+    : youLost
+      ? 'text-error/70'
+      : isDisabled
+        ? 'text-text-muted'
+        : tone === 'primary'
+          ? 'text-primary'
+          : 'text-error';
 
   const content = (
     <>
@@ -746,6 +787,8 @@ function PoolSide({
         </Text>
         {isWinner ? (
           <Trophy size={14} color={colors.primary} weight="fill" />
+        ) : youLost ? (
+          <X size={14} color={colors.error} weight="bold" />
         ) : isDisabled ? (
           <Lock size={14} color={colors.textMuted} weight="bold" />
         ) : isSelected ? (
@@ -754,7 +797,7 @@ function PoolSide({
       </View>
       <Text className="mt-1 text-xs text-text-secondary">
         {count === 0 ? 'no backers' : count === 1 ? '1 backer' : `${count} backers`}
-        {youOnThisSide ? ' · you' : ''}
+        {youLost ? ' · you lost' : youOnThisSide ? ' · you' : ''}
       </Text>
       {count > 0 ? <StakeAvatars stakes={stakes} /> : null}
       {canJoin && !isDisabled && !isSelected ? (
