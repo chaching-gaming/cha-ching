@@ -7,6 +7,7 @@ import { useRouter } from 'expo-router';
 import { useQueryClient } from '@tanstack/react-query';
 
 import { useAuth } from './auth';
+import { useToast } from './toast';
 import { env } from '@/lib/env';
 import { supabase } from '@/lib/supabase';
 import { notificationsKey } from '@/hooks/use-notifications-feed';
@@ -71,6 +72,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
   const router = useRouter();
   const queryClient = useQueryClient();
   const { session } = useAuth();
+  const { show: showToast } = useToast();
   const [expoPushToken, setExpoPushToken] = useState<string | null>(null);
   const [unreadCount, setUnreadCount] = useState(0);
 
@@ -224,7 +226,6 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
         case 'bet_settled':
         case 'bet_won':
         case 'bet_lost':
-        case 'bet_voided':
         case 'bet_disputed':
         case 'bet_expiring':
         case 'bet_accepted':
@@ -235,6 +236,17 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
             router.push(`/(tabs)/rooms/${room_id}`);
           }
           break;
+        case 'bet_voided':
+          // Voided bets are auto-deleted, show info toast and navigate to room
+          if (room_id) {
+            router.push(`/(tabs)/rooms/${room_id}`);
+            showToast({
+              type: 'info',
+              message: 'This bet was voided and has been deleted. Voided bets are removed after 5 minutes.',
+            });
+          }
+          break;
+        case 'bet_created':
         case 'chip_request_created':
         case 'chip_donated':
           if (room_id) {

@@ -13,11 +13,11 @@ export function Providers({ children }: { children: React.ReactNode }) {
       <TimeProvider>
         <AuthProvider>
           <PreferencesProvider>
-            <NotificationProvider>
-              <FeedbackProvider>
-                <ToastProvider>{children}</ToastProvider>
-              </FeedbackProvider>
-            </NotificationProvider>
+            <ToastProvider>
+              <NotificationProvider>
+                <FeedbackProvider>{children}</FeedbackProvider>
+              </NotificationProvider>
+            </ToastProvider>
           </PreferencesProvider>
         </AuthProvider>
       </TimeProvider>

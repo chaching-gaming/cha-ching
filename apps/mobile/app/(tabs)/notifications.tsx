@@ -25,6 +25,7 @@ import {
   type NotificationRow,
 } from '@/hooks/use-notifications-feed';
 import { useNotifications } from '@/providers/notifications';
+import { useToast } from '@/providers/toast';
 
 type GroupedNotifications = {
   title: string;
@@ -66,6 +67,7 @@ function groupByDate(notifications: NotificationRow[]): GroupedNotifications[] {
 export default function NotificationsScreen() {
   const router = useRouter();
   const queryClient = useQueryClient();
+  const { show: showToast } = useToast();
   const { markAsRead, markAllAsRead, refreshUnreadCount, unreadCount } = useNotifications();
   const {
     data,
@@ -124,9 +126,19 @@ export default function NotificationsScreen() {
       // Navigate to bet detail for bet-related notifications
       if (
         bet_id &&
-        ['bet_matched', 'bet_settled', 'bet_disputed', 'bet_expiring', 'bet_accepted'].includes(type)
+        ['bet_matched', 'bet_settled', 'bet_disputed', 'bet_expiring', 'bet_accepted', 'bet_won', 'bet_lost'].includes(type)
       ) {
         router.push(`/(tabs)/rooms/bet/${bet_id}`);
+        return;
+      }
+
+      // Voided bets are auto-deleted, show info toast and navigate to room
+      if (type === 'bet_voided' && room_id) {
+        router.push(`/(tabs)/rooms/${room_id}`);
+        showToast({
+          type: 'info',
+          message: 'This bet was voided and has been deleted. Voided bets are removed after 5 minutes.',
+        });
         return;
       }
 
@@ -135,7 +147,7 @@ export default function NotificationsScreen() {
         router.push(`/(tabs)/rooms/${room_id}`);
       }
     },
-    [markAsRead, router, queryClient]
+    [markAsRead, router, queryClient, showToast]
   );
 
   const handleLoadMore = useCallback(() => {
