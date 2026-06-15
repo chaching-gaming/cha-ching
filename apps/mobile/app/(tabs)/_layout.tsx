@@ -100,7 +100,7 @@ export default function TabLayout() {
             title: 'Bet',
             tabBarIcon: () => (
               <View className="-mt-4 h-14 w-14 items-center justify-center rounded-full bg-primary">
-                <Plus size={28} color="#fff" weight="bold" />
+                <Plus size={28} color={colors.surface} weight="bold" />
               </View>
             ),
             tabBarLabel: () => null,

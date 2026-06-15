@@ -2,11 +2,11 @@ import { Text, View } from 'react-native';
 
 const variants = {
   admin: 'bg-primary/20',
-  player: 'bg-blue-500/20',
+  player: 'bg-secondary/20',
   attestor: 'bg-warning/20',
   warning: 'bg-warning/20',
   /** Matched / in-play bets — distinct from open (green) */
-  matched: 'bg-indigo-500/25',
+  matched: 'bg-secondary/25',
   success: 'bg-primary/20',
   error: 'bg-error/20',
   default: 'bg-surface-light',
@@ -14,10 +14,10 @@ const variants = {
 
 const textVariants = {
   admin: 'text-primary',
-  player: 'text-blue-400',
+  player: 'text-secondary',
   attestor: 'text-warning',
   warning: 'text-warning',
-  matched: 'text-indigo-300',
+  matched: 'text-secondary',
   success: 'text-primary',
   error: 'text-error',
   default: 'text-text-secondary',

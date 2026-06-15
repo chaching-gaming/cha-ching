@@ -245,7 +245,7 @@ function LedgerRow({ entry }: { entry: LedgerEntryRow }) {
 
       <View className="min-w-0 flex-1">
         <View className="flex-row items-center gap-2">
-          <Text className="min-w-0 shrink text-base font-semibold text-white" numberOfLines={1}>
+          <Text className="min-w-0 shrink text-base font-semibold text-text-primary" numberOfLines={1}>
             {entry.display_name ?? 'Unknown'}
           </Text>
           <Badge

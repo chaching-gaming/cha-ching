@@ -2,7 +2,7 @@ import 'react-native-gesture-handler';
 import '../global.css';
 
 import FontAwesome from '@expo/vector-icons/FontAwesome';
-import { DarkTheme, ThemeProvider } from '@react-navigation/native';
+import { DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
 import { Stack, useRouter, useSegments, type Href } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
@@ -50,9 +50,9 @@ void SplashScreen.preventAutoHideAsync().catch(() => {
 });
 
 const appTheme = {
-  ...DarkTheme,
+  ...DefaultTheme,
   colors: {
-    ...DarkTheme.colors,
+    ...DefaultTheme.colors,
     background: colors.background,
     card: colors.surface,
     text: colors.textPrimary,

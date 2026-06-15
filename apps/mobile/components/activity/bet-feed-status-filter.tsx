@@ -44,7 +44,7 @@ export function BetFeedStatusFilter({
                 active ? 'bg-primary' : 'border border-border bg-surface-light'
               }`}
             >
-              <Text className={`text-sm font-bold ${active ? 'text-white' : 'text-text-secondary'}`}>
+              <Text className={`text-sm font-bold ${active ? 'text-background' : 'text-text-secondary'}`}>
                 {o.label}
               </Text>
             </TouchableOpacity>
@@ -68,7 +68,7 @@ export function BetFeedStatusFilter({
             <Square size={22} color={colors.textMuted} />
           )}
           <Text
-            className={`text-sm font-medium ${myBetsOnly ? 'text-white' : 'text-text-secondary'}`}
+            className={`text-sm font-medium ${myBetsOnly ? 'text-text-primary' : 'text-text-secondary'}`}
           >
             Show only my bets
           </Text>

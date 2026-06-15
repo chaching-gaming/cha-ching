@@ -39,7 +39,7 @@ function RoomRow({
       className="flex-row items-center gap-3 border-b border-border px-1 py-4"
     >
       <View className="flex-1">
-        <Text className="text-base font-semibold text-white" numberOfLines={1}>
+        <Text className="text-base font-semibold text-text-primary" numberOfLines={1}>
           {item.room.name}
         </Text>
         <View className="mt-1 flex-row items-center gap-2">
@@ -112,7 +112,7 @@ export function RoomSelectionSheet({ visible, onClose, onSelectRoom }: Props) {
   );
 
   const listHeader = useMemo(
-    () => <Text className="mb-2 text-xl font-bold text-white">Choose a room to create bet</Text>,
+    () => <Text className="mb-2 text-xl font-bold text-text-primary">Choose a room to create bet</Text>,
     [],
   );
 
@@ -144,7 +144,7 @@ export function RoomSelectionSheet({ visible, onClose, onSelectRoom }: Props) {
         >
           {listHeader}
           <View className="items-center px-2 py-8">
-            <Text className="text-lg font-semibold text-white">No active rooms</Text>
+            <Text className="text-lg font-semibold text-text-primary">No active rooms</Text>
             <Text className="mb-5 mt-2 text-center text-base leading-6 text-text-secondary">
               You need an active room before placing a bet.
             </Text>

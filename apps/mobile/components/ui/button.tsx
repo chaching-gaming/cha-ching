@@ -10,9 +10,9 @@ const variants = {
 } as const;
 
 const textVariants = {
-  primary: 'text-white font-semibold',
+  primary: 'text-background font-semibold',
   secondary: 'text-text-secondary font-medium',
-  danger: 'text-white font-semibold',
+  danger: 'text-background font-semibold',
   outline: 'text-text-secondary font-medium',
 } as const;
 

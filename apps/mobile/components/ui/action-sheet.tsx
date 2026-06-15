@@ -78,7 +78,7 @@ export function ActionSheet({ visible, onClose, title, options, selectedKey }: P
       <BottomSheetView
         style={{ paddingHorizontal: 20, paddingTop: 4, paddingBottom: bottomInset }}
       >
-        {title ? <Text className="mb-3 px-1 text-xl font-bold text-white">{title}</Text> : null}
+        {title ? <Text className="mb-3 px-1 text-xl font-bold text-text-primary">{title}</Text> : null}
         <View className="overflow-hidden rounded-2xl border border-border bg-surface">
           {options.map((option, idx) => {
             const isSelected = selectedKey != null && selectedKey === option.key;
@@ -104,7 +104,7 @@ export function ActionSheet({ visible, onClose, title, options, selectedKey }: P
                         ? 'text-error'
                         : isSelected
                           ? 'text-primary'
-                          : 'text-white'
+                          : 'text-text-primary'
                     }`}
                     numberOfLines={1}
                   >

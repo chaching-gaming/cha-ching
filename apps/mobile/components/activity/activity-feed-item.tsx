@@ -361,7 +361,7 @@ function BetActivityCard({
         />
       </View>
 
-      <Text className="text-base font-bold leading-5 text-white" numberOfLines={2}>
+      <Text className="text-base font-bold leading-5 text-text-primary" numberOfLines={2}>
         {bet.question}
       </Text>
     </>
@@ -398,7 +398,7 @@ function BetActivityCard({
       {showSubmissionStatus ? (
         <View className="mt-2 flex-row items-center gap-3 rounded-xl border border-border bg-surface-light px-3 py-2">
           <View className="min-w-0 flex-1">
-            <Text className="text-sm font-semibold text-white">
+            <Text className="text-sm font-semibold text-text-primary">
               {submittedCount}/{totalParticipants} submitted
             </Text>
             {mySubmission ? (
@@ -530,7 +530,7 @@ function BetActivityCard({
           className="mt-3 flex-row items-center justify-center gap-2 rounded-xl bg-primary py-3"
         >
           <Check size={18} color={colors.textPrimary} weight="bold" />
-          <Text className="text-sm font-bold text-white">Submit outcome</Text>
+          <Text className="text-sm font-bold text-text-primary">Submit outcome</Text>
         </TouchableOpacity>
       ) : null}
 
@@ -559,7 +559,7 @@ function BetActivityCard({
             ) : (
               <Check size={18} color={colors.textPrimary} weight="bold" />
             )}
-            <Text className="text-sm font-bold text-white">
+            <Text className="text-sm font-bold text-text-primary">
               {dbStatus === 'DISPUTED' ? 'Resolve dispute' : 'Resolve'}
             </Text>
           </TouchableOpacity>
@@ -1061,7 +1061,7 @@ function ChipRequestActivityCard({
             size="md"
           />
           <View className="min-w-0 flex-1">
-            <Text className="text-base font-semibold text-white" numberOfLines={1}>
+            <Text className="text-base font-semibold text-text-primary" numberOfLines={1}>
               {requesterName}
             </Text>
             <View className="mt-0.5 flex-row items-center gap-1">
@@ -1090,7 +1090,7 @@ function ChipRequestActivityCard({
         <View className="mb-1.5 flex-row items-center justify-between">
           <View className="flex-row items-center gap-1.5">
             <Coins size={18} color={colors.chipsIcon} weight="fill" />
-            <Text className="text-sm font-semibold text-white">
+            <Text className="text-sm font-semibold text-text-primary">
               {fulfilled.toLocaleString('en-US')}{' '}
               <Text className="text-text-secondary">of {requested.toLocaleString('en-US')}</Text>
             </Text>
@@ -1123,7 +1123,7 @@ function ChipRequestActivityCard({
           className="mt-3 flex-row items-center justify-center gap-2 rounded-xl bg-primary py-3"
         >
           <HandCoins size={18} color={colors.textPrimary} weight="bold" />
-          <Text className="text-sm font-bold text-white">Donate chips</Text>
+          <Text className="text-sm font-bold text-text-primary">Donate chips</Text>
         </TouchableOpacity>
       ) : null}
 

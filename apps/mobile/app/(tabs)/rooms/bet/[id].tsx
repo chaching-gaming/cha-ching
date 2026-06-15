@@ -589,8 +589,8 @@ export default function BetDetailScreen() {
         {currentUserWon && (
           <View className="mx-4 mt-4 items-center rounded-2xl bg-primary px-6 py-5">
             <Crown size={32} color="#fff" weight="fill" />
-            <Text className="mt-1 text-xl font-black text-white">YOU WON!</Text>
-            <Text className="text-3xl font-black text-white">
+            <Text className="mt-1 text-xl font-black text-text-primary">YOU WON!</Text>
+            <Text className="text-3xl font-black text-text-primary">
               +{perWinnerPayout.toLocaleString('en-US')}
             </Text>
           </View>
@@ -622,7 +622,7 @@ export default function BetDetailScreen() {
           </View>
 
           {/* Question */}
-          <Text className="mt-3 text-lg font-bold leading-6 text-white">{bet.question}</Text>
+          <Text className="mt-3 text-lg font-bold leading-6 text-text-primary">{bet.question}</Text>
 
           <Text className="mt-1 text-sm text-text-secondary">
             {subjectName
@@ -648,7 +648,7 @@ export default function BetDetailScreen() {
             <View className="flex-row items-center gap-2">
               <Coins size={18} color={colors.chipsIcon} weight="fill" />
               <Text className="text-sm text-text-secondary">Entry</Text>
-              <Text className="font-bold text-white">{bet.stake.toLocaleString('en-US')}</Text>
+              <Text className="font-bold text-text-primary">{bet.stake.toLocaleString('en-US')}</Text>
             </View>
             <View className="flex-row items-center gap-2">
               <Trophy size={18} color={colors.primary} weight="fill" />
@@ -890,7 +890,7 @@ export default function BetDetailScreen() {
                                 ? 'text-error/80'
                                 : isCurrentUser
                                   ? 'text-primary'
-                                  : 'text-white'
+                                  : 'text-text-primary'
                             }`}
                             numberOfLines={1}
                           >
@@ -1013,7 +1013,7 @@ export default function BetDetailScreen() {
             className="flex-row items-center justify-center gap-2 rounded-xl bg-warning py-4"
           >
             <Warning size={20} color="#fff" weight="bold" />
-            <Text className="text-base font-bold text-white">
+            <Text className="text-base font-bold text-text-primary">
               {raiseDispute.isPending ? 'Raising Dispute...' : 'Raise Dispute'}
             </Text>
           </TouchableOpacity>
@@ -1030,7 +1030,7 @@ export default function BetDetailScreen() {
             ) : (
               <Check size={20} color="#fff" weight="bold" />
             )}
-            <Text className="text-base font-bold text-white">
+            <Text className="text-base font-bold text-text-primary">
               {dbStatus === 'DISPUTED' ? 'Resolve Dispute' : 'Finalize Result'}
             </Text>
           </TouchableOpacity>

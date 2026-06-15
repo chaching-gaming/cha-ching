@@ -3,7 +3,7 @@ import { Text, View } from 'react-native';
 type Tone = 'default' | 'primary' | 'warning' | 'error';
 
 const VALUE_TONE: Record<Tone, string> = {
-  default: 'text-white',
+  default: 'text-text-primary',
   primary: 'text-primary',
   warning: 'text-warning',
   error: 'text-error',

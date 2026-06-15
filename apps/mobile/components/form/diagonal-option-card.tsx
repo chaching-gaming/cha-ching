@@ -32,7 +32,7 @@ export function DiagonalOptionCard({
   const negativeSelected = isActive && selectedPick === negativeLabel;
 
   const borderColor = isActive ? colors.primary : colors.border;
-  const bgColor = isActive ? 'rgba(46, 175, 125, 0.1)' : colors.surface;
+  const bgColor = isActive ? 'rgba(77, 138, 138, 0.1)' : colors.surface;
 
   return (
     <View
@@ -51,7 +51,7 @@ export function DiagonalOptionCard({
       {/* Top section: Icon and label */}
       <View className="items-center px-3 pb-2 pt-4">
         {icon}
-        <Text className="mt-2 text-center text-sm font-bold text-white" numberOfLines={2}>
+        <Text className="mt-2 text-center text-sm font-bold text-text-primary" numberOfLines={2}>
           {label}
         </Text>
         {sublabel ? (
@@ -68,7 +68,7 @@ export function DiagonalOptionCard({
             flex: 1,
             paddingVertical: 10,
             borderRadius: 10,
-            backgroundColor: positiveSelected ? colors.primary : 'rgba(255,255,255,0.08)',
+            backgroundColor: positiveSelected ? colors.primary : 'rgba(0,0,0,0.04)',
             alignItems: 'center',
             justifyContent: 'center',
           }}
@@ -77,7 +77,7 @@ export function DiagonalOptionCard({
             style={{
               fontSize: 13,
               fontWeight: '700',
-              color: positiveSelected ? colors.background : colors.textSecondary,
+              color: positiveSelected ? colors.surface : colors.textSecondary,
             }}
           >
             {positiveLabel}
@@ -91,7 +91,7 @@ export function DiagonalOptionCard({
             flex: 1,
             paddingVertical: 10,
             borderRadius: 10,
-            backgroundColor: negativeSelected ? colors.error : 'rgba(255,255,255,0.08)',
+            backgroundColor: negativeSelected ? colors.error : 'rgba(0,0,0,0.04)',
             alignItems: 'center',
             justifyContent: 'center',
           }}
@@ -100,7 +100,7 @@ export function DiagonalOptionCard({
             style={{
               fontSize: 13,
               fontWeight: '700',
-              color: negativeSelected ? '#FFFFFF' : colors.textSecondary,
+              color: negativeSelected ? colors.surface : colors.textSecondary,
             }}
           >
             {negativeLabel}

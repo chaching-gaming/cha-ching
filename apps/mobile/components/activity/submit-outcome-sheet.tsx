@@ -96,7 +96,7 @@ export function SubmitOutcomeSheet({
           onPress={(e) => e.stopPropagation()}
         >
           <View className="mb-4 flex-row items-center justify-between">
-            <Text className="text-xl font-bold text-white">Submit outcome</Text>
+            <Text className="text-xl font-bold text-text-primary">Submit outcome</Text>
             <TouchableOpacity
               onPress={handleClose}
               disabled={submitOutcome.isPending}
@@ -107,7 +107,7 @@ export function SubmitOutcomeSheet({
           </View>
 
           <Text className="mb-1 text-sm font-medium text-text-secondary">Question</Text>
-          <Text className="mb-5 text-base leading-6 text-white">{bet.question}</Text>
+          <Text className="mb-5 text-base leading-6 text-text-primary">{bet.question}</Text>
 
           <Text className="mb-2 text-sm font-medium text-text-secondary">What happened?</Text>
           <View className="mb-5 gap-2">
@@ -124,7 +124,7 @@ export function SubmitOutcomeSheet({
                   }`}
                 >
                   <Text
-                    className={`text-base font-semibold ${isSelected ? 'text-primary' : 'text-white'}`}
+                    className={`text-base font-semibold ${isSelected ? 'text-primary' : 'text-text-primary'}`}
                   >
                     {getDisplayLabel(option)}
                   </Text>

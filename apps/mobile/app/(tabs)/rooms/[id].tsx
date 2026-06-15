@@ -219,7 +219,7 @@ export default function RoomDetailScreen() {
         title={roomDisplayName}
         subtitle={roomDate ?? undefined}
         showBack
-        titleClassName="text-xl font-bold text-white"
+        titleClassName="text-xl font-bold text-text-primary"
         backIconSize={28}
         right={
           <View className="flex-row items-center gap-4">
@@ -236,7 +236,7 @@ export default function RoomDetailScreen() {
               <HandHeart size={26} color={colors.primary} weight="fill" />
               {openChipRequestCount > 0 && (
                 <View className="absolute -right-1.5 -top-1 min-w-[18px] items-center justify-center rounded-full bg-error px-1 py-0.5">
-                  <Text className="text-[10px] font-bold text-white">{openChipRequestCount}</Text>
+                  <Text className="text-[10px] font-bold text-text-primary">{openChipRequestCount}</Text>
                 </View>
               )}
             </TouchableOpacity>

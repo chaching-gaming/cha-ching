@@ -44,7 +44,7 @@ export function TextField({
       )}
       <View className="relative">
         <TextInput
-          className={`rounded-xl border bg-surface-light text-base text-white ${padL} ${padR} ${
+          className={`rounded-xl border bg-surface-light text-base text-text-primary ${padL} ${padR} ${
             errors ? 'border-error' : 'border-border'
           } ${inputClassName}`}
           style={[

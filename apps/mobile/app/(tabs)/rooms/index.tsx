@@ -35,7 +35,7 @@ function RoomCardContent({ item }: { item: RoomWithMembership }) {
       {/* Row 1: name + balance */}
       <View className="flex-row items-center justify-between">
         <View className="mr-3 flex-1">
-          <Text className="text-lg font-semibold text-white" numberOfLines={1}>
+          <Text className="text-lg font-semibold text-text-primary" numberOfLines={1}>
             {item.room.name}
           </Text>
         </View>
@@ -127,7 +127,7 @@ function RoomSwipeRow({ item }: { item: RoomWithMembership }) {
               activeOpacity={0.85}
             >
               <Text
-                className="text-center text-sm font-semibold leading-5 text-white"
+                className="text-center text-sm font-semibold leading-5 text-background"
                 numberOfLines={2}
               >
                 End session

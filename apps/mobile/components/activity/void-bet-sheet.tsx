@@ -88,7 +88,7 @@ export function VoidBetSheet({ visible, onClose, bet, roomId }: Props) {
             <View className="mb-4 flex-row items-center justify-between">
               <View className="flex-row items-center gap-2">
                 <Prohibit size={22} color={colors.error} weight="fill" />
-                <Text className="text-xl font-bold text-white">Void bet</Text>
+                <Text className="text-xl font-bold text-text-primary">Void bet</Text>
               </View>
               <TouchableOpacity
                 onPress={handleClose}
@@ -100,7 +100,7 @@ export function VoidBetSheet({ visible, onClose, bet, roomId }: Props) {
             </View>
 
             <Text className="mb-1 text-sm font-medium text-text-secondary">Question</Text>
-            <Text className="mb-4 text-base leading-6 text-white">{bet.question}</Text>
+            <Text className="mb-4 text-base leading-6 text-text-primary">{bet.question}</Text>
 
             <View className="mb-4 flex-row items-center justify-between rounded-xl border border-border bg-surface-light px-3 py-2.5">
               <Text className="text-sm font-medium text-text-secondary">
@@ -141,7 +141,7 @@ export function VoidBetSheet({ visible, onClose, bet, roomId }: Props) {
               multiline
               maxLength={200}
               textAlignVertical="top"
-              className="mb-5 min-h-[80px] rounded-xl border border-border bg-surface-light px-3 py-2.5 text-base text-white"
+              className="mb-5 min-h-[80px] rounded-xl border border-border bg-surface-light px-3 py-2.5 text-base text-text-primary"
             />
 
             <Button variant="danger" onPress={handleSubmit} loading={voidBet.isPending}>

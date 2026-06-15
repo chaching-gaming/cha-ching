@@ -96,7 +96,7 @@ function LockedInContent({
           </View>
         </View>
 
-        <Text className="mt-6 text-3xl font-black uppercase tracking-wider text-white">
+        <Text className="mt-6 text-3xl font-black uppercase tracking-wider text-text-primary">
           You&apos;re locked in
         </Text>
         {subjectName ? (

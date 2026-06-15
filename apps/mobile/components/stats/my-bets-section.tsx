@@ -136,7 +136,7 @@ function BetRow({ bet, isLast }: { bet: MyBet; isLast: boolean }) {
 
   const iconColor = useMemo(() => {
     if (bet.status === 'SETTLED') {
-      return bet.won ? '#22C55E' : '#EF4444';
+      return bet.won ? colors.success : colors.error;
     }
     if (bet.status === 'VOID') {
       return colors.textMuted;
@@ -167,7 +167,7 @@ function BetRow({ bet, isLast }: { bet: MyBet; isLast: boolean }) {
           <StatusIcon size={20} color={iconColor} weight="fill" />
         </View>
         <View className="min-w-0 flex-1">
-          <Text className="text-base font-semibold text-white" numberOfLines={2}>
+          <Text className="text-base font-semibold text-text-primary" numberOfLines={2}>
             {bet.question}
           </Text>
           <Text className="mt-1 text-sm text-text-secondary" numberOfLines={1}>
@@ -182,21 +182,21 @@ function BetRow({ bet, isLast }: { bet: MyBet; isLast: boolean }) {
           {/* My pick */}
           <View>
             <Text className="text-xs text-text-muted">Your pick</Text>
-            <Text className="mt-0.5 text-sm font-medium text-white">{bet.my_pick}</Text>
+            <Text className="mt-0.5 text-sm font-medium text-text-primary">{bet.my_pick}</Text>
           </View>
 
           {/* Outcome (if settled) */}
           {bet.outcome ? (
             <View>
               <Text className="text-xs text-text-muted">Outcome</Text>
-              <Text className="mt-0.5 text-sm font-medium text-white">{bet.outcome}</Text>
+              <Text className="mt-0.5 text-sm font-medium text-text-primary">{bet.outcome}</Text>
             </View>
           ) : null}
 
           {/* Stake */}
           <View>
             <Text className="text-xs text-text-muted">Stake</Text>
-            <Text className="mt-0.5 text-sm font-medium text-white">{bet.stake}</Text>
+            <Text className="mt-0.5 text-sm font-medium text-text-primary">{bet.stake}</Text>
           </View>
         </View>
 

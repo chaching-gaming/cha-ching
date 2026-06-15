@@ -35,8 +35,8 @@ const ICON_COLORS: Record<NotificationType, string> = {
   bet_created: colors.primary,
   bet_matched: colors.primary,
   bet_settled: colors.primary,
-  bet_won: '#22C55E', // green for wins
-  bet_lost: '#EF4444', // red for losses
+  bet_won: colors.success,
+  bet_lost: colors.error,
   bet_voided: colors.textMuted,
   bet_disputed: colors.warning,
   bet_expiring: colors.warning,
@@ -77,7 +77,7 @@ export function NotificationItem({ notification, onPress, isLast: _isLast }: Not
       {/* Content */}
       <View className="min-w-0 flex-1 pr-4">
         <Text
-          className={`text-base ${isUnread ? 'font-bold' : 'font-semibold'} text-white`}
+          className={`text-base ${isUnread ? 'font-bold' : 'font-semibold'} text-text-primary`}
           numberOfLines={1}
         >
           {notification.title}

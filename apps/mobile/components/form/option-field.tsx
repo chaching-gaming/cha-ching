@@ -84,7 +84,7 @@ export function OptionField({
             layout === 'wrap'
               ? `text-sm font-bold ${isSelected ? 'text-primary' : 'text-text-secondary'}`
               : layout === 'grid-2'
-                ? `mt-3 text-center text-base font-bold text-white`
+                ? `mt-3 text-center text-base font-bold text-text-primary`
                 : `text-base font-medium ${isSelected ? 'text-primary' : 'text-text-secondary'}`;
 
           return (

@@ -42,7 +42,7 @@ export function LoadingScreen({ message }: LoadingScreenProps) {
           className="mb-6 h-28 w-28"
           resizeMode="contain"
         />
-        <Text className="mb-6 text-3xl font-bold text-white">Cha-Ching</Text>
+        <Text className="mb-6 text-3xl font-bold text-text-primary">Cha-Ching</Text>
         <ActivityIndicator size="large" color={colors.primary} />
         {message && (
           <Text className="mt-4 text-sm text-text-secondary">{message}</Text>

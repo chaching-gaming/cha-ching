@@ -85,7 +85,7 @@ export function Toast({ type, message, action, onDismiss }: ToastProps) {
       >
         <Icon size={20} color={config.iconColor} weight="fill" />
 
-        <Text className="min-w-0 flex-1 text-sm font-medium text-white" numberOfLines={2}>
+        <Text className="min-w-0 flex-1 text-sm font-medium text-text-primary" numberOfLines={2}>
           {message}
         </Text>
 
@@ -96,9 +96,9 @@ export function Toast({ type, message, action, onDismiss }: ToastProps) {
               onDismiss();
             }}
             activeOpacity={0.7}
-            className="rounded-lg bg-white/10 px-3 py-1.5"
+            className="rounded-lg bg-surface-light px-3 py-1.5"
           >
-            <Text className="text-sm font-semibold text-white">{action.label}</Text>
+            <Text className="text-sm font-semibold text-text-primary">{action.label}</Text>
           </TouchableOpacity>
         ) : null}
 

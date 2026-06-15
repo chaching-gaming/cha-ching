@@ -94,7 +94,7 @@ function RoomPreviewCard({ preview }: { preview: RoomPreview }) {
           </Text>
         </View>
         <View className="min-w-0 flex-1">
-          <Text className="text-base font-semibold text-white" numberOfLines={1}>
+          <Text className="text-base font-semibold text-text-primary" numberOfLines={1}>
             {preview.name}
           </Text>
           <View className="mt-0.5 flex-row items-center gap-1">
@@ -113,7 +113,7 @@ function InvalidCodeCard() {
   return (
     <View className="mb-4 items-center rounded-2xl border border-border bg-surface px-4 py-5">
       <WarningCircle size={36} color={colors.warning} weight="fill" />
-      <Text className="mt-2 text-base font-semibold text-white">No room found</Text>
+      <Text className="mt-2 text-base font-semibold text-text-primary">No room found</Text>
       <Text className="mt-1 text-center text-sm text-text-muted">
         This code doesn&apos;t match any active room.{'\n'}Double-check with whoever invited you.
       </Text>
@@ -286,7 +286,7 @@ export default function JoinRoomScreen() {
             activeOpacity={0.7}
           >
             <Text
-              className={`text-sm font-semibold ${activeTab === 'code' ? 'text-white' : 'text-text-secondary'}`}
+              className={`text-sm font-semibold ${activeTab === 'code' ? 'text-background' : 'text-text-secondary'}`}
             >
               Invite Code
             </Text>
@@ -297,7 +297,7 @@ export default function JoinRoomScreen() {
             activeOpacity={0.7}
           >
             <Text
-              className={`text-sm font-semibold ${activeTab === 'qr' ? 'text-white' : 'text-text-secondary'}`}
+              className={`text-sm font-semibold ${activeTab === 'qr' ? 'text-background' : 'text-text-secondary'}`}
             >
               Scan QR
             </Text>
@@ -323,7 +323,7 @@ export default function JoinRoomScreen() {
                   onKeyPress={({ nativeEvent }) => handleKeyPress(nativeEvent.key, index)}
                   autoCapitalize="characters"
                   autoCorrect={false}
-                  className={`h-14 w-12 rounded-xl border text-center text-xl font-bold text-white ${
+                  className={`h-14 w-12 rounded-xl border text-center text-xl font-bold text-text-primary ${
                     char ? 'border-primary bg-primary/10' : 'border-border bg-surface'
                   }`}
                   selectionColor={colors.primary}

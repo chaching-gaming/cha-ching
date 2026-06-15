@@ -50,7 +50,7 @@ export function EmptyState({
         </View>
       ) : null}
 
-      <Text className="text-center text-xl font-semibold text-white">{title}</Text>
+      <Text className="text-center text-xl font-semibold text-text-primary">{title}</Text>
 
       {subtitle ? (
         <Text className="mt-2 max-w-sm text-center text-base leading-6 text-text-secondary">

@@ -77,7 +77,7 @@ function SettingsRow({
     rightIcon ?? (onPress ? <CaretRight size={18} color={colors.textMuted} weight="bold" /> : null);
   const content = (
     <View className="flex-row items-center justify-between border-b border-border px-4 py-4">
-      <Text className="text-base font-semibold text-white">{label}</Text>
+      <Text className="text-base font-semibold text-text-primary">{label}</Text>
       <View className="flex-row items-center gap-2">
         <Text
           className={`text-base font-semibold ${valueClassName ?? 'text-text-secondary'}`}
@@ -128,7 +128,7 @@ function AdminActionRow({
       <View className={`h-10 w-10 items-center justify-center rounded-full ${tintBg}`}>{icon}</View>
       <View className="min-w-0 flex-1">
         <Text
-          className={`text-base font-bold ${destructive ? 'text-error' : 'text-white'}`}
+          className={`text-base font-bold ${destructive ? 'text-error' : 'text-text-primary'}`}
           numberOfLines={1}
         >
           {label}
@@ -388,7 +388,7 @@ export default function RoomSettingsScreen() {
 
   return (
     <View className="flex-1 bg-background">
-      <ScreenHeader title="Room Settings" showBack showHome titleClassName="text-xl font-bold text-white" />
+      <ScreenHeader title="Room Settings" showBack showHome titleClassName="text-xl font-bold text-text-primary" />
 
       <ScrollView contentContainerClassName="pb-12">
         {/* Room settings */}
@@ -552,13 +552,13 @@ export default function RoomSettingsScreen() {
         <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
           <View className="flex-1 items-center justify-center bg-black/60 px-6">
             <View className="w-full max-w-sm rounded-2xl bg-surface p-5">
-              <Text className="text-lg font-bold text-white">Outcome Timeout</Text>
+              <Text className="text-lg font-bold text-text-primary">Outcome Timeout</Text>
               <Text className="mt-2 text-sm text-text-secondary">
                 Enter the time (in seconds) participants have to submit their outcome after a bet
                 expires. (10-300)
               </Text>
               <TextInput
-                className="mt-4 rounded-xl border border-border bg-background px-4 py-3 text-base text-white"
+                className="mt-4 rounded-xl border border-border bg-background px-4 py-3 text-base text-text-primary"
                 value={outcomeTimeoutInput}
                 onChangeText={setOutcomeTimeoutInput}
                 keyboardType="number-pad"
@@ -577,7 +577,7 @@ export default function RoomSettingsScreen() {
                   onPress={handleSaveOutcomeTimeout}
                   className="rounded-xl bg-primary px-4 py-2.5"
                 >
-                  <Text className="text-base font-semibold text-white">Save</Text>
+                  <Text className="text-base font-semibold text-text-primary">Save</Text>
                 </TouchableOpacity>
               </View>
             </View>

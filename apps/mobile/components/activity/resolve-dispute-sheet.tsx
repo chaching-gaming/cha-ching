@@ -122,7 +122,7 @@ export function ResolveDisputeSheet({
               ) : (
                 <Check size={22} color={colors.primary} weight="fill" />
               )}
-              <Text className="text-xl font-bold text-white">
+              <Text className="text-xl font-bold text-text-primary">
                 {isDispute ? 'Resolve dispute' : 'Settle bet'}
               </Text>
             </View>
@@ -136,7 +136,7 @@ export function ResolveDisputeSheet({
           </View>
 
           <Text className="mb-1 text-sm font-medium text-text-secondary">Question</Text>
-          <Text className="mb-4 text-base leading-6 text-white">{bet.question}</Text>
+          <Text className="mb-4 text-base leading-6 text-text-primary">{bet.question}</Text>
 
           <Text className="mb-2 text-sm font-medium text-text-secondary">
             Participants reported ({totalSubmissions})
@@ -150,7 +150,7 @@ export function ResolveDisputeSheet({
                   key={option}
                   className="flex-row items-center justify-between rounded-xl border border-border bg-surface-light px-3 py-2.5"
                 >
-                  <Text className="text-sm font-semibold text-white" numberOfLines={1}>
+                  <Text className="text-sm font-semibold text-text-primary" numberOfLines={1}>
                     {getDisplayLabel(option)}
                   </Text>
                   <Text className={`text-sm font-bold ${tone}`} numberOfLines={1}>
@@ -176,7 +176,7 @@ export function ResolveDisputeSheet({
                   }`}
                 >
                   <Text
-                    className={`text-base font-semibold ${isSelected ? 'text-primary' : 'text-white'}`}
+                    className={`text-base font-semibold ${isSelected ? 'text-primary' : 'text-text-primary'}`}
                   >
                     {getDisplayLabel(option)}
                   </Text>

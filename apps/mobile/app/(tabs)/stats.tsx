@@ -158,7 +158,7 @@ function RoomDropdown({ roomName, onPress }: { roomName: string; onPress: () => 
       className="flex-row items-center justify-between rounded-2xl border border-border bg-surface px-4 py-3"
     >
       <View className="min-w-0 flex-1">
-        <Text className="mt-0.5 text-base font-bold text-white" numberOfLines={1}>
+        <Text className="mt-0.5 text-base font-bold text-text-primary" numberOfLines={1}>
           {roomName}
         </Text>
       </View>
@@ -243,7 +243,7 @@ function RoomStats({ roomId }: { roomId: string }) {
           <StatusCard dotClass="bg-warning" label="Matched" value={event?.matched_bets ?? 0} />
         </View>
         <View className="mt-3 flex-row gap-3">
-          <StatusCard dotClass="bg-indigo-400" label="Settled" value={event?.settled_bets ?? 0} />
+          <StatusCard dotClass="bg-secondary" label="Settled" value={event?.settled_bets ?? 0} />
           <StatusCard dotClass="bg-text-muted" label="Void" value={event?.voided_bets ?? 0} />
         </View>
 
@@ -257,7 +257,7 @@ function RoomStats({ roomId }: { roomId: string }) {
                   idx === event.popular_templates.length - 1 ? '' : 'border-b border-border/40'
                 }`}
               >
-                <Text className="min-w-0 flex-1 text-base text-white" numberOfLines={1}>
+                <Text className="min-w-0 flex-1 text-base text-text-primary" numberOfLines={1}>
                   {t.label}
                 </Text>
                 <Text className="ml-3 text-sm font-semibold text-text-muted">
@@ -301,7 +301,7 @@ function StatusCard({
           {label}
         </Text>
       </View>
-      <Text className="mt-2 text-2xl font-bold text-white">{value}</Text>
+      <Text className="mt-2 text-2xl font-bold text-text-primary">{value}</Text>
     </View>
   );
 }
@@ -331,7 +331,7 @@ function PlayerRow({ player, isLast }: { player: PlayerStat; isLast: boolean }) 
       >
         <Avatar uri={player.avatar_url} fallback={player.display_name ?? '?'} size="sm" />
         <View className="ml-3 min-w-0 flex-1">
-          <Text className="text-base text-white" numberOfLines={1}>
+          <Text className="text-base text-text-primary" numberOfLines={1}>
             {player.display_name ?? 'Unknown'}
           </Text>
           <Text className="mt-0.5 text-xs font-medium text-text-muted">
@@ -350,7 +350,7 @@ function PlayerRow({ player, isLast }: { player: PlayerStat; isLast: boolean }) 
               key={`${cat.template_slug ?? 'writein'}`}
               className="flex-row items-center justify-between py-1"
             >
-              <Text className="min-w-0 flex-1 text-sm text-white" numberOfLines={1}>
+              <Text className="min-w-0 flex-1 text-sm text-text-primary" numberOfLines={1}>
                 {cat.template_label}
               </Text>
               <Text className="ml-3 text-sm font-semibold text-text-muted">

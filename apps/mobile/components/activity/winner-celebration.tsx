@@ -80,7 +80,7 @@ function WinnerContent({
           </View>
         </View>
 
-        <Text className="text-center text-3xl font-bold text-white">
+        <Text className="text-center text-3xl font-bold text-text-primary">
           {meWon ? 'You won!' : winnerLabel}
         </Text>
 

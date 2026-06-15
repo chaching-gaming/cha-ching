@@ -48,7 +48,7 @@ export default function StandingsScreen() {
   if (roomLoading) {
     return (
       <View className="flex-1 bg-background">
-        <ScreenHeader title="Standings" showBack showHome titleClassName="text-xl font-bold text-white" backIconSize={28} />
+        <ScreenHeader title="Standings" showBack showHome titleClassName="text-xl font-bold text-text-primary" backIconSize={28} />
         <View>
           {Array.from({ length: 8 }).map((_, i) => (
             <SkeletonListItem key={i} />
@@ -72,7 +72,7 @@ export default function StandingsScreen() {
         title="Standings"
         subtitle={room.name}
         showBack
-        titleClassName="text-xl font-bold text-white"
+        titleClassName="text-xl font-bold text-text-primary"
         backIconSize={28}
       />
 
@@ -223,7 +223,7 @@ function PodiumColumn({
 
       {/* Name */}
       <Text
-        className="mt-2 max-w-full text-center text-sm font-semibold text-white"
+        className="mt-2 max-w-full text-center text-sm font-semibold text-text-primary"
         numberOfLines={1}
       >
         {member.display_name ?? 'Unknown'}
@@ -292,7 +292,7 @@ function StandingsRow({
       <Text className="w-8 text-base font-bold text-text-muted">{rank}</Text>
       <Avatar uri={member.avatar_url} fallback={member.display_name ?? '?'} size="md" />
       <View className="ml-3 min-w-0 flex-1 flex-row items-center gap-2">
-        <Text className="min-w-0 shrink text-base text-white" numberOfLines={1}>
+        <Text className="min-w-0 shrink text-base text-text-primary" numberOfLines={1}>
           {member.display_name ?? 'Unknown'}
           {isSelf ? <Text className="text-sm text-text-secondary"> (you)</Text> : null}
         </Text>

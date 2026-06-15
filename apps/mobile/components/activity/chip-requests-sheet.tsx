@@ -98,7 +98,7 @@ export function ChipRequestsSheet({
           <View className="mb-4 flex-row items-center justify-between">
             <View className="flex-row items-center gap-2">
               <HandHeart size={22} color={colors.primary} weight="fill" />
-              <Text className="text-xl font-bold text-white">Chip Requests</Text>
+              <Text className="text-xl font-bold text-text-primary">Chip Requests</Text>
             </View>
             <TouchableOpacity
               onPress={onClose}
@@ -240,7 +240,7 @@ function ChipRequestRow({
         />
         <View className="min-w-0 flex-1">
           <View className="flex-row items-center">
-            <Text className="text-base font-semibold text-white" numberOfLines={1}>
+            <Text className="text-base font-semibold text-text-primary" numberOfLines={1}>
               {requesterName}
               {isRequester ? (
                 <Text className="text-text-secondary"> (you)</Text>
@@ -260,7 +260,7 @@ function ChipRequestRow({
         <View className="mb-1.5 flex-row items-center justify-between">
           <View className="flex-row items-center gap-1.5">
             <Coins size={16} color={colors.chipsIcon} weight="fill" />
-            <Text className="text-sm font-semibold text-white">
+            <Text className="text-sm font-semibold text-text-primary">
               {fulfilled.toLocaleString('en-US')}{' '}
               <Text className="text-text-secondary">/ {requested.toLocaleString('en-US')}</Text>
             </Text>
@@ -283,8 +283,8 @@ function ChipRequestRow({
           activeOpacity={0.8}
           className="mt-3 flex-row items-center justify-center gap-2 rounded-lg bg-primary py-2.5"
         >
-          <HandCoins size={16} color={colors.textPrimary} weight="bold" />
-          <Text className="text-sm font-bold text-white">Donate</Text>
+          <HandCoins size={16} color={colors.background} weight="bold" />
+          <Text className="text-sm font-bold text-background">Donate</Text>
         </TouchableOpacity>
       ) : null}
     </View>

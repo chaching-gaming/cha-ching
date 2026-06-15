@@ -14,7 +14,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   splash: {
     image: './assets/images/splash-icon.png',
     resizeMode: 'contain',
-    backgroundColor: '#011E22',
+    backgroundColor: '#F3F4F6',
   },
   ios: {
     supportsTablet: false,
@@ -28,7 +28,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   android: {
     adaptiveIcon: {
       foregroundImage: './assets/images/adaptive-icon.png',
-      backgroundColor: '#011E22',
+      backgroundColor: '#F3F4F6',
     },
     edgeToEdgeEnabled: true,
     package: 'com.visualglobe.chaching',
@@ -51,7 +51,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       'expo-notifications',
       {
         icon: './assets/images/notification-icon.png',
-        color: '#2EAF7D',
+        color: '#4D8A8A',
         defaultChannel: 'default',
       },
     ],

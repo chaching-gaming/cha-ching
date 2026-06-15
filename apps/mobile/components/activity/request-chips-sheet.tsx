@@ -111,7 +111,7 @@ export function RequestChipsSheet({ visible, onClose, roomId, currentBalance }: 
             <View className="mb-4 flex-row items-center justify-between">
               <View className="flex-row items-center gap-2">
                 <HandHeart size={22} color={colors.primary} weight="fill" />
-                <Text className="text-xl font-bold text-white">Request chips</Text>
+                <Text className="text-xl font-bold text-text-primary">Request chips</Text>
               </View>
               <TouchableOpacity
                 onPress={handleClose}
@@ -128,7 +128,7 @@ export function RequestChipsSheet({ visible, onClose, roomId, currentBalance }: 
                 <Coins size={18} color={colors.chipsIcon} weight="fill" />
                 <Text
                   className={`text-base font-bold ${
-                    currentBalance < 0 ? 'text-error' : 'text-white'
+                    currentBalance < 0 ? 'text-error' : 'text-text-primary'
                   }`}
                 >
                   {currentBalance.toLocaleString('en-US')}
@@ -148,7 +148,7 @@ export function RequestChipsSheet({ visible, onClose, roomId, currentBalance }: 
                 keyboardType="number-pad"
                 selectTextOnFocus
                 maxLength={6}
-                className="ml-2 flex-1 text-2xl font-bold text-white"
+                className="ml-2 flex-1 text-2xl font-bold text-text-primary"
               />
               <Text className="text-base font-medium text-text-secondary">chips</Text>
             </View>
@@ -163,7 +163,7 @@ export function RequestChipsSheet({ visible, onClose, roomId, currentBalance }: 
               multiline
               maxLength={MAX_MESSAGE_LENGTH}
               textAlignVertical="top"
-              className="mb-5 min-h-[80px] rounded-xl border border-border bg-surface-light px-3 py-2.5 text-base text-white"
+              className="mb-5 min-h-[80px] rounded-xl border border-border bg-surface-light px-3 py-2.5 text-base text-text-primary"
             />
 
             <Button

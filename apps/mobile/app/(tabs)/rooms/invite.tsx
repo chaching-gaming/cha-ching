@@ -61,7 +61,7 @@ export default function InviteScreen() {
       <View className="flex-1 items-center px-5 pt-4">
         {/* Room name & member count */}
         <Text
-          className="text-center text-lg font-semibold text-white"
+          className="text-center text-lg font-semibold text-text-primary"
           numberOfLines={1}
           style={{ maxWidth: '100%' }}
         >
@@ -76,7 +76,7 @@ export default function InviteScreen() {
 
         {/* QR Code */}
         <View className="mb-3 rounded-2xl bg-white p-6">
-          <QRCode value={inviteCode} size={200} color="#0B1120" backgroundColor="white" />
+          <QRCode value={inviteCode} size={200} color={colors.textPrimary} backgroundColor={colors.surface} />
         </View>
         <Text className="mb-8 text-center text-sm text-text-muted">
           Scan this QR code to join the room
@@ -88,7 +88,7 @@ export default function InviteScreen() {
             INVITE CODE
           </Text>
           <View className="flex-row items-center justify-between">
-            <Text className="text-2xl font-bold tracking-[6px] text-white">{formattedCode}</Text>
+            <Text className="text-2xl font-bold tracking-[6px] text-text-primary">{formattedCode}</Text>
             <TouchableOpacity
               onPress={handleCopyCode}
               className={`h-10 w-10 items-center justify-center rounded-lg ${copied ? 'bg-primary/20' : 'bg-primary/10'}`}

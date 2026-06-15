@@ -146,11 +146,11 @@ export function RoomHeaderBar({
           <View className="flex-row items-center justify-between">
             <View className="flex-row items-center gap-2">
               <HandHeart size={18} color={colors.primary} weight="fill" />
-              <Text className="text-sm font-semibold text-white">Your chip request</Text>
+              <Text className="text-sm font-semibold text-text-primary">Your chip request</Text>
             </View>
             <View className="flex-row items-center gap-1.5">
               <Coins size={16} color={colors.chipsIcon} weight="fill" />
-              <Text className="text-sm font-semibold text-white">
+              <Text className="text-sm font-semibold text-text-primary">
                 {fulfilled.toLocaleString('en-US')}
                 <Text className="text-text-secondary"> / {requested.toLocaleString('en-US')}</Text>
               </Text>

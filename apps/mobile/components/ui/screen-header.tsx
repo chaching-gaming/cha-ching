@@ -24,7 +24,7 @@ export function ScreenHeader({
   showBack = false,
   showHome = false,
   right,
-  titleClassName = 'text-xl font-bold text-white',
+  titleClassName = 'text-xl font-bold text-text-primary',
   backIconSize = 24,
 }: ScreenHeaderProps) {
   const router = useRouter();

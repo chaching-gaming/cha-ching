@@ -9,6 +9,7 @@ import { KeyboardAwareScrollView } from '@/components/form/keyboard-aware-scroll
 import { useForm } from '@/hooks/use-form';
 import { useToast } from '@/providers/toast';
 import { LoadingScreen } from '@/components/ui';
+import { colors } from '@/constants/colors';
 
 const signUpSchema = z.object({
   displayName: z.string().min(1, 'Display name is required'),
@@ -85,7 +86,7 @@ export default function SignUpScreen() {
           className="mb-4 h-24 w-24"
           resizeMode="contain"
         />
-        <Text className="text-3xl font-bold text-white">Create Account</Text>
+        <Text className="text-3xl font-bold text-text-primary">Create Account</Text>
         <Text className="mt-2 text-base text-text-secondary">Join your friends on Cha-Ching</Text>
       </View>
 
@@ -149,8 +150,8 @@ export default function SignUpScreen() {
           disabled={oauthLoading}
           activeOpacity={0.7}
         >
-          <FontAwesome name="apple" size={18} color="#fff" />
-          <Text className="text-base font-medium text-white">Apple</Text>
+          <FontAwesome name="apple" size={18} color={colors.textPrimary} />
+          <Text className="text-base font-medium text-text-primary">Apple</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -159,8 +160,8 @@ export default function SignUpScreen() {
           disabled={oauthLoading}
           activeOpacity={0.7}
         >
-          <FontAwesome name="google" size={18} color="#fff" />
-          <Text className="text-base font-medium text-white">Google</Text>
+          <FontAwesome name="google" size={18} color={colors.textPrimary} />
+          <Text className="text-base font-medium text-text-primary">Google</Text>
         </TouchableOpacity>
       </View>
 

@@ -1,32 +1,32 @@
-const amber = '#F59E0B' as const;
+const amber = '#D97706' as const;
 
 export const colors = {
-  // Green/Teal palette (darker)
-  background: '#011E22',
-  surface: '#02353C',
-  surfaceLight: '#054550',
-  border: '#086568',
-  primary: '#2EAF7D',
-  primaryDark: '#238F66',
-  primaryLight: '#3FD0C9',
-  secondary: '#3FD0C9',
-  accent: '#C1F6ED',
-  success: '#449342',
-  error: '#EF4444',
+  // Light theme: Vintage blue, white & green palette
+  background: '#F3F4F6',
+  surface: '#FFFFFF',
+  surfaceLight: '#E5E7EB',
+  border: '#D1D5DB',
+  primary: '#4D8A8A',
+  primaryDark: '#3D7A7A',
+  primaryLight: '#6BB5AC',
+  secondary: '#5B86A0',
+  accent: '#7DAE7E',
+  success: '#16A34A',
+  error: '#DC2626',
   warning: amber,
   /** Phosphor `Coins` / chip glyphs — use everywhere chips are represented as an icon */
   chipsIcon: amber,
-  textPrimary: '#FFFFFF',
-  textSecondary: '#A8D5D0',
-  textMuted: '#6B9E99',
+  textPrimary: '#1F2937',
+  textSecondary: '#4B5563',
+  textMuted: '#6B7280',
   /** Medal colors for standings podium */
   medal: {
-    gold: '#F59E0B',
-    silver: '#A8D5D0',
-    bronze: '#B97F4C',
+    gold: '#D97706',
+    silver: '#6B7280',
+    bronze: '#B45309',
   },
   /** Confetti colors for celebration animations */
-  confetti: ['#C1F6ED', '#2EAF7D', '#3FD0C9', '#449342', '#F59E0B', '#EF476F'],
+  confetti: ['#7DAE7E', '#4D8A8A', '#6BB5AC', '#16A34A', '#D97706', '#5B86A0'],
 } as const;
 
 export default {

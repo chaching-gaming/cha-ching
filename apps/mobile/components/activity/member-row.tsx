@@ -71,7 +71,7 @@ export function MemberRow({
         fallback={member.profiles?.display_name ?? '?'}
         size="md"
       />
-      <Text className="ml-3 flex-1 text-lg text-white">
+      <Text className="ml-3 flex-1 text-lg text-text-primary">
         {member.profiles?.display_name ?? 'Unknown'}
         {isSelf ? <Text className="text-sm text-text-secondary"> (you)</Text> : null}
       </Text>
@@ -110,7 +110,7 @@ export function MemberRow({
             activeOpacity={0.85}
             style={{ alignSelf: 'stretch' }}
           >
-            <Text className="text-center text-base font-semibold leading-6 text-white">Remove</Text>
+            <Text className="text-center text-base font-semibold leading-6 text-background">Remove</Text>
           </TouchableOpacity>
         </View>
       )}

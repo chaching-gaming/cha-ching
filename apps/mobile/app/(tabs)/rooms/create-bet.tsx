@@ -380,7 +380,7 @@ export default function CreateBetScreen() {
         right={
           <View className="flex-row items-center gap-1.5 rounded-full bg-primary/20 px-3 py-1.5">
             <Coins size={16} color={colors.chipsIcon} weight="fill" />
-            <Text className="text-base font-bold text-white" numberOfLines={1}>
+            <Text className="text-base font-bold text-text-primary" numberOfLines={1}>
               {balance ?? 0}
             </Text>
           </View>
@@ -621,7 +621,7 @@ export default function CreateBetScreen() {
                     className="flex-row items-center justify-center gap-2 rounded-xl bg-primary py-4"
                     style={{ opacity: sessionActive ? 1 : 0.5 }}
                   >
-                    <Text className="text-base font-bold text-white">Next</Text>
+                    <Text className="text-base font-bold text-text-primary">Next</Text>
                     <ArrowRight size={20} color="#FFFFFF" weight="bold" />
                   </TouchableOpacity>
                 </View>
@@ -852,7 +852,7 @@ export default function CreateBetScreen() {
                   className="flex-row items-center justify-center gap-2 rounded-xl bg-primary py-4"
                   style={{ opacity: sessionActive ? 1 : 0.5 }}
                 >
-                  <Text className="text-base font-bold text-white">Next</Text>
+                  <Text className="text-base font-bold text-text-primary">Next</Text>
                   <ArrowRight size={20} color="#FFFFFF" weight="bold" />
                 </TouchableOpacity>
               </View>
@@ -902,7 +902,7 @@ export default function CreateBetScreen() {
 
                     return (
                       <>
-                        <Text className="text-base font-semibold text-white">
+                        <Text className="text-base font-semibold text-text-primary">
                           {tpl?.short_label ?? 'Custom Question'}
                           {member ? ` · ${memberDisplayName(member)}` : ''}
                         </Text>
@@ -1022,7 +1022,7 @@ export default function CreateBetScreen() {
                             keyboardType="number-pad"
                             editable={sessionActive}
                             selectTextOnFocus
-                            className="min-w-[80px] flex-1 rounded-xl border border-border bg-surface px-4 text-lg font-bold text-white"
+                            className="min-w-[80px] flex-1 rounded-xl border border-border bg-surface px-4 text-lg font-bold text-text-primary"
                             style={[
                               {
                                 height: 48,
@@ -1119,7 +1119,7 @@ export default function CreateBetScreen() {
                     onPress={(e) => e.stopPropagation()}
                   >
                     <View className="mb-4 flex-row items-center justify-between">
-                      <Text className="text-xl font-bold text-white">Review bet</Text>
+                      <Text className="text-xl font-bold text-text-primary">Review bet</Text>
                       <TouchableOpacity
                         onPress={closeReview}
                         disabled={isSubmitting}
@@ -1146,7 +1146,7 @@ export default function CreateBetScreen() {
                         />
                         <View className="flex-1">
                           <Text className="text-sm font-medium text-text-secondary">Player</Text>
-                          <Text className="text-lg font-semibold text-white">
+                          <Text className="text-lg font-semibold text-text-primary">
                             {reviewPayload?.memberDisplayName}
                           </Text>
                         </View>
@@ -1155,7 +1155,7 @@ export default function CreateBetScreen() {
 
                     <View className="mb-4 rounded-2xl border border-border bg-surface px-4 py-3">
                       <Text className="text-sm font-medium text-text-secondary">Question</Text>
-                      <Text className="mt-1 text-base leading-6 text-white">
+                      <Text className="mt-1 text-base leading-6 text-text-primary">
                         {reviewPayload?.finalQuestion}
                       </Text>
                     </View>
@@ -1163,7 +1163,7 @@ export default function CreateBetScreen() {
                     {reviewPayload?.templateId && reviewTemplate ? (
                       <View className="mb-3 flex-row justify-between border-b border-border py-2">
                         <Text className="text-sm text-text-secondary">Template</Text>
-                        <Text className="text-sm font-semibold text-white">
+                        <Text className="text-sm font-semibold text-text-primary">
                           {reviewTemplate.short_label}
                         </Text>
                       </View>
@@ -1178,14 +1178,14 @@ export default function CreateBetScreen() {
 
                     <View className="mb-3 flex-row justify-between border-b border-border py-2">
                       <Text className="text-sm text-text-secondary">Stake</Text>
-                      <Text className="text-sm font-semibold text-white">
+                      <Text className="text-sm font-semibold text-text-primary">
                         {reviewPayload?.stake ?? 0} chips
                       </Text>
                     </View>
 
                     <View className="mb-6 flex-row justify-between border-b border-border py-2">
                       <Text className="text-sm text-text-secondary">Expires in</Text>
-                      <Text className="text-sm font-semibold text-white">
+                      <Text className="text-sm font-semibold text-text-primary">
                         {reviewPayload?.isCustomExpiry
                           ? formatCustomExpiryLabel(
                               parseInt(reviewPayload.customExpiryMinutes, 10),

@@ -121,7 +121,7 @@ export default function AcceptBetScreen() {
           fallback={subjectName}
           size="xl"
         />
-        <Text className="mt-3 text-lg font-bold text-white" numberOfLines={1}>
+        <Text className="mt-3 text-lg font-bold text-text-primary" numberOfLines={1}>
           {subjectName}
         </Text>
         <Text className="text-sm text-text-secondary" numberOfLines={1}>
@@ -139,7 +139,7 @@ export default function AcceptBetScreen() {
                 {template.short_label}
               </Text>
               <Text
-                className="mt-2 text-center text-lg font-semibold leading-6 text-white"
+                className="mt-2 text-center text-lg font-semibold leading-6 text-text-primary"
                 numberOfLines={4}
               >
                 {bet.question}
@@ -151,7 +151,7 @@ export default function AcceptBetScreen() {
                 The bet
               </Text>
               <Text
-                className="mt-2 text-center text-xl font-bold leading-7 text-white"
+                className="mt-2 text-center text-xl font-bold leading-7 text-text-primary"
                 numberOfLines={4}
               >
                 &ldquo;{bet.question}&rdquo;
@@ -185,7 +185,7 @@ export default function AcceptBetScreen() {
                 onPress={() => !disabled && setSelected(option)}
                 disabled={disabled}
                 activeOpacity={0.75}
-                className={`flex-1 items-center justify-center rounded-2xl border-2 py-6 ${
+                className={`flex-1 items-center justify-center rounded-lg border-2 py-8 ${
                   subjectDisallowed
                     ? 'border-border bg-surface opacity-40'
                     : isSelected
@@ -204,7 +204,7 @@ export default function AcceptBetScreen() {
                       ? 'text-text-muted'
                       : isSelected
                         ? 'text-primary'
-                        : 'text-white'
+                        : 'text-text-primary'
                   }`}
                 >
                   {option}
@@ -240,6 +240,7 @@ export default function AcceptBetScreen() {
           loading={joinBet.isPending}
           disabled={!selected || !!blockingMessage}
           size="lg"
+          className="py-5 rounded-lg"
         >
           {`Lock In \u00b7 ${bet.stake.toLocaleString('en-US')} chips`}
         </Button>

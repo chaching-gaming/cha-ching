@@ -76,7 +76,7 @@ function SettingsCardRow({
       className={`flex-row items-center justify-between px-4 py-4 ${isLast ? '' : 'border-b border-border'}`}
     >
       <View className="min-w-0 flex-1 pr-3">
-        <Text className="text-base font-semibold text-white">{label}</Text>
+        <Text className="text-base font-semibold text-text-primary">{label}</Text>
         {subtitle ? (
           <Text className="mt-0.5 text-sm text-text-secondary" numberOfLines={1}>
             {subtitle}
@@ -112,7 +112,7 @@ function RoomRow({
       className={`flex-row items-center gap-3 px-4 py-4 ${isLast ? '' : 'border-b border-border'}`}
     >
       <View className="min-w-0 flex-1">
-        <Text className="text-base font-semibold text-white" numberOfLines={1}>
+        <Text className="text-base font-semibold text-text-primary" numberOfLines={1}>
           {item.room.name}
         </Text>
         {statusText ? (
@@ -337,7 +337,7 @@ export default function ProfileScreen() {
           {isEditing ? (
             <View className="mt-4 w-full items-center gap-3">
               <TextInput
-                className="min-h-[48px] w-full rounded-xl border border-border bg-surface-light px-4 py-3.5 text-center text-base text-white"
+                className="min-h-[48px] w-full rounded-xl border border-border bg-surface-light px-4 py-3.5 text-center text-base text-text-primary"
                 value={displayName}
                 onChangeText={setDisplayName}
                 placeholder="Display Name"
@@ -357,7 +357,7 @@ export default function ProfileScreen() {
           ) : (
             <>
               <TouchableOpacity onPress={startEditing} className="mt-3" activeOpacity={0.7}>
-                <Text className="text-2xl font-bold text-white">{displayedName}</Text>
+                <Text className="text-2xl font-bold text-text-primary">{displayedName}</Text>
               </TouchableOpacity>
               {email ? <Text className="mt-1 text-sm text-text-secondary">{email}</Text> : null}
             </>
@@ -376,7 +376,7 @@ export default function ProfileScreen() {
                   onValueChange={setSoundEnabled}
                   disabled={!isHydrated}
                   trackColor={{ true: colors.primary, false: colors.border }}
-                  thumbColor="#ffffff"
+                  thumbColor={colors.surface}
                   ios_backgroundColor={colors.border}
                 />
               }
@@ -389,7 +389,7 @@ export default function ProfileScreen() {
                   onValueChange={setHapticsEnabled}
                   disabled={!isHydrated}
                   trackColor={{ true: colors.primary, false: colors.border }}
-                  thumbColor="#ffffff"
+                  thumbColor={colors.surface}
                   ios_backgroundColor={colors.border}
                 />
               }
@@ -402,7 +402,7 @@ export default function ProfileScreen() {
                   onValueChange={setNotificationsEnabled}
                   disabled={!isHydrated}
                   trackColor={{ true: colors.primary, false: colors.border }}
-                  thumbColor="#ffffff"
+                  thumbColor={colors.surface}
                   ios_backgroundColor={colors.border}
                 />
               }
