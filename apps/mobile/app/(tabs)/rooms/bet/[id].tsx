@@ -45,18 +45,12 @@ import { useAuth } from '@/providers/auth';
 import { formatBetCountdown, formatRelativeActivityTime, parseApiTimestamp } from '@/lib/date-format';
 import {
   getEffectiveBetStatus,
-  getOutcomeWindowRemaining,
   getDisputeWindowRemaining,
   isInDisputeWindow,
-  hasOutcomeWindowSet,
   hasDisputeWindowSet,
-  isBetPastExpiry,
 } from '@/lib/effective-bet-status';
 import { useRaiseDispute } from '@/hooks/use-raise-dispute';
-import {
-  useProcessOutcomeWindow,
-  useProcessDisputeWindow,
-} from '@/hooks/use-process-settlement-windows';
+import { useProcessDisputeWindow } from '@/hooks/use-process-settlement-windows';
 import { markBetCelebrated, hasBetBeenCelebrated } from '@/hooks/use-winner-celebration';
 import { supabase } from '@/lib/supabase';
 
@@ -118,12 +112,10 @@ export default function BetDetailScreen() {
   const joinBet = useJoinBet();
   const processExpiredBet = useProcessExpiredBet();
   const raiseDispute = useRaiseDispute();
-  const processOutcomeWindow = useProcessOutcomeWindow();
   const processDisputeWindow = useProcessDisputeWindow();
 
   // Track if we've already triggered processing for this bet
   const processedBetRef = useRef<string | null>(null);
-  const outcomeProcessedRef = useRef<string | null>(null);
   const disputeProcessedRef = useRef<string | null>(null);
 
   // Get template for contextual labels (Hit/Miss, Make/Miss, etc.)
@@ -244,48 +236,8 @@ export default function BetDetailScreen() {
     })();
   }, [bet, dbStatus, isLoading, processExpiredBet, queryClient, serverNow]);
 
-
-  // Auto-process outcome window when it expires (eliminates cron delay)
-  useEffect(() => {
-    if (dbStatus !== 'PENDING_RESULT' || !bet?.id || !bet?.room_id) return;
-    if (processOutcomeWindow.isPending) return; // Already processing
-    if (outcomeProcessedRef.current === bet.id) return; // Already processed this bet
-
-    // CRITICAL: Only process if outcome_window_ends_at is set and expired
-    // If NULL, the server hasn't set it yet - let the cron handle it
-    if (!bet.outcome_window_ends_at) return;
-
-    const remaining = getOutcomeWindowRemaining(bet, room?.outcome_submission_window_seconds ?? 30, serverNow);
-    if (remaining > 0) return; // Window still open
-
-    const betId = bet.id;
-    const roomId = bet.room_id;
-
-    outcomeProcessedRef.current = betId;
-
-    (async () => {
-      try {
-        const result = await processOutcomeWindow.mutateAsync({ p_bet_id: betId, roomId });
-
-        // Check if RPC actually processed the bet
-        if (result.status === 'PENDING_RESULT') {
-          // Server hasn't processed yet (clock skew) - schedule retry
-          setTimeout(() => {
-            outcomeProcessedRef.current = null;
-            queryClient.invalidateQueries({ queryKey: betDetailKey(betId) });
-          }, 2000);
-        } else {
-          // Successfully processed - force immediate refetch
-          await Promise.all([
-            queryClient.refetchQueries({ queryKey: betDetailKey(betId) }),
-            queryClient.refetchQueries({ queryKey: roomBalanceKey(roomId) }),
-          ]);
-        }
-      } catch {
-        outcomeProcessedRef.current = null;
-      }
-    })();
-  }, [dbStatus, bet?.id, bet?.room_id, bet?.outcome_window_ends_at, serverNow, processOutcomeWindow, queryClient, room?.outcome_submission_window_seconds]);
+  // Note: Client-side outcome window processing removed - windows are now indefinite.
+  // Settlement happens when all participants submit (via process_all_submissions on server).
 
   // Auto-process dispute window when it expires (eliminates cron delay)
   useEffect(() => {
@@ -486,18 +438,13 @@ export default function BetDetailScreen() {
     !alreadyStaked &&
     effectiveStatus !== 'EXPIRED';
 
-  // Can submit outcome? Use effectiveStatus for immediate client-side detection
-  // Check if window has expired (using client-side calculation if outcome_window_ends_at not set)
+  // Can submit outcome? Outcome windows are now indefinite - can always submit while PENDING_RESULT
   const isParticipant = !!myStake;
-  const outcomeWindowSeconds = room?.outcome_submission_window_seconds ?? 30;
-  const outcomeWindowExpired =
-    !!bet && hasOutcomeWindowSet(bet) && getOutcomeWindowRemaining(bet, outcomeWindowSeconds) <= 0;
   const canSubmitOutcome =
     isActive &&
     isParticipant &&
     !mySubmission &&
-    effectiveStatus === 'PENDING_RESULT' &&
-    !outcomeWindowExpired;
+    effectiveStatus === 'PENDING_RESULT';
 
   // Can resolve? Only DISPUTED bets need manual resolution by attestor/admin
   // PENDING_RESULT and PENDING_DISPUTE are handled automatically by timed windows
@@ -752,15 +699,7 @@ export default function BetDetailScreen() {
               ) : null}
             </View>
 
-            {/* Outcome window countdown - only show once bet has actually expired */}
-            {hasBetExpired && hasOutcomeWindowSet(bet) && getOutcomeWindowRemaining(bet, outcomeWindowSeconds) > 0 && (
-              <View className="mt-2 flex-row items-center gap-2">
-                <Timer size={16} color={colors.warning} weight="bold" />
-                <Text className="text-sm font-bold text-warning">
-                  {getOutcomeWindowRemaining(bet, outcomeWindowSeconds)}s to submit
-                </Text>
-              </View>
-            )}
+            {/* Note: Outcome windows are now indefinite - no countdown needed */}
 
             {/* Show who's waiting */}
             {pendingParticipants.length > 0 && (

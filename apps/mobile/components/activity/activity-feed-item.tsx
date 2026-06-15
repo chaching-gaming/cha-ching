@@ -36,15 +36,10 @@ import type {
 import { formatBetCountdown, formatRelativeActivityTime, parseApiTimestamp } from '@/lib/date-format';
 import {
   getEffectiveBetStatus,
-  getOutcomeWindowRemaining,
   getDisputeWindowRemaining,
-  hasOutcomeWindowSet,
   hasDisputeWindowSet,
 } from '@/lib/effective-bet-status';
-import {
-  useProcessOutcomeWindow,
-  useProcessDisputeWindow,
-} from '@/hooks/use-process-settlement-windows';
+import { useProcessDisputeWindow } from '@/hooks/use-process-settlement-windows';
 import { useServerTimeTick } from '@/providers/time';
 
 function formatStakeChips(stake: number): string {
@@ -89,7 +84,8 @@ function BetActivityCard({
   onSelectPick,
   onJoinSuccess,
   onNavigate,
-  outcomeSubmissionWindowSeconds = 30,
+  // Note: outcomeSubmissionWindowSeconds is deprecated - outcome windows are now indefinite
+  outcomeSubmissionWindowSeconds: _outcomeSubmissionWindowSeconds = 30,
 }: {
   bet: BetWithProfiles;
   timestamp: string;
@@ -110,10 +106,8 @@ function BetActivityCard({
   const [voidSheetOpen, setVoidSheetOpen] = useState(false);
   const dbStatus = bet.status ?? '';
   const processExpiredBet = useProcessExpiredBet();
-  const processOutcomeWindow = useProcessOutcomeWindow();
   const processDisputeWindow = useProcessDisputeWindow();
   const processedRef = useRef<string | null>(null);
-  const outcomeProcessedRef = useRef<string | null>(null);
   const disputeProcessedRef = useRef<string | null>(null);
 
   // Auto-process expired bets immediately (eliminates 0-60s cron lag)
@@ -154,30 +148,8 @@ function BetActivityCard({
     );
   }, [bet.id, bet.expires_at, dbStatus, roomId, processExpiredBet, serverNow]);
 
-  // Auto-process outcome window when it expires (eliminates cron delay)
-  useEffect(() => {
-    if (!roomId) return;
-    if (processOutcomeWindow.isPending) return;
-    if (dbStatus !== 'PENDING_RESULT') return;
-    if (outcomeProcessedRef.current === bet.id) return;
-
-    // CRITICAL: Only process if outcome_window_ends_at is set and expired
-    // If NULL, the server hasn't set it yet - let the cron handle it
-    if (!bet.outcome_window_ends_at) return;
-
-    const remaining = getOutcomeWindowRemaining(bet, outcomeSubmissionWindowSeconds, serverNow);
-    if (remaining > 0) return; // Window still open
-
-    outcomeProcessedRef.current = bet.id;
-    processOutcomeWindow.mutate(
-      { p_bet_id: bet.id, roomId },
-      {
-        onError: () => {
-          outcomeProcessedRef.current = null;
-        },
-      },
-    );
-  }, [bet.id, bet.outcome_window_ends_at, dbStatus, roomId, processOutcomeWindow.isPending, serverNow, outcomeSubmissionWindowSeconds]);
+  // Note: Client-side outcome window processing removed - windows are now indefinite.
+  // Settlement happens when all participants submit (via process_all_submissions on server).
 
   // Auto-process dispute window when it expires (eliminates cron delay)
   useEffect(() => {
@@ -264,9 +236,7 @@ function BetActivityCard({
       ? formatBetCountdown(bet.expires_at, serverNow)
       : null;
 
-  // Outcome window countdown for PENDING_RESULT status (or expired MATCHED that is effectively PENDING_RESULT)
-  // Only show once bet has actually expired (not when processed early by server)
-  const outcomeWindowRemaining = effectiveStatus === 'PENDING_RESULT' && hasBetExpired ? getOutcomeWindowRemaining(bet, outcomeSubmissionWindowSeconds) : 0;
+  // Note: Outcome windows are now indefinite - bets stay in PENDING_RESULT until all submit or admin resolves
 
   // Dispute window countdown for PENDING_DISPUTE status
   const disputeWindowRemaining = dbStatus === 'PENDING_DISPUTE' ? getDisputeWindowRemaining(bet) : 0;
@@ -313,17 +283,13 @@ function BetActivityCard({
 
   const isParticipant = !!currentUserId && stakes.some((s) => s.user_id === currentUserId);
 
-  // Only allow outcome submission when PENDING_RESULT (after expiry) - use effectiveStatus for immediate detection
-  // Check if window has expired (using client-side calculation if outcome_window_ends_at not set)
-  const outcomeWindowExpired =
-    hasOutcomeWindowSet(bet) && getOutcomeWindowRemaining(bet, outcomeSubmissionWindowSeconds) <= 0;
+  // Outcome windows are now indefinite - can always submit while PENDING_RESULT
   const canSubmitOutcome =
     !!roomActive &&
     !!roomId &&
     isParticipant &&
     !mySubmission &&
-    effectiveStatus === 'PENDING_RESULT' &&
-    !outcomeWindowExpired;
+    effectiveStatus === 'PENDING_RESULT';
 
   // Allow resolve only for DISPUTED bets (attestor/admin manual resolution)
   // PENDING_RESULT and PENDING_DISPUTE are handled automatically by timed windows
@@ -449,13 +415,7 @@ function BetActivityCard({
         {effectiveStatus === 'PENDING_RESULT' && hasBetExpired ? (
           <>
             <Timer size={14} color={colors.primary} weight="bold" />
-            <Text className="text-sm font-semibold text-primary">
-              {!hasOutcomeWindowSet(bet)
-                ? 'Waiting...'
-                : outcomeWindowRemaining > 0
-                  ? `${outcomeWindowRemaining}s to submit`
-                  : 'Processing...'}
-            </Text>
+            <Text className="text-sm font-semibold text-primary">Awaiting submissions</Text>
           </>
         ) : null}
         {dbStatus === 'PENDING_DISPUTE' ? (
