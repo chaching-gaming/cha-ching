@@ -59,6 +59,8 @@ export const roomBalanceKey = (roomId: string) => ['rooms', roomId, 'balance'] a
 export const roomMemberBalancesKey = (roomId: string) =>
   ['rooms', roomId, 'member-balances'] as const;
 
+export type SettlementStatus = 'PENDING' | 'SETTLED' | 'DISPUTED';
+
 export type RoomMemberBalance = {
   user_id: string;
   display_name: string | null;
@@ -66,6 +68,9 @@ export type RoomMemberBalance = {
   balance: number;
   wins: number;
   losses: number;
+  net_balance: number;
+  settlement_status: SettlementStatus | null;
+  left_at: string | null;
 };
 
 export function useRoomBets(roomId: string) {
@@ -430,6 +435,23 @@ export function useRealtimeActivityFeed(roomId: string, options?: RealtimeActivi
       )
       .subscribe();
 
+    // member_settlements: settlement status changes for member balances
+    const memberSettlementsChannel = supabase
+      .channel(`cc-feed:${roomId}:settlements:${token}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'member_settlements',
+          filter: `room_id=eq.${roomId}`,
+        },
+        () => {
+          invalidate(roomMemberBalancesKey(roomId));
+        },
+      )
+      .subscribe();
+
     return () => {
       void (async () => {
         await supabase.removeChannel(betsChannel);
@@ -438,6 +460,7 @@ export function useRealtimeActivityFeed(roomId: string, options?: RealtimeActivi
         await supabase.removeChannel(betStakesChannel);
         await supabase.removeChannel(roomMembersChannel);
         await supabase.removeChannel(ledgerEntriesChannel);
+        await supabase.removeChannel(memberSettlementsChannel);
       })();
     };
   }, [roomId, queryClient, currentUserId, options]);

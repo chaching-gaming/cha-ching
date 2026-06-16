@@ -348,6 +348,48 @@ export type Database = {
           },
         ]
       }
+      member_settlements: {
+        Row: {
+          id: string
+          room_id: string
+          user_id: string
+          status: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          room_id: string
+          user_id: string
+          status?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          room_id?: string
+          user_id?: string
+          status?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "member_settlements_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "rooms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "member_settlements_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notification_config: {
         Row: {
           edge_function_url: string
@@ -911,6 +953,9 @@ export type Database = {
           losses: number
           user_id: string
           wins: number
+          net_balance: number
+          settlement_status: string | null
+          left_at: string | null
         }[]
       }
       get_room_player_stats: {
@@ -1341,6 +1386,23 @@ export type Database = {
         SetofOptions: {
           from: "*"
           to: "profiles"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      update_settlement_status: {
+        Args: { p_room_id: string; p_user_id: string; p_status: string }
+        Returns: {
+          id: string
+          room_id: string
+          user_id: string
+          status: string
+          created_at: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "member_settlements"
           isOneToOne: true
           isSetofReturn: false
         }
