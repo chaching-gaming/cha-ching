@@ -298,6 +298,13 @@ export default function RoomSettingsScreen() {
     );
   }, [id, leaveRoom, router]);
 
+  const handleMemberPress = useCallback(
+    (userId: string) => {
+      router.push(`/(tabs)/rooms/member/${userId}?roomId=${id}`);
+    },
+    [id, router],
+  );
+
   if (roomLoading) {
     return (
       <View className="flex-1 items-center justify-center bg-background">
@@ -384,6 +391,7 @@ export default function RoomSettingsScreen() {
                 membershipStatus={member.membershipStatus}
                 onChangeRole={handleChangeRoleRequest}
                 onRemoveMember={handleRemoveMemberRequest}
+                onMemberPress={handleMemberPress}
               />
             ))}
             {isActive && isCurrentUserActiveMember ? (
@@ -418,6 +426,7 @@ export default function RoomSettingsScreen() {
                   membershipStatus={member.membershipStatus}
                   onChangeRole={handleChangeRoleRequest}
                   onRemoveMember={handleRemoveMemberRequest}
+                  onMemberPress={handleMemberPress}
                 />
               ))}
             </View>

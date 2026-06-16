@@ -1,4 +1,4 @@
-import { Text, TouchableOpacity, View } from 'react-native';
+import { Pressable, Text, TouchableOpacity, View } from 'react-native';
 import { Swipeable } from 'react-native-gesture-handler';
 
 import { Avatar } from '@/components/ui/avatar';
@@ -25,6 +25,7 @@ interface MemberRowProps {
   membershipStatus?: RoomMemberStatus;
   onChangeRole?: (userId: string) => void;
   onRemoveMember?: (userId: string) => void;
+  onMemberPress?: (userId: string) => void;
 }
 
 export function MemberRow({
@@ -35,6 +36,7 @@ export function MemberRow({
   membershipStatus = 'active',
   onChangeRole,
   onRemoveMember,
+  onMemberPress,
 }: MemberRowProps) {
   const role = member.role ?? 'PLAYER';
   const roleVariant = role.toLowerCase() as 'admin' | 'player' | 'attestor';
@@ -44,6 +46,7 @@ export function MemberRow({
   // Disable interactions for past members
   const canChangeRole = Boolean(isAdmin && isActive && onChangeRole && !isPastMember);
   const canSwipeRemove = Boolean(isAdmin && isActive && onRemoveMember && !isSelf && !isPastMember);
+  const canPressMember = Boolean(onMemberPress && member.user_id);
 
   // Show status badge for past members, role badge for active members
   const badge = isPastMember ? (
@@ -62,10 +65,8 @@ export function MemberRow({
     />
   );
 
-  const row = (
-    <View
-      className={`min-h-[56px] flex-row items-center border-b border-border bg-background px-5 py-4 ${isPastMember ? 'opacity-60' : ''}`}
-    >
+  const rowContent = (
+    <>
       <Avatar
         uri={member.profiles?.avatar_url}
         fallback={member.profiles?.display_name ?? '?'}
@@ -77,7 +78,9 @@ export function MemberRow({
       </Text>
       {canChangeRole ? (
         <TouchableOpacity
-          onPress={() => {
+          onPress={(e) => {
+            // Prevent propagation to parent Pressable
+            e.stopPropagation();
             onChangeRole?.(member.user_id!);
           }}
           activeOpacity={0.7}
@@ -88,6 +91,21 @@ export function MemberRow({
       ) : (
         badge
       )}
+    </>
+  );
+
+  const row = canPressMember ? (
+    <Pressable
+      onPress={() => onMemberPress?.(member.user_id!)}
+      className={`min-h-[56px] flex-row items-center border-b border-border bg-background px-5 py-4 active:bg-surface/50 ${isPastMember ? 'opacity-60' : ''}`}
+    >
+      {rowContent}
+    </Pressable>
+  ) : (
+    <View
+      className={`min-h-[56px] flex-row items-center border-b border-border bg-background px-5 py-4 ${isPastMember ? 'opacity-60' : ''}`}
+    >
+      {rowContent}
     </View>
   );
 

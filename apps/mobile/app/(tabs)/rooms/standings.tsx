@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from 'react';
-import { FlatList, RefreshControl, Text, View } from 'react-native';
-import { useLocalSearchParams } from 'expo-router';
+import { FlatList, Pressable, RefreshControl, Text, View } from 'react-native';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useQueryClient } from '@tanstack/react-query';
 import { Crown } from 'phosphor-react-native';
 
@@ -22,9 +22,17 @@ export default function StandingsScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { session: authSession } = useAuth();
   const queryClient = useQueryClient();
+  const router = useRouter();
 
   const { data: room, isLoading: roomLoading } = useRoomDetail(id);
   const { data: memberBalances, isLoading: balancesLoading } = useRoomMemberBalances(id);
+
+  const handleMemberPress = useCallback(
+    (userId: string) => {
+      router.push(`/(tabs)/rooms/member/${userId}?roomId=${id}`);
+    },
+    [id, router],
+  );
   // Expo Router keeps the main room screen mounted in the stack while this page
   // is on top, so its `useRealtimeActivityFeed` subscription is still active and
   // keeps invalidating `roomMemberBalancesKey` on every chip movement. Our own
@@ -100,6 +108,7 @@ export default function StandingsScreen() {
               rank={index + 4}
               isSelf={!!currentUserId && item.user_id === currentUserId}
               chipLimit={chipLimit}
+              onPress={() => handleMemberPress(item.user_id)}
             />
           )}
           contentContainerClassName="pb-12"
@@ -111,7 +120,12 @@ export default function StandingsScreen() {
             />
           }
           ListHeaderComponent={
-            <Podium members={podium} currentUserId={currentUserId} chipLimit={chipLimit} />
+            <Podium
+              members={podium}
+              currentUserId={currentUserId}
+              chipLimit={chipLimit}
+              onMemberPress={handleMemberPress}
+            />
           }
         />
       )}
@@ -127,10 +141,12 @@ function Podium({
   members,
   currentUserId,
   chipLimit,
+  onMemberPress,
 }: {
   members: RoomMemberBalance[];
   currentUserId: string | null;
   chipLimit: number | null;
+  onMemberPress: (userId: string) => void;
 }) {
   // Position: #2 on the left, #1 in the middle (tallest), #3 on the right.
   // For under-filled rooms we still center #1 and only render columns we have.
@@ -149,6 +165,7 @@ function Podium({
             pedestalHeight={96}
             isSelf={!!currentUserId && second.user_id === currentUserId}
             chipLimit={chipLimit}
+            onPress={() => onMemberPress(second.user_id)}
           />
         ) : (
           <View className="opacity-0">
@@ -165,6 +182,7 @@ function Podium({
             pedestalHeight={128}
             isSelf={!!currentUserId && first.user_id === currentUserId}
             chipLimit={chipLimit}
+            onPress={() => onMemberPress(first.user_id)}
           />
         ) : null}
       </View>
@@ -177,6 +195,7 @@ function Podium({
             pedestalHeight={80}
             isSelf={!!currentUserId && third.user_id === currentUserId}
             chipLimit={chipLimit}
+            onPress={() => onMemberPress(third.user_id)}
           />
         ) : (
           <View className="opacity-0">
@@ -195,6 +214,7 @@ function PodiumColumn({
   pedestalHeight,
   isSelf,
   chipLimit,
+  onPress,
 }: {
   member: RoomMemberBalance;
   rank: 1 | 2 | 3;
@@ -202,12 +222,13 @@ function PodiumColumn({
   pedestalHeight: number;
   isSelf: boolean;
   chipLimit: number | null;
+  onPress: () => void;
 }) {
   const badge = RANK_BADGE_COLORS[rank];
   const belowLimit = chipLimit != null && member.balance <= chipLimit;
 
   return (
-    <View className="items-center">
+    <Pressable onPress={onPress} className="items-center active:opacity-70">
       {/* Avatar with rank badge */}
       <View className="relative">
         <Avatar uri={member.avatar_url} fallback={member.display_name ?? '?'} size={avatarSize} />
@@ -253,7 +274,7 @@ function PodiumColumn({
       >
         <Text className="text-5xl font-black text-text-muted opacity-30">{rank}</Text>
       </View>
-    </View>
+    </Pressable>
   );
 }
 
@@ -280,15 +301,20 @@ function StandingsRow({
   rank,
   isSelf,
   chipLimit,
+  onPress,
 }: {
   member: RoomMemberBalance;
   rank: number;
   isSelf: boolean;
   chipLimit: number | null;
+  onPress: () => void;
 }) {
   const belowLimit = chipLimit != null && member.balance <= chipLimit;
   return (
-    <View className="flex-row items-center border-b border-border/40 px-5 py-4">
+    <Pressable
+      onPress={onPress}
+      className="flex-row items-center border-b border-border/40 px-5 py-4 active:bg-surface/50"
+    >
       <Text className="w-8 text-base font-bold text-text-muted">{rank}</Text>
       <Avatar uri={member.avatar_url} fallback={member.display_name ?? '?'} size="md" />
       <View className="ml-3 min-w-0 flex-1 flex-row items-center gap-2">
@@ -308,6 +334,6 @@ function StandingsRow({
       <Text className={`text-base font-bold ${balanceColorClass(member.balance)}`}>
         {formatBalance(member.balance)}
       </Text>
-    </View>
+    </Pressable>
   );
 }
