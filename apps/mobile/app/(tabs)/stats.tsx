@@ -4,7 +4,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { CaretDown, ChartBar } from 'phosphor-react-native';
 
 import { colors } from '@/constants/colors';
-import { Avatar, EmptyState, ScreenHeader, SkeletonStatsCard } from '@/components/ui';
+import { Avatar, EmptyState, ScreenHeader, SectionHeader, SkeletonStatsCard } from '@/components/ui';
 import { RoomSelectionSheet } from '@/components/activity/room-selection-sheet';
 import { StatCard } from '@/components/stats/stat-card';
 import { MyBetsSection } from '@/components/stats/my-bets-section';
@@ -203,7 +203,7 @@ function RoomStats({ roomId }: { roomId: string }) {
       }
     >
       <View className="px-5">
-        <SectionLabel>Overview</SectionLabel>
+        <SectionHeader>Overview</SectionHeader>
         <View className="flex-row gap-3">
           <StatCard label="Total bets" value={formatChipCount(event?.total_bets ?? 0)} />
           <StatCard
@@ -224,7 +224,7 @@ function RoomStats({ roomId }: { roomId: string }) {
           />
         </View>
 
-        <SectionLabel>Players</SectionLabel>
+        <SectionHeader>Players</SectionHeader>
         {players && players.length > 0 ? (
           <View className="overflow-hidden rounded-2xl border border-border bg-surface">
             {players.map((p, idx) => (
@@ -237,7 +237,7 @@ function RoomStats({ roomId }: { roomId: string }) {
           </View>
         )}
 
-        <SectionLabel>By status</SectionLabel>
+        <SectionHeader>By status</SectionHeader>
         <View className="flex-row gap-3">
           <StatusCard dotClass="bg-primary" label="Open" value={event?.open_bets ?? 0} />
           <StatusCard dotClass="bg-warning" label="Matched" value={event?.matched_bets ?? 0} />
@@ -247,7 +247,7 @@ function RoomStats({ roomId }: { roomId: string }) {
           <StatusCard dotClass="bg-text-muted" label="Void" value={event?.voided_bets ?? 0} />
         </View>
 
-        <SectionLabel>Popular questions</SectionLabel>
+        <SectionHeader>Popular questions</SectionHeader>
         {event?.popular_templates && event.popular_templates.length > 0 ? (
           <View className="overflow-hidden rounded-2xl border border-border bg-surface">
             {event.popular_templates.map((t, idx) => (
@@ -273,14 +273,6 @@ function RoomStats({ roomId }: { roomId: string }) {
         )}
       </View>
     </ScrollView>
-  );
-}
-
-function SectionLabel({ children }: { children: string }) {
-  return (
-    <Text className="mb-2 mt-5 px-1 text-xs font-semibold uppercase tracking-widest text-text-muted">
-      {children}
-    </Text>
   );
 }
 

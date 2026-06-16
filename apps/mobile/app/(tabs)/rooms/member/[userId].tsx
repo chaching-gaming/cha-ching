@@ -2,7 +2,7 @@ import { ActivityIndicator, ScrollView, Text, View } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 
 import { colors } from '@/constants/colors';
-import { Avatar, Badge, ScreenHeader } from '@/components/ui';
+import { Avatar, Badge, ScreenHeader, SectionHeader } from '@/components/ui';
 import { useAuth } from '@/providers/auth';
 import { useMemberStats } from '@/hooks/use-member-stats';
 import { balanceColorClass, formatBalance } from '@/lib/format-balance';
@@ -13,27 +13,21 @@ const ROLE_LABELS: Record<string, string> = {
   ADMIN: 'Admin',
 };
 
-function SectionHeader({ children }: { children: string }) {
-  return (
-    <Text className="mb-3 mt-6 text-xs font-semibold uppercase tracking-widest text-text-muted">
-      {children}
-    </Text>
-  );
-}
-
 function StatRow({
   label,
   value,
   valueClassName,
   subtitle,
+  isLast = false,
 }: {
   label: string;
   value: string;
   valueClassName?: string;
   subtitle?: string;
+  isLast?: boolean;
 }) {
   return (
-    <View className="flex-row items-center justify-between border-b border-border/40 px-4 py-4">
+    <View className={`flex-row items-center justify-between px-4 py-4 ${isLast ? '' : 'border-b border-border/40'}`}>
       <View className="flex-1">
         <Text className="text-base font-medium text-text-primary">{label}</Text>
         {subtitle ? (
@@ -154,6 +148,7 @@ export default function MemberStatsScreen() {
             label="Net Profit/Loss"
             value={netProfitLossFormatted}
             valueClassName={netProfitLossColor}
+            isLast
           />
         </View>
 
@@ -169,6 +164,7 @@ export default function MemberStatsScreen() {
             label="Chips Received"
             value={received.value}
             subtitle={stats.received_count > 0 ? received.subtitle : undefined}
+            isLast
           />
         </View>
       </ScrollView>
