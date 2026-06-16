@@ -81,15 +81,15 @@ AS $$
     mi.left_reason,
     mb.balance,
     ri.starting_chips,
-    do.chips_donated,
-    do.donation_count,
-    di.chips_received,
-    di.received_count
+    dout.chips_donated,
+    dout.donation_count,
+    din.chips_received,
+    din.received_count
   FROM member_info mi
   CROSS JOIN room_info ri
   CROSS JOIN member_balance mb
-  CROSS JOIN donations_out do
-  CROSS JOIN donations_in di;
+  CROSS JOIN donations_out dout
+  CROSS JOIN donations_in din;
 $$;
 
 REVOKE ALL ON FUNCTION public.get_member_stats(uuid, uuid) FROM PUBLIC;
