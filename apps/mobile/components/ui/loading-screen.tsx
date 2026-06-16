@@ -1,13 +1,14 @@
 import { useEffect, useRef } from 'react';
 import { ActivityIndicator, Animated, Image, Text, View } from 'react-native';
 
-import { colors } from '@/constants/colors';
+import { useTheme } from '@/providers/theme';
 
 interface LoadingScreenProps {
   message?: string;
 }
 
 export function LoadingScreen({ message }: LoadingScreenProps) {
+  const { colors } = useTheme();
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(0.9)).current;
 

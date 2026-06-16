@@ -17,6 +17,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { useProfile, useUpdateProfile } from '@/hooks/use-profile';
 import { useAuth } from '@/providers/auth';
 import { usePreferences } from '@/providers/preferences';
+import { useTheme, type ThemePreference } from '@/providers/theme';
 import {
   useRooms,
   useJoinRoom,
@@ -29,7 +30,6 @@ import { supabase } from '@/lib/supabase';
 import { Avatar, Button } from '@/components/ui';
 import { Badge } from '@/components/ui/badge';
 import { ScreenHeader } from '@/components/ui/screen-header';
-import { colors } from '@/constants/colors';
 
 type RoleBadge = { variant: 'admin' | 'player' | 'attestor'; label: string };
 
@@ -57,6 +57,43 @@ function SectionLabel({ children }: { children: string }) {
     <Text className="mb-2 mt-6 px-1 text-xs font-semibold uppercase tracking-widest text-text-muted">
       {children}
     </Text>
+  );
+}
+
+function ThemeSelector({
+  value,
+  onChange,
+}: {
+  value: ThemePreference;
+  onChange: (value: ThemePreference) => void;
+}) {
+  const options: { key: ThemePreference; label: string }[] = [
+    { key: 'light', label: 'Light' },
+    { key: 'dark', label: 'Dark' },
+    { key: 'system', label: 'System' },
+  ];
+
+  return (
+    <View className="flex-row rounded-lg bg-surface-light p-1">
+      {options.map((option) => (
+        <TouchableOpacity
+          key={option.key}
+          onPress={() => onChange(option.key)}
+          activeOpacity={0.7}
+          className={`flex-1 items-center rounded-md px-3 py-1.5 ${
+            value === option.key ? 'bg-primary' : ''
+          }`}
+        >
+          <Text
+            className={`text-xs font-semibold ${
+              value === option.key ? 'text-white' : 'text-text-secondary'
+            }`}
+          >
+            {option.label}
+          </Text>
+        </TouchableOpacity>
+      ))}
+    </View>
   );
 }
 
@@ -101,6 +138,7 @@ function RoomRow({
   onRejoin?: () => void;
   isRejoining?: boolean;
 }) {
+  const { colors } = useTheme();
   const badge = ROLE_BADGES[item.role ?? ''];
   const statusText = getMembershipStatusText(item.membershipStatus);
   const canRejoin = item.room.is_active && item.membershipStatus !== 'active';
@@ -200,6 +238,8 @@ export default function ProfileScreen() {
     setNotificationsEnabled,
     isHydrated,
   } = usePreferences();
+
+  const { themePreference, setThemePreference, isHydrated: themeHydrated, colors } = useTheme();
 
   function startEditing() {
     setDisplayName(profile?.display_name ?? '');
@@ -405,6 +445,14 @@ export default function ProfileScreen() {
                   thumbColor={colors.surface}
                   ios_backgroundColor={colors.border}
                 />
+              }
+            />
+            <SettingsCardRow
+              label="Theme"
+              trailing={
+                themeHydrated ? (
+                  <ThemeSelector value={themePreference} onChange={setThemePreference} />
+                ) : null
               }
               isLast
             />

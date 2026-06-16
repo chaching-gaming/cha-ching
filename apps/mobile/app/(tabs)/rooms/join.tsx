@@ -4,7 +4,7 @@ import { useRouter } from 'expo-router';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { Users } from 'phosphor-react-native';
 
-import { colors } from '@/constants/colors';
+import { useTheme } from '@/providers/theme';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { KeyboardAwareScrollView } from '@/components/form/keyboard-aware-scroll-view';
@@ -24,6 +24,7 @@ type RoomPreview = {
 } | null;
 
 function CornerBrackets() {
+  const { colors } = useTheme();
   const size = 28;
   const thickness = 3;
   const c = colors.primary;
@@ -83,6 +84,7 @@ function CornerBrackets() {
 }
 
 function RoomPreviewCard({ preview }: { preview: RoomPreview }) {
+  const { colors } = useTheme();
   if (!preview) return null;
 
   return (
@@ -110,6 +112,7 @@ function RoomPreviewCard({ preview }: { preview: RoomPreview }) {
 }
 
 function InvalidCodeCard() {
+  const { colors } = useTheme();
   return (
     <View className="mb-4 items-center rounded-2xl border border-border bg-surface px-4 py-5">
       <WarningCircle size={36} color={colors.warning} weight="fill" />
@@ -122,6 +125,7 @@ function InvalidCodeCard() {
 }
 
 export default function JoinRoomScreen() {
+  const { colors } = useTheme();
   const router = useRouter();
   const joinRoom = useJoinRoom();
   const [activeTab, setActiveTab] = useState<Tab>('code');

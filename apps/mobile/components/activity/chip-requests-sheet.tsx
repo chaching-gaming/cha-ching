@@ -9,7 +9,7 @@ import {
 } from '@gorhom/bottom-sheet';
 import { Coins, HandCoins, HandHeart, X } from 'phosphor-react-native';
 
-import { colors } from '@/constants/colors';
+import { useTheme } from '@/providers/theme';
 import { Avatar } from '@/components/ui/avatar';
 import { DonateChipsSheet } from '@/components/activity/donate-chips-sheet';
 import type { ChipRequestWithProfile } from '@/hooks/use-activity-feed';
@@ -36,6 +36,7 @@ export function ChipRequestsSheet({
   currentUserBalance,
   isActiveMember = true,
 }: Props) {
+  const { colors } = useTheme();
   const safeInsets = useSafeAreaInsets();
   const sheetRef = useRef<BottomSheetModal>(null);
   const [selectedRequest, setSelectedRequest] = useState<ChipRequestWithProfile | null>(null);
@@ -192,6 +193,7 @@ function ChipRequestRow({
   onDonate: () => void;
   dimmed?: boolean;
 }) {
+  const { colors } = useTheme();
   const requesterName = chipRequest.requested_by_profile?.display_name ?? 'Someone';
   const requested = chipRequest.requested_amount;
   const fulfilled = chipRequest.fulfilled_amount;

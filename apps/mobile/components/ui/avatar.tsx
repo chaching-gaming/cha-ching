@@ -1,7 +1,7 @@
 import { Image, Text, TouchableOpacity, View } from 'react-native';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 
-import { colors } from '@/constants/colors';
+import { useTheme } from '@/providers/theme';
 
 const sizes = {
   sm: { container: 'h-8 w-8', text: 'text-sm', icon: 14 },
@@ -29,6 +29,7 @@ export function Avatar({
   showEditBadge = false,
   className = '',
 }: AvatarProps) {
+  const { colors } = useTheme();
   const s = sizes[size];
   const initial = fallback?.charAt(0).toUpperCase() ?? '?';
 

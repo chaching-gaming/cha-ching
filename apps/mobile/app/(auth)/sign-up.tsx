@@ -9,7 +9,7 @@ import { KeyboardAwareScrollView } from '@/components/form/keyboard-aware-scroll
 import { useForm } from '@/hooks/use-form';
 import { useToast } from '@/providers/toast';
 import { LoadingScreen } from '@/components/ui';
-import { colors } from '@/constants/colors';
+import { useTheme } from '@/providers/theme';
 
 const signUpSchema = z.object({
   displayName: z.string().min(1, 'Display name is required'),
@@ -21,6 +21,7 @@ const signUpSchema = z.object({
 });
 
 export default function SignUpScreen() {
+  const { colors } = useTheme();
   const [oauthLoading, setOauthLoading] = useState(false);
   const toast = useToast();
 

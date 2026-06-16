@@ -14,7 +14,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Coins, HandHeart, X } from 'phosphor-react-native';
 
-import { colors } from '@/constants/colors';
+import { useTheme } from '@/providers/theme';
 import { Button } from '@/components/ui/button';
 import { useRequestChips } from '@/hooks/use-chip-requests';
 import { getRpcErrorMessage } from '@/hooks/use-rooms';
@@ -30,6 +30,7 @@ const MAX_MESSAGE_LENGTH = 200;
 const MAX_AMOUNT = 100000;
 
 export function RequestChipsSheet({ visible, onClose, roomId, currentBalance }: Props) {
+  const { colors } = useTheme();
   const safeInsets = useSafeAreaInsets();
   const requestChips = useRequestChips();
 

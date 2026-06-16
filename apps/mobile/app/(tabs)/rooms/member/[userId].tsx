@@ -1,7 +1,7 @@
 import { ActivityIndicator, ScrollView, Text, View } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 
-import { colors } from '@/constants/colors';
+import { useTheme } from '@/providers/theme';
 import { Avatar, Badge, ScreenHeader, SectionHeader } from '@/components/ui';
 import { useAuth } from '@/providers/auth';
 import { useMemberStats } from '@/hooks/use-member-stats';
@@ -51,6 +51,7 @@ function formatChipsWithCount(chips: number, count: number): { value: string; su
 }
 
 export default function MemberStatsScreen() {
+  const { colors } = useTheme();
   const { userId, roomId } = useLocalSearchParams<{ userId: string; roomId: string }>();
   const { session } = useAuth();
   const currentUserId = session?.user.id ?? null;

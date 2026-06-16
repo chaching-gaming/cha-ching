@@ -14,7 +14,7 @@ import {
   X,
 } from 'phosphor-react-native';
 
-import { colors } from '@/constants/colors';
+import { useTheme } from '@/providers/theme';
 import { Avatar } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { DonateChipsSheet } from '@/components/activity/donate-chips-sheet';
@@ -100,6 +100,7 @@ function BetActivityCard({
   onNavigate?: () => void;
   outcomeSubmissionWindowSeconds?: number;
 }) {
+  const { colors } = useTheme();
   const serverNow = useServerTimeTick();
   const [submitSheetOpen, setSubmitSheetOpen] = useState(false);
   const [disputeSheetOpen, setDisputeSheetOpen] = useState(false);
@@ -567,6 +568,7 @@ function BetActivityCard({
 }
 
 function VoidFooter({ voidLog }: { voidLog: BetVoidLogWithProfile | null }) {
+  const { colors } = useTheme();
   // Non-admin clients get void_logs = [] from RLS, so voidLog is null — we show
   // the generic message. Admins see the actor + (optional) reason.
   const voidedByName = voidLog?.voided_by_profile?.display_name?.trim();
@@ -694,6 +696,7 @@ function PoolSide({
   isDisabled?: boolean;
   onPress?: (option: string) => void;
 }) {
+  const { colors } = useTheme();
   const handlePress = useCallback(() => {
     onPress?.(option);
   }, [onPress, option]);
@@ -955,6 +958,7 @@ function ChipRequestActivityCard({
   roomId?: string;
   currentUserBalance?: number;
 }) {
+  const { colors } = useTheme();
   const [donateOpen, setDonateOpen] = useState(false);
   const cancelRequest = useCancelChipRequest();
 

@@ -21,7 +21,7 @@ import {
   User,
 } from 'phosphor-react-native';
 
-import { colors } from '@/constants/colors';
+import { useTheme } from '@/providers/theme';
 import { ActionSheet, type ActionSheetOption } from '@/components/ui/action-sheet';
 import { Badge } from '@/components/ui/badge';
 import { ScreenHeader } from '@/components/ui/screen-header';
@@ -66,6 +66,7 @@ function SettingsRow({
   rightIcon?: React.ReactNode;
   onPress?: () => void;
 }) {
+  const { colors } = useTheme();
   const trailing =
     rightIcon ?? (onPress ? <CaretRight size={18} color={colors.textMuted} weight="bold" /> : null);
   const content = (
@@ -107,6 +108,7 @@ function AdminActionRow({
   destructive?: boolean;
   onPress?: () => void;
 }) {
+  const { colors } = useTheme();
   const tintBg =
     tint === 'primary' ? 'bg-primary/15' : tint === 'warning' ? 'bg-warning/15' : 'bg-error/15';
   const disabled = comingSoon || !onPress;
@@ -145,6 +147,7 @@ function AdminActionRow({
 }
 
 export default function RoomSettingsScreen() {
+  const { colors } = useTheme();
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { session: authSession } = useAuth();

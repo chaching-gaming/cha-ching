@@ -1,6 +1,6 @@
 import { ActivityIndicator, Text, TouchableOpacity } from 'react-native';
 
-import { colors } from '@/constants/colors';
+import { useTheme } from '@/providers/theme';
 
 const variants = {
   primary: 'bg-primary active:bg-primary-dark',
@@ -40,6 +40,7 @@ export function Button({
   children,
   className = '',
 }: ButtonProps) {
+  const { colors } = useTheme();
   const s = sizes[size];
   return (
     <TouchableOpacity

@@ -3,7 +3,7 @@ import { RefreshControl, ScrollView, Text, TouchableOpacity, View } from 'react-
 import { useQueryClient } from '@tanstack/react-query';
 import { CaretDown, ChartBar } from 'phosphor-react-native';
 
-import { colors } from '@/constants/colors';
+import { useTheme } from '@/providers/theme';
 import { Avatar, EmptyState, ScreenHeader, SectionHeader, SkeletonStatsCard } from '@/components/ui';
 import { RoomSelectionSheet } from '@/components/activity/room-selection-sheet';
 import { StatCard } from '@/components/stats/stat-card';
@@ -149,6 +149,7 @@ function TabButton({
 // ============================================================================
 
 function RoomDropdown({ roomName, onPress }: { roomName: string; onPress: () => void }) {
+  const { colors } = useTheme();
   return (
     <TouchableOpacity
       onPress={onPress}
@@ -172,6 +173,7 @@ function RoomDropdown({ roomName, onPress }: { roomName: string; onPress: () => 
 // ============================================================================
 
 function RoomStats({ roomId }: { roomId: string }) {
+  const { colors } = useTheme();
   const queryClient = useQueryClient();
   const { data: event, isLoading: eventLoading } = useRoomEventStats(roomId);
   const { data: players, isLoading: playersLoading } = useRoomPlayerStats(roomId);

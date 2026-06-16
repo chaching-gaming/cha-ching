@@ -2,7 +2,6 @@ import 'react-native-gesture-handler';
 import '../global.css';
 
 import FontAwesome from '@expo/vector-icons/FontAwesome';
-import { DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
 import { Stack, useRouter, useSegments, type Href } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
@@ -11,7 +10,6 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import 'react-native-reanimated';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 
-import { colors } from '@/constants/colors';
 import { Providers } from '@/providers';
 import { useAuth } from '@/providers/auth';
 import { LoadingScreen } from '@/components/ui';
@@ -48,18 +46,6 @@ export const unstable_settings = {
 void SplashScreen.preventAutoHideAsync().catch(() => {
   /* Dev / fast refresh: splash may already be hidden or not registered */
 });
-
-const appTheme = {
-  ...DefaultTheme,
-  colors: {
-    ...DefaultTheme.colors,
-    background: colors.background,
-    card: colors.surface,
-    text: colors.textPrimary,
-    border: colors.border,
-    primary: colors.primary,
-  },
-};
 
 function AuthGate({ children }: { children: React.ReactNode }) {
   const { session, isLoading, isPasswordRecovery, clearPasswordRecovery } = useAuth();
@@ -127,17 +113,15 @@ export default Sentry.wrap(function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <Providers>
-        <ThemeProvider value={appTheme}>
-          <BottomSheetModalProvider>
-            <AuthGate>
-              <Stack screenOptions={{ headerShown: false }}>
-                <Stack.Screen name="index" />
-                <Stack.Screen name="(tabs)" />
-                <Stack.Screen name="(auth)" />
-              </Stack>
-            </AuthGate>
-          </BottomSheetModalProvider>
-        </ThemeProvider>
+        <BottomSheetModalProvider>
+          <AuthGate>
+            <Stack screenOptions={{ headerShown: false }}>
+              <Stack.Screen name="index" />
+              <Stack.Screen name="(tabs)" />
+              <Stack.Screen name="(auth)" />
+            </Stack>
+          </AuthGate>
+        </BottomSheetModalProvider>
       </Providers>
     </GestureHandlerRootView>
   );

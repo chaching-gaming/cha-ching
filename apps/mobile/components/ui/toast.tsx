@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { Text, TouchableOpacity } from 'react-native';
 import Animated, {
   SlideInUp,
@@ -9,7 +10,8 @@ import Animated, {
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { CheckCircle, Info, Warning, X } from 'phosphor-react-native';
 
-import { colors } from '@/constants/colors';
+import { useTheme } from '@/providers/theme';
+import type { ThemeColors } from '@/constants/colors';
 
 type ToastType = 'error' | 'success' | 'info';
 
@@ -23,32 +25,33 @@ export interface ToastProps {
   onDismiss: () => void;
 }
 
-const TOAST_CONFIG: Record<
-  ToastType,
-  { icon: typeof Warning; bgClass: string; borderClass: string; iconColor: string }
-> = {
-  error: {
-    icon: Warning,
-    bgClass: 'bg-error/15',
-    borderClass: 'border-error/30',
-    iconColor: colors.error,
-  },
-  success: {
-    icon: CheckCircle,
-    bgClass: 'bg-primary/15',
-    borderClass: 'border-primary/30',
-    iconColor: colors.primary,
-  },
-  info: {
-    icon: Info,
-    bgClass: 'bg-surface-light',
-    borderClass: 'border-border',
-    iconColor: colors.textSecondary,
-  },
-};
+function getToastConfig(colors: ThemeColors) {
+  return {
+    error: {
+      icon: Warning,
+      bgClass: 'bg-error/15',
+      borderClass: 'border-error/30',
+      iconColor: colors.error,
+    },
+    success: {
+      icon: CheckCircle,
+      bgClass: 'bg-primary/15',
+      borderClass: 'border-primary/30',
+      iconColor: colors.primary,
+    },
+    info: {
+      icon: Info,
+      bgClass: 'bg-surface-light',
+      borderClass: 'border-border',
+      iconColor: colors.textSecondary,
+    },
+  } as const;
+}
 
 export function Toast({ type, message, action, onDismiss }: ToastProps) {
-  const config = TOAST_CONFIG[type];
+  const { colors } = useTheme();
+  const toastConfig = useMemo(() => getToastConfig(colors), [colors]);
+  const config = toastConfig[type];
   const Icon = config.icon;
 
   const translateY = useSharedValue(0);
@@ -103,7 +106,7 @@ export function Toast({ type, message, action, onDismiss }: ToastProps) {
         ) : null}
 
         <TouchableOpacity onPress={onDismiss} activeOpacity={0.7} className="p-1">
-          <X size={18} color={colors.textMuted} weight="bold" />
+          <X size={18} color={toastConfig.info.iconColor} weight="bold" />
         </TouchableOpacity>
       </Animated.View>
     </GestureDetector>

@@ -6,7 +6,7 @@ import { House, Plus, ChartBar, Bell, UserCircle } from 'phosphor-react-native';
 import { useQueryClient } from '@tanstack/react-query';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { colors } from '@/constants/colors';
+import { useTheme } from '@/providers/theme';
 import { RoomSelectionSheet } from '@/components/activity/room-selection-sheet';
 import { NotificationBadge } from '@/components/notifications/notification-badge';
 import { useNotifications } from '@/providers/notifications';
@@ -24,6 +24,7 @@ export default function TabLayout() {
   const [sheetOpen, setSheetOpen] = useState(false);
   const { unreadCount, markAsRead } = useNotifications();
   const insets = useSafeAreaInsets();
+  const { colors } = useTheme();
 
   // Calculate bottom padding: use safe area inset on Android (edge-to-edge), fallback for iOS
   const bottomPadding = Platform.OS === 'android' ? Math.max(insets.bottom, 12) : 20;
@@ -36,7 +37,7 @@ export default function TabLayout() {
       paddingBottom: bottomPadding,
       paddingTop: TAB_BAR_PADDING_TOP,
     }),
-    [bottomPadding],
+    [bottomPadding, colors],
   );
 
   const handleNotificationsTabFocus = useCallback(async () => {

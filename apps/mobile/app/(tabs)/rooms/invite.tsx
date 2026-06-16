@@ -5,13 +5,14 @@ import * as Clipboard from 'expo-clipboard';
 import QRCode from 'react-native-qrcode-svg';
 import { Check, Copy, Users } from 'phosphor-react-native';
 
-import { colors } from '@/constants/colors';
+import { useTheme } from '@/providers/theme';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { useRoomDetail, useRoomMembers } from '@/hooks/use-rooms';
 
 export default function InviteScreen() {
+  const { colors } = useTheme();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { data: room, isLoading: roomLoading } = useRoomDetail(id);
   const { data: members } = useRoomMembers(id);

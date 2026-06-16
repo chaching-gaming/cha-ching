@@ -10,7 +10,7 @@ import {
 } from '@gorhom/bottom-sheet';
 import { Coins, HandCoins, X } from 'phosphor-react-native';
 
-import { colors } from '@/constants/colors';
+import { useTheme } from '@/providers/theme';
 import { Avatar } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { useDonateChips } from '@/hooks/use-chip-requests';
@@ -26,6 +26,7 @@ type Props = {
 };
 
 export function DonateChipsSheet({ visible, onClose, chipRequest, roomId, donorBalance }: Props) {
+  const { colors } = useTheme();
   const safeInsets = useSafeAreaInsets();
   const sheetRef = useRef<BottomSheetModal>(null);
   const donateChips = useDonateChips();

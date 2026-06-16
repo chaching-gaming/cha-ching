@@ -3,7 +3,7 @@ import { useRouter } from 'expo-router';
 import { CaretLeft, House } from 'phosphor-react-native';
 import * as Haptics from 'expo-haptics';
 
-import { colors } from '@/constants/colors';
+import { useTheme } from '@/providers/theme';
 
 interface ScreenHeaderProps {
   title: string;
@@ -28,6 +28,7 @@ export function ScreenHeader({
   backIconSize = 24,
 }: ScreenHeaderProps) {
   const router = useRouter();
+  const { colors } = useTheme();
 
   const handleGoHome = () => {
     void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);

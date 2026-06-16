@@ -11,7 +11,7 @@ import {
   BottomSheetView,
 } from '@gorhom/bottom-sheet';
 
-import { colors } from '@/constants/colors';
+import { useTheme } from '@/providers/theme';
 import { Avatar } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { useRooms, type RoomWithMembership } from '@/hooks/use-rooms';
@@ -30,6 +30,7 @@ function RoomRow({
   item: RoomWithMembership;
   onPress: (roomId: string) => void;
 }) {
+  const { colors } = useTheme();
   const overflow = item.room.member_count - item.memberPreviews.length;
 
   return (
@@ -76,6 +77,7 @@ function RoomRow({
 }
 
 export function RoomSelectionSheet({ visible, onClose, onSelectRoom }: Props) {
+  const { colors } = useTheme();
   const safeInsets = useSafeAreaInsets();
   const { height: screenHeight } = useWindowDimensions();
   const router = useRouter();

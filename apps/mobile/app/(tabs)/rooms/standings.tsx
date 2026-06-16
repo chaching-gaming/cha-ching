@@ -4,7 +4,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useQueryClient } from '@tanstack/react-query';
 import { Crown } from 'phosphor-react-native';
 
-import { colors } from '@/constants/colors';
+import { useTheme, type ThemeColors } from '@/providers/theme';
 import { Avatar, Badge, EmptyState, ScreenHeader, SkeletonListItem } from '@/components/ui';
 import { SettlementStatusSheet } from '@/components/activity/settlement-status-sheet';
 import { useAuth } from '@/providers/auth';
@@ -18,11 +18,13 @@ import { useUpdateSettlementStatus } from '@/hooks/use-settlement-status';
 import { formatBalance, netBalanceColorClass } from '@/lib/format-balance';
 
 // Podium medal colors from design tokens
-const RANK_BADGE_COLORS: Record<1 | 2 | 3, { bg: string; text: string }> = {
-  1: { bg: colors.medal.gold, text: colors.textPrimary },
-  2: { bg: colors.medal.silver, text: colors.textPrimary },
-  3: { bg: colors.medal.bronze, text: colors.textPrimary },
-};
+function getRankBadgeColors(colors: ThemeColors): Record<1 | 2 | 3, { bg: string; text: string }> {
+  return {
+    1: { bg: colors.medal.gold, text: colors.textPrimary },
+    2: { bg: colors.medal.silver, text: colors.textPrimary },
+    3: { bg: colors.medal.bronze, text: colors.textPrimary },
+  };
+}
 
 // Settlement status badge variants
 const SETTLEMENT_BADGE_VARIANTS: Record<SettlementStatus, 'warning' | 'success' | 'error'> = {
@@ -38,10 +40,12 @@ const SETTLEMENT_BADGE_LABELS: Record<SettlementStatus, string> = {
 };
 
 export default function StandingsScreen() {
+  const { colors } = useTheme();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { session: authSession } = useAuth();
   const queryClient = useQueryClient();
   const router = useRouter();
+  const rankBadgeColors = useMemo(() => getRankBadgeColors(colors), [colors]);
 
   const { data: room, isLoading: roomLoading } = useRoomDetail(id);
   const { data: memberBalances, isLoading: balancesLoading } = useRoomMemberBalances(id);
@@ -306,7 +310,9 @@ function PodiumColumn({
   onPress: () => void;
   onBadgePress: () => void;
 }) {
-  const badge = RANK_BADGE_COLORS[rank];
+  const { colors } = useTheme();
+  const rankBadgeColors = useMemo(() => getRankBadgeColors(colors), [colors]);
+  const badge = rankBadgeColors[rank];
   const belowLimit = chipLimit != null && member.balance <= chipLimit;
   const hasNonZeroNet = member.net_balance !== 0;
   const settlementStatus = member.settlement_status ?? (hasNonZeroNet ? 'PENDING' : null);

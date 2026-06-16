@@ -4,7 +4,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Check, Coins, Lock } from 'phosphor-react-native';
 
-import { colors } from '@/constants/colors';
+import { useTheme } from '@/providers/theme';
 import { Avatar } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { ScreenHeader } from '@/components/ui/screen-header';
@@ -16,6 +16,7 @@ import { getRpcErrorMessage } from '@/hooks/use-rooms';
 import { BetTemplateIcon } from '@/lib/bet-create-ui';
 
 export default function AcceptBetScreen() {
+  const { colors } = useTheme();
   const { betId } = useLocalSearchParams<{ betId: string }>();
   const router = useRouter();
   const safeInsets = useSafeAreaInsets();

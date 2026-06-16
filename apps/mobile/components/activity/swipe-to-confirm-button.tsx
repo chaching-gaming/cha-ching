@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import {
   Alert,
   Animated,
@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import { ArrowRight, Check, Coins } from 'phosphor-react-native';
 
-import { colors } from '@/constants/colors';
+import { useTheme, type ThemeColors } from '@/providers/theme';
 import type { BetWithProfiles } from '@/hooks/use-activity-feed';
 import { useJoinBet } from '@/hooks/use-join-bet';
 import { getRpcErrorMessage } from '@/hooks/use-rooms';
@@ -34,6 +34,8 @@ export function SwipeToConfirmButton({
   onSuccess,
   disabled = false,
 }: Props) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const joinBet = useJoinBet();
   const [trackWidth, setTrackWidth] = useState(300);
   const [confirming, setConfirming] = useState(false);
@@ -206,64 +208,66 @@ export function SwipeToConfirmButton({
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    marginTop: 12,
-    height: BUTTON_HEIGHT,
-    backgroundColor: colors.surfaceLight,
-    borderRadius: 12,
-    justifyContent: 'center',
-  },
-  emptyContainer: {
-    marginTop: 12,
-    height: BUTTON_HEIGHT,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surfaceLight,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  emptyText: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: colors.textMuted,
-  },
-  labelContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingLeft: THUMB_SIZE + TRACK_PADDING * 2,
-  },
-  labelRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  labelText: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: colors.primary,
-  },
-  thumb: {
-    position: 'absolute',
-    left: TRACK_PADDING,
-    top: TRACK_PADDING,
-    width: THUMB_SIZE,
-    height: THUMB_SIZE,
-    borderRadius: 8,
-    backgroundColor: colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 2,
-  },
-  underlay: {
-    position: 'absolute',
-    left: 0,
-    top: 0,
-    height: BUTTON_HEIGHT,
-    backgroundColor: colors.primary,
-    borderRadius: 12,
-    zIndex: 1,
-  },
-});
+function createStyles(colors: ThemeColors) {
+  return StyleSheet.create({
+    container: {
+      marginTop: 12,
+      height: BUTTON_HEIGHT,
+      backgroundColor: colors.surfaceLight,
+      borderRadius: 12,
+      justifyContent: 'center',
+    },
+    emptyContainer: {
+      marginTop: 12,
+      height: BUTTON_HEIGHT,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: colors.border,
+      backgroundColor: colors.surfaceLight,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    emptyText: {
+      fontSize: 14,
+      fontWeight: '500',
+      color: colors.textMuted,
+    },
+    labelContainer: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingLeft: THUMB_SIZE + TRACK_PADDING * 2,
+    },
+    labelRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+    },
+    labelText: {
+      fontSize: 14,
+      fontWeight: '700',
+      color: colors.primary,
+    },
+    thumb: {
+      position: 'absolute',
+      left: TRACK_PADDING,
+      top: TRACK_PADDING,
+      width: THUMB_SIZE,
+      height: THUMB_SIZE,
+      borderRadius: 8,
+      backgroundColor: colors.primary,
+      alignItems: 'center',
+      justifyContent: 'center',
+      zIndex: 2,
+    },
+    underlay: {
+      position: 'absolute',
+      left: 0,
+      top: 0,
+      height: BUTTON_HEIGHT,
+      backgroundColor: colors.primary,
+      borderRadius: 12,
+      zIndex: 1,
+    },
+  });
+}

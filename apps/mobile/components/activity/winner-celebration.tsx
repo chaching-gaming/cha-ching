@@ -11,7 +11,7 @@ import { Trophy } from 'phosphor-react-native';
 
 import { Avatar } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { colors } from '@/constants/colors';
+import { useTheme } from '@/providers/theme';
 import type { BetWithProfiles } from '@/hooks/use-activity-feed';
 
 type Props = {
@@ -42,6 +42,7 @@ function WinnerContent({
   currentUserId: string | null;
   onDismiss: () => void;
 }) {
+  const { colors } = useTheme();
   // Derive winners from stakes that matched the outcome; compute per-winner
   // payout as floor(total_pool / n_winners) — mirrors the server math.
   const stakes = bet.stakes ?? [];
@@ -109,6 +110,7 @@ function WinnerContent({
 }
 
 function ConfettiPiece({ index }: { index: number }) {
+  const { colors } = useTheme();
   const color = colors.confetti[index % colors.confetti.length];
   const startX = useMemo(() => Math.random() * SCREEN_W, []);
   const driftX = useMemo(() => (Math.random() - 0.5) * 120, []);

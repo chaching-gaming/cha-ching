@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { ChatCircleDots, Coins } from 'phosphor-react-native';
 
-import { colors } from '@/constants/colors';
+import { useTheme } from '@/providers/theme';
 import type { BetWithProfiles } from '@/hooks/use-activity-feed';
 
 type Props = {
@@ -32,6 +32,7 @@ function LockedInContent({
   currentUserId: string | null;
   onDismiss: () => void;
 }) {
+  const { colors } = useTheme();
   const subjectName = bet.subject_profile?.display_name ?? null;
   const myStake = currentUserId
     ? ((bet.stakes ?? []).find((s) => s.user_id === currentUserId) ?? null)

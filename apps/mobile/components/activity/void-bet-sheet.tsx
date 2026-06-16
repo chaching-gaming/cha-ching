@@ -14,7 +14,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Prohibit, Warning, X } from 'phosphor-react-native';
 
-import { colors } from '@/constants/colors';
+import { useTheme } from '@/providers/theme';
 import { Button } from '@/components/ui/button';
 import { useVoidBet } from '@/hooks/use-void-bet';
 import { getRpcErrorMessage } from '@/hooks/use-rooms';
@@ -28,6 +28,7 @@ type Props = {
 };
 
 export function VoidBetSheet({ visible, onClose, bet, roomId }: Props) {
+  const { colors } = useTheme();
   const safeInsets = useSafeAreaInsets();
   const voidBet = useVoidBet();
   const [reason, setReason] = useState('');

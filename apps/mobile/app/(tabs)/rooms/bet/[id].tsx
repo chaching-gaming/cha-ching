@@ -24,7 +24,7 @@ import {
 } from 'phosphor-react-native';
 import { useQueryClient } from '@tanstack/react-query';
 
-import { colors } from '@/constants/colors';
+import { useTheme } from '@/providers/theme';
 import { Avatar } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -98,6 +98,7 @@ function getSettlementMethodLabel(method: string | null | undefined): string {
 }
 
 export default function BetDetailScreen() {
+  const { colors } = useTheme();
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const safeInsets = useSafeAreaInsets();

@@ -2,14 +2,23 @@
 module.exports = {
   content: ['./app/**/*.{ts,tsx}', './components/**/*.{ts,tsx}', './providers/**/*.{ts,tsx}'],
   presets: [require('nativewind/preset')],
+  darkMode: 'class',
   theme: {
     extend: {
       colors: {
-        // Light theme: Vintage blue, white & green palette
-        background: '#F3F4F6',
-        surface: '#FFFFFF',
-        'surface-light': '#E5E7EB',
-        border: '#D1D5DB',
+        // Theme-aware colors (CSS variables - auto-switch with .dark class)
+        background: 'rgb(var(--color-background) / <alpha-value>)',
+        surface: 'rgb(var(--color-surface) / <alpha-value>)',
+        'surface-light': 'rgb(var(--color-surface-light) / <alpha-value>)',
+        'surface-alt': 'rgb(var(--color-surface-alt) / <alpha-value>)',
+        border: 'rgb(var(--color-border) / <alpha-value>)',
+        'text-primary': 'rgb(var(--color-text-primary) / <alpha-value>)',
+        'text-secondary': 'rgb(var(--color-text-secondary) / <alpha-value>)',
+        'text-muted': 'rgb(var(--color-text-muted) / <alpha-value>)',
+        success: 'rgb(var(--color-success) / <alpha-value>)',
+        error: 'rgb(var(--color-error) / <alpha-value>)',
+
+        // Static colors (same in light & dark)
         primary: {
           DEFAULT: '#4D8A8A',
           dark: '#3D7A7A',
@@ -17,16 +26,13 @@ module.exports = {
         },
         secondary: '#5B86A0',
         accent: '#7DAE7E',
-        success: '#16A34A',
-        error: '#DC2626',
         warning: '#D97706',
-        'text-primary': '#1F2937',
-        'text-secondary': '#4B5563',
-        'text-muted': '#6B7280',
+
         // Medal colors for standings
         'medal-gold': '#D97706',
         'medal-silver': '#6B7280',
         'medal-bronze': '#B45309',
+
         // Confetti colors for celebrations
         'confetti-1': '#7DAE7E',
         'confetti-2': '#4D8A8A',

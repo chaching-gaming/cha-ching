@@ -9,7 +9,7 @@ import {
   ListDashes,
 } from 'phosphor-react-native';
 
-import { colors } from '@/constants/colors';
+import { useTheme } from '@/providers/theme';
 import { EmptyState } from '@/components/ui';
 import { StatCard } from './stat-card';
 import { useMyBets, myBetsKey, calculateMyBetsStats, type MyBet } from '@/hooks/use-my-bets';
@@ -20,6 +20,7 @@ interface MyBetsSectionProps {
 }
 
 export function MyBetsSection({ roomId }: MyBetsSectionProps) {
+  const { colors } = useTheme();
   const queryClient = useQueryClient();
   const {
     data,
@@ -124,6 +125,7 @@ function StatsHeader({ stats }: { stats: ReturnType<typeof calculateMyBetsStats>
 }
 
 function BetRow({ bet, isLast }: { bet: MyBet; isLast: boolean }) {
+  const { colors } = useTheme();
   const StatusIcon = useMemo(() => {
     if (bet.status === 'SETTLED') {
       return bet.won ? Trophy : TrendDown;

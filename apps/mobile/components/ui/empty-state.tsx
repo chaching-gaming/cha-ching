@@ -1,7 +1,7 @@
 import { Text, View } from 'react-native';
 import type { ComponentType } from 'react';
 
-import { colors } from '@/constants/colors';
+import { useTheme } from '@/providers/theme';
 import { Button } from './button';
 
 interface IconProps {
@@ -42,6 +42,7 @@ export function EmptyState({
   secondaryAction,
   className = '',
 }: EmptyStateProps) {
+  const { colors } = useTheme();
   return (
     <View className={`flex-1 items-center justify-center px-5 ${className}`}>
       {Icon ? (

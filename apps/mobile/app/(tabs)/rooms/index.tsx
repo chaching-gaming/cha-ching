@@ -13,7 +13,7 @@ import { useRouter } from 'expo-router';
 import { Swipeable } from 'react-native-gesture-handler';
 import { Plus, QrCode, Users } from 'phosphor-react-native';
 
-import { colors } from '@/constants/colors';
+import { useTheme } from '@/providers/theme';
 import { Avatar, EmptyState, ScreenHeader, SkeletonListItem } from '@/components/ui';
 import {
   useRooms,
@@ -168,6 +168,7 @@ function RoomsEmptyState() {
 }
 
 export default function RoomsListScreen() {
+  const { colors } = useTheme();
   const router = useRouter();
   const { data: rooms, isLoading, refetch, isRefetching } = useRooms('active');
 

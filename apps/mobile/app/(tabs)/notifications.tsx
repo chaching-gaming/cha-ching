@@ -11,7 +11,7 @@ import { useRouter } from 'expo-router';
 import { Bell, Checks } from 'phosphor-react-native';
 import { useQueryClient } from '@tanstack/react-query';
 
-import { colors } from '@/constants/colors';
+import { useTheme } from '@/providers/theme';
 import { EmptyState, ScreenHeader, SkeletonNotificationItem } from '@/components/ui';
 import { NotificationItem } from '@/components/notifications/notification-item';
 import {
@@ -65,6 +65,7 @@ function groupByDate(notifications: NotificationRow[]): GroupedNotifications[] {
 }
 
 export default function NotificationsScreen() {
+  const { colors } = useTheme();
   const router = useRouter();
   const queryClient = useQueryClient();
   const { show: showToast } = useToast();

@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
-import { colors } from '@/constants/colors';
+import { useTheme } from '@/providers/theme';
 
 type DiagonalOptionCardProps = {
   icon: ReactNode;
@@ -28,6 +28,7 @@ export function DiagonalOptionCard({
   disabled = false,
   isActive,
 }: DiagonalOptionCardProps) {
+  const { colors } = useTheme();
   const positiveSelected = isActive && selectedPick === positiveLabel;
   const negativeSelected = isActive && selectedPick === negativeLabel;
 

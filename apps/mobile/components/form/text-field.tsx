@@ -1,7 +1,7 @@
 import { Platform, Text, TextInput, View } from 'react-native';
 import type { TextInputProps } from 'react-native';
 import { useFieldContext } from '@/hooks/form-context';
-import { colors } from '@/constants/colors';
+import { useTheme } from '@/providers/theme';
 
 type TextFieldProps = {
   label?: string;
@@ -29,6 +29,7 @@ export function TextField({
   multiline,
   ...inputProps
 }: TextFieldProps) {
+  const { colors } = useTheme();
   const field = useFieldContext<string>();
   const errors = field.state.meta.errors[0];
   const padL = leftIcon ? 'pl-11' : 'pl-4';

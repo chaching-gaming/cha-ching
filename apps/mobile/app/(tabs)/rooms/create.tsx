@@ -3,7 +3,7 @@ import { useRouter } from 'expo-router';
 import { Coins, Info, Timer } from 'phosphor-react-native';
 import { z } from 'zod';
 
-import { colors } from '@/constants/colors';
+import { useTheme } from '@/providers/theme';
 import { KeyboardAwareScrollView } from '@/components/form/keyboard-aware-scroll-view';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { useCreateRoom } from '@/hooks/use-rooms';
@@ -25,6 +25,7 @@ const createRoomSchema = z.object({
 });
 
 export default function CreateRoomScreen() {
+  const { colors } = useTheme();
   const router = useRouter();
   const createRoom = useCreateRoom();
   const today = formatTodayCalendarDate();

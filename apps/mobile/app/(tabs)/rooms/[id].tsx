@@ -13,7 +13,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Gear, HandHeart, Plus } from 'phosphor-react-native';
 
-import { colors } from '@/constants/colors';
+import { useTheme } from '@/providers/theme';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { ActivityFeedItem } from '@/components/activity/activity-feed-item';
 import { WinnerCelebration } from '@/components/activity/winner-celebration';
@@ -56,6 +56,7 @@ const EMPTY_STATE_COPY: Record<BetFilter, { title: string; subtitle: string }> =
 };
 
 export default function RoomDetailScreen() {
+  const { colors } = useTheme();
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { session: authSession } = useAuth();

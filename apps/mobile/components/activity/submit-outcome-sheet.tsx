@@ -3,7 +3,7 @@ import { Alert, Modal, Pressable, Text, TouchableOpacity, View } from 'react-nat
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Check, X } from 'phosphor-react-native';
 
-import { colors } from '@/constants/colors';
+import { useTheme } from '@/providers/theme';
 import { Button } from '@/components/ui/button';
 import { useSubmitOutcome } from '@/hooks/use-submit-outcome';
 import { getRpcErrorMessage } from '@/hooks/use-rooms';
@@ -28,6 +28,7 @@ export function SubmitOutcomeSheet({
   positiveLabel,
   negativeLabel,
 }: Props) {
+  const { colors } = useTheme();
   const safeInsets = useSafeAreaInsets();
   const submitOutcome = useSubmitOutcome();
   const [selected, setSelected] = useState<string | null>(null);

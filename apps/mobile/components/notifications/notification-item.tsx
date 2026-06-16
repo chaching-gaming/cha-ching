@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
 import {
   Handshake,
@@ -13,7 +14,7 @@ import {
   type IconProps,
 } from 'phosphor-react-native';
 
-import { colors } from '@/constants/colors';
+import { useTheme, type ThemeColors } from '@/providers/theme';
 import { formatRelativeActivityTime } from '@/lib/date-format';
 import type { NotificationRow, NotificationType } from '@/hooks/use-notifications-feed';
 
@@ -31,19 +32,21 @@ const NOTIFICATION_ICONS: Record<NotificationType, React.ComponentType<IconProps
   bet_accepted: UserPlus,
 };
 
-const ICON_COLORS: Record<NotificationType, string> = {
-  bet_created: colors.primary,
-  bet_matched: colors.primary,
-  bet_settled: colors.primary,
-  bet_won: colors.success,
-  bet_lost: colors.error,
-  bet_voided: colors.textMuted,
-  bet_disputed: colors.warning,
-  bet_expiring: colors.warning,
-  chip_request_created: colors.chipsIcon,
-  chip_donated: colors.chipsIcon,
-  bet_accepted: colors.primary,
-};
+function getIconColors(colors: ThemeColors): Record<NotificationType, string> {
+  return {
+    bet_created: colors.primary,
+    bet_matched: colors.primary,
+    bet_settled: colors.primary,
+    bet_won: colors.success,
+    bet_lost: colors.error,
+    bet_voided: colors.textMuted,
+    bet_disputed: colors.warning,
+    bet_expiring: colors.warning,
+    chip_request_created: colors.chipsIcon,
+    chip_donated: colors.chipsIcon,
+    bet_accepted: colors.primary,
+  };
+}
 
 interface NotificationItemProps {
   notification: NotificationRow;
@@ -52,8 +55,10 @@ interface NotificationItemProps {
 }
 
 export function NotificationItem({ notification, onPress, isLast: _isLast }: NotificationItemProps) {
+  const { colors } = useTheme();
+  const iconColors = useMemo(() => getIconColors(colors), [colors]);
   const Icon = NOTIFICATION_ICONS[notification.type];
-  const iconColor = ICON_COLORS[notification.type];
+  const iconColor = iconColors[notification.type];
   const isUnread = notification.read_at === null;
 
   return (

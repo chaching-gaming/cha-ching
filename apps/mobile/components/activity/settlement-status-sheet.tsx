@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
@@ -9,7 +9,7 @@ import {
 } from '@gorhom/bottom-sheet';
 import { Check, Clock, CheckCircle, Warning } from 'phosphor-react-native';
 
-import { colors } from '@/constants/colors';
+import { useTheme, type ThemeColors } from '@/providers/theme';
 import type { SettlementStatus } from '@/hooks/use-activity-feed';
 
 type Props = {
@@ -20,35 +20,31 @@ type Props = {
   onSelectStatus: (status: SettlementStatus) => void;
 };
 
-const STATUS_OPTIONS: {
-  key: SettlementStatus;
-  label: string;
-  description: string;
-  icon: typeof Clock;
-  color: string;
-}[] = [
-  {
-    key: 'PENDING',
-    label: 'Pending',
-    description: 'Settlement not yet completed',
-    icon: Clock,
-    color: colors.warning,
-  },
-  {
-    key: 'SETTLED',
-    label: 'Settled',
-    description: 'Balance has been settled',
-    icon: CheckCircle,
-    color: colors.primary,
-  },
-  {
-    key: 'DISPUTED',
-    label: 'Disputed',
-    description: 'Settlement is disputed',
-    icon: Warning,
-    color: colors.error,
-  },
-];
+function getStatusOptions(colors: ThemeColors) {
+  return [
+    {
+      key: 'PENDING' as SettlementStatus,
+      label: 'Pending',
+      description: 'Settlement not yet completed',
+      icon: Clock,
+      color: colors.warning,
+    },
+    {
+      key: 'SETTLED' as SettlementStatus,
+      label: 'Settled',
+      description: 'Balance has been settled',
+      icon: CheckCircle,
+      color: colors.primary,
+    },
+    {
+      key: 'DISPUTED' as SettlementStatus,
+      label: 'Disputed',
+      description: 'Settlement is disputed',
+      icon: Warning,
+      color: colors.error,
+    },
+  ];
+}
 
 export function SettlementStatusSheet({
   visible,
@@ -57,8 +53,10 @@ export function SettlementStatusSheet({
   memberName,
   onSelectStatus,
 }: Props) {
+  const { colors } = useTheme();
   const safeInsets = useSafeAreaInsets();
   const sheetRef = useRef<BottomSheetModal>(null);
+  const statusOptions = useMemo(() => getStatusOptions(colors), [colors]);
 
   useEffect(() => {
     if (visible) sheetRef.current?.present();
@@ -104,7 +102,7 @@ export function SettlementStatusSheet({
         <Text className="mb-1 px-1 text-xl font-bold text-text-primary">Settlement Status</Text>
         <Text className="mb-3 px-1 text-sm text-text-secondary">{memberName}</Text>
         <View className="overflow-hidden rounded-2xl border border-border bg-surface">
-          {STATUS_OPTIONS.map((option, idx) => {
+          {statusOptions.map((option, idx) => {
             const isSelected = currentStatus === option.key;
             const Icon = option.icon;
             return (
@@ -113,7 +111,7 @@ export function SettlementStatusSheet({
                 onPress={() => handleOptionPress(option.key)}
                 activeOpacity={0.75}
                 className={`flex-row items-center gap-3 px-4 py-4 ${
-                  idx < STATUS_OPTIONS.length - 1 ? 'border-b border-border' : ''
+                  idx < statusOptions.length - 1 ? 'border-b border-border' : ''
                 }`}
               >
                 <View

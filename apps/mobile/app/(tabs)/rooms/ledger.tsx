@@ -12,7 +12,7 @@ import { useLocalSearchParams } from 'expo-router';
 import { useQueryClient } from '@tanstack/react-query';
 import { DownloadSimple, Export, FileCsv } from 'phosphor-react-native';
 
-import { colors } from '@/constants/colors';
+import { useTheme } from '@/providers/theme';
 import { ActionSheet, type ActionSheetOption } from '@/components/ui/action-sheet';
 import { Avatar } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -56,6 +56,7 @@ const TYPE_VARIANTS: Record<LedgerType, BadgeVariant> = {
 };
 
 export default function LedgerScreen() {
+  const { colors } = useTheme();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { session: authSession } = useAuth();
   const queryClient = useQueryClient();

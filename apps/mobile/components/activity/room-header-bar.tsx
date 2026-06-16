@@ -2,7 +2,7 @@ import { useCallback, useState } from 'react';
 import { Alert, Text, TouchableOpacity, View } from 'react-native';
 import { Coins, HandHeart, UsersThree, X } from 'phosphor-react-native';
 
-import { colors } from '@/constants/colors';
+import { useTheme } from '@/providers/theme';
 import { Avatar } from '@/components/ui/avatar';
 import { RequestChipsSheet } from '@/components/activity/request-chips-sheet';
 import { useCancelChipRequest } from '@/hooks/use-chip-requests';
@@ -36,6 +36,7 @@ export function RoomHeaderBar({
   myOpenChipRequest,
   isActiveMember = true,
 }: RoomHeaderBarProps) {
+  const { colors } = useTheme();
   const [requestOpen, setRequestOpen] = useState(false);
   const cancelRequest = useCancelChipRequest();
   const visible = members.slice(0, MAX_AVATARS);

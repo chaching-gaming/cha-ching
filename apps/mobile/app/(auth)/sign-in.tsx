@@ -8,7 +8,7 @@ import { signInWithGoogle, signInWithApple } from '@/lib/oauth';
 import { KeyboardAwareScrollView } from '@/components/form/keyboard-aware-scroll-view';
 import { useForm } from '@/hooks/use-form';
 import { useToast } from '@/providers/toast';
-import { colors } from '@/constants/colors';
+import { useTheme } from '@/providers/theme';
 
 const signInSchema = z.object({
   email: z.string().min(1, 'Email is required').email('Invalid email address'),
@@ -16,6 +16,7 @@ const signInSchema = z.object({
 });
 
 export default function SignInScreen() {
+  const { colors } = useTheme();
   const [oauthLoading, setOauthLoading] = useState(false);
   const toast = useToast();
 

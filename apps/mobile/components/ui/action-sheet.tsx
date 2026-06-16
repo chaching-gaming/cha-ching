@@ -9,7 +9,7 @@ import {
 } from '@gorhom/bottom-sheet';
 import { Check } from 'phosphor-react-native';
 
-import { colors } from '@/constants/colors';
+import { useTheme } from '@/providers/theme';
 
 export type ActionSheetOption = {
   key: string;
@@ -33,6 +33,7 @@ type Props = {
 export function ActionSheet({ visible, onClose, title, options, selectedKey }: Props) {
   const safeInsets = useSafeAreaInsets();
   const sheetRef = useRef<BottomSheetModal>(null);
+  const { colors } = useTheme();
 
   useEffect(() => {
     if (visible) sheetRef.current?.present();

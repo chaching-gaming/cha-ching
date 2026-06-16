@@ -19,7 +19,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ArrowLeft, ArrowRight, Coins, PencilSimple, X } from 'phosphor-react-native';
 import { z } from 'zod';
 
-import { colors } from '@/constants/colors';
+import { useTheme } from '@/providers/theme';
 import { useAuth } from '@/providers/auth';
 import { Avatar } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -114,6 +114,7 @@ function memberDisplayName(m: RoomMemberWithProfile): string {
 }
 
 export default function CreateBetScreen() {
+  const { colors } = useTheme();
   const { id: roomId } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const safeInsets = useSafeAreaInsets();

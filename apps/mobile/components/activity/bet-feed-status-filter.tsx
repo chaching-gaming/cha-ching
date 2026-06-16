@@ -2,7 +2,7 @@ import { Text, TouchableOpacity, View } from 'react-native';
 import { CheckSquare, Square } from 'phosphor-react-native';
 
 import { getEffectiveBetStatus } from '@/lib/effective-bet-status';
-import { colors } from '@/constants/colors';
+import { useTheme } from '@/providers/theme';
 import type { BetWithProfiles } from '@/hooks/use-activity-feed';
 
 export type BetFilter = 'active' | 'open' | 'matched' | 'settled';
@@ -27,6 +27,7 @@ export function BetFeedStatusFilter({
   myBetsOnly = false,
   onMyBetsChange,
 }: BetFeedStatusFilterProps) {
+  const { colors } = useTheme();
   return (
     <View className="mb-3">
       {/* Status filters */}
