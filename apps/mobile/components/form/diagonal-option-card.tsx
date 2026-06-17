@@ -78,7 +78,7 @@ export function DiagonalOptionCard({
             style={{
               fontSize: 13,
               fontWeight: '700',
-              color: positiveSelected ? colors.surface : colors.textSecondary,
+              color: positiveSelected ? '#FFFFFF' : colors.textSecondary,
             }}
           >
             {positiveLabel}
@@ -101,7 +101,7 @@ export function DiagonalOptionCard({
             style={{
               fontSize: 13,
               fontWeight: '700',
-              color: negativeSelected ? colors.surface : colors.textSecondary,
+              color: negativeSelected ? '#FFFFFF' : colors.textSecondary,
             }}
           >
             {negativeLabel}

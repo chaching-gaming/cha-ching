@@ -422,7 +422,7 @@ export default function ProfileScreen() {
                   onValueChange={setSoundEnabled}
                   disabled={!isHydrated}
                   trackColor={{ true: colors.primary, false: colors.border }}
-                  thumbColor={colors.surface}
+                  thumbColor="#FFFFFF"
                   ios_backgroundColor={colors.border}
                 />
               }
@@ -435,7 +435,7 @@ export default function ProfileScreen() {
                   onValueChange={setHapticsEnabled}
                   disabled={!isHydrated}
                   trackColor={{ true: colors.primary, false: colors.border }}
-                  thumbColor={colors.surface}
+                  thumbColor="#FFFFFF"
                   ios_backgroundColor={colors.border}
                 />
               }
@@ -448,7 +448,7 @@ export default function ProfileScreen() {
                   onValueChange={setNotificationsEnabled}
                   disabled={!isHydrated}
                   trackColor={{ true: colors.primary, false: colors.border }}
-                  thumbColor={colors.surface}
+                  thumbColor="#FFFFFF"
                   ios_backgroundColor={colors.border}
                 />
               }

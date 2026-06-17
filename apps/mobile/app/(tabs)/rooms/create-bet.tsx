@@ -879,7 +879,7 @@ export default function CreateBetScreen() {
                   className="flex-row items-center justify-center gap-2 rounded-xl bg-primary py-4"
                   style={{ opacity: sessionActive ? 1 : 0.5 }}
                 >
-                  <Text className="text-base font-bold text-text-primary">Next</Text>
+                  <Text className="text-base font-bold text-white">Next</Text>
                   <ArrowRight size={20} color="#FFFFFF" weight="bold" />
                 </TouchableOpacity>
               </View>

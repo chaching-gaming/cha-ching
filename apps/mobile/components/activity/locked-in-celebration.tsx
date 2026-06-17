@@ -93,7 +93,7 @@ function LockedInContent({
               elevation: 10,
             }}
           >
-            <ChatCircleDots size={44} color={colors.textPrimary} weight="fill" />
+            <ChatCircleDots size={44} color="#FFFFFF" weight="fill" />
           </View>
         </View>
 
