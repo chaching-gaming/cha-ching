@@ -262,17 +262,21 @@ export default function CreateBetScreen() {
       }
     }
 
-    // Prevent betting against yourself (only when picking the negative option)
-    if (values.memberId && values.memberId === currentUserId) {
+    // Prevent betting against yourself when picking against subject_positive_option
+    // For templates: subject must pick the option matching subject_positive_option
+    // For write-in: no restriction (backend auto-allows when creator is subject)
+    if (values.memberId && values.memberId === currentUserId && values.templateId) {
       const tpl = templates?.find((t) => t.id === values.templateId);
-      const isNegativePick = tpl
-        ? values.offeredPick === tpl.negative_label
-        : values.writeInOpen && values.offeredPick === 'No';
-      if (isNegativePick) {
-        form.setErrorMap({
-          onSubmit: { fields: {}, form: "You can't bet against yourself on this question" },
-        });
-        return;
+      if (tpl?.subject_positive_option) {
+        // Map subject_positive_option (Yes/No) to the allowed display label
+        const allowedPick =
+          tpl.subject_positive_option === 'Yes' ? tpl.positive_label : tpl.negative_label;
+        if (values.offeredPick !== allowedPick) {
+          form.setErrorMap({
+            onSubmit: { fields: {}, form: "You can't bet against yourself on this question" },
+          });
+          return;
+        }
       }
     }
 
@@ -449,11 +453,15 @@ export default function CreateBetScreen() {
                     {([memberId, templateId, offeredPick, writeInOpen]) => {
                       const tpl = templates?.find((t) => t.id === templateId);
                       const isPlayerRequired = tpl && templateRequiresPlayer(tpl.question_text);
-                      // Show warning only when user selects themselves AND picks the negative option
-                      const isNegativePick = tpl
-                        ? offeredPick === tpl.negative_label
-                        : writeInOpen && offeredPick === 'No';
-                      const showSelfBetWarning = memberId === currentUserId && isNegativePick;
+                      // Show warning when user bets against themselves (picks opposite of subject_positive_option)
+                      // For templates with subject_positive_option: warn if pick doesn't match allowed option
+                      // For write-in: no restriction
+                      let showSelfBetWarning = false;
+                      if (memberId === currentUserId && tpl?.subject_positive_option) {
+                        const allowedPick =
+                          tpl.subject_positive_option === 'Yes' ? tpl.positive_label : tpl.negative_label;
+                        showSelfBetWarning = offeredPick !== allowedPick;
+                      }
                       return (
                         <>
                           <Text className="mb-2 text-sm font-medium text-text-secondary">
@@ -688,11 +696,15 @@ export default function CreateBetScreen() {
                     {([memberId, templateId, offeredPick, writeInOpen]) => {
                       const tpl = templates?.find((t) => t.id === templateId);
                       const isPlayerRequired = tpl && templateRequiresPlayer(tpl.question_text);
-                      // Show warning only when user selects themselves AND picks the negative option
-                      const isNegativePick = tpl
-                        ? offeredPick === tpl.negative_label
-                        : writeInOpen && offeredPick === 'No';
-                      const showSelfBetWarning = memberId === currentUserId && isNegativePick;
+                      // Show warning when user bets against themselves (picks opposite of subject_positive_option)
+                      // For templates with subject_positive_option: warn if pick doesn't match allowed option
+                      // For write-in: no restriction
+                      let showSelfBetWarning = false;
+                      if (memberId === currentUserId && tpl?.subject_positive_option) {
+                        const allowedPick =
+                          tpl.subject_positive_option === 'Yes' ? tpl.positive_label : tpl.negative_label;
+                        showSelfBetWarning = offeredPick !== allowedPick;
+                      }
                       return (
                         <>
                           <Text className="mb-2 text-sm font-medium text-text-secondary">
