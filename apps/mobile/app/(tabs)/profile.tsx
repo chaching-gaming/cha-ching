@@ -11,7 +11,7 @@ import {
   View,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { CaretRight, SignOut, Trash } from 'phosphor-react-native';
+import { CaretRight, DeviceMobile, Moon, SignOut, Sun, Trash } from 'phosphor-react-native';
 import * as ImagePicker from 'expo-image-picker';
 
 import { useProfile, useUpdateProfile } from '@/hooks/use-profile';
@@ -67,32 +67,38 @@ function ThemeSelector({
   value: ThemePreference;
   onChange: (value: ThemePreference) => void;
 }) {
-  const options: { key: ThemePreference; label: string }[] = [
-    { key: 'light', label: 'Light' },
-    { key: 'dark', label: 'Dark' },
-    { key: 'system', label: 'System' },
+  const { colors } = useTheme();
+  const options: { key: ThemePreference; icon: typeof Sun }[] = [
+    { key: 'light', icon: Sun },
+    { key: 'dark', icon: Moon },
+    { key: 'system', icon: DeviceMobile },
   ];
 
   return (
-    <View className="flex-row rounded-lg bg-surface-light p-1">
-      {options.map((option) => (
-        <TouchableOpacity
-          key={option.key}
-          onPress={() => onChange(option.key)}
-          activeOpacity={0.7}
-          className={`flex-1 items-center rounded-md px-3 py-1.5 ${
-            value === option.key ? 'bg-primary' : ''
-          }`}
-        >
-          <Text
-            className={`text-xs font-semibold ${
-              value === option.key ? 'text-white' : 'text-text-secondary'
+    <View className="flex-row gap-2 px-4 py-3">
+      {options.map((option) => {
+        const Icon = option.icon;
+        const isActive = value === option.key;
+        return (
+          <TouchableOpacity
+            key={option.key}
+            onPress={() => onChange(option.key)}
+            activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityState={{ selected: isActive }}
+            accessibilityLabel={`${option.key} theme`}
+            className={`flex-1 items-center justify-center rounded-xl py-3 ${
+              isActive ? 'bg-primary' : 'bg-surface-light'
             }`}
           >
-            {option.label}
-          </Text>
-        </TouchableOpacity>
-      ))}
+            <Icon
+              size={24}
+              color={isActive ? '#FFFFFF' : colors.textMuted}
+              weight={isActive ? 'fill' : 'regular'}
+            />
+          </TouchableOpacity>
+        );
+      })}
     </View>
   );
 }
@@ -447,15 +453,9 @@ export default function ProfileScreen() {
                 />
               }
             />
-            <SettingsCardRow
-              label="Theme"
-              trailing={
-                themeHydrated ? (
-                  <ThemeSelector value={themePreference} onChange={setThemePreference} />
-                ) : null
-              }
-              isLast
-            />
+            {themeHydrated ? (
+              <ThemeSelector value={themePreference} onChange={setThemePreference} />
+            ) : null}
           </View>
         </View>
 

@@ -36,13 +36,22 @@ import { VoidBetSheet } from '@/components/activity/void-bet-sheet';
 import { WinnerCelebration } from '@/components/activity/winner-celebration';
 import { useFeedback } from '@/providers/feedback';
 import { useServerTimeTick } from '@/providers/time';
-import { betDetailKey, roomBalanceKey, useBetDetail, type BetStakeWithProfile } from '@/hooks/use-activity-feed';
+import {
+  betDetailKey,
+  roomBalanceKey,
+  useBetDetail,
+  type BetStakeWithProfile,
+} from '@/hooks/use-activity-feed';
 import { useRoomDetail, useRoomMembers, getRpcErrorMessage } from '@/hooks/use-rooms';
 import { useJoinBet } from '@/hooks/use-join-bet';
 import { useProcessExpiredBet } from '@/hooks/use-process-expired-bet';
 import { useQuestionTemplates } from '@/hooks/use-question-templates';
 import { useAuth } from '@/providers/auth';
-import { formatBetCountdown, formatRelativeActivityTime, parseApiTimestamp } from '@/lib/date-format';
+import {
+  formatBetCountdown,
+  formatRelativeActivityTime,
+  parseApiTimestamp,
+} from '@/lib/date-format';
 import {
   getEffectiveBetStatus,
   getDisputeWindowRemaining,
@@ -281,7 +290,15 @@ export default function BetDetailScreen() {
         disputeProcessedRef.current = null;
       }
     })();
-  }, [dbStatus, bet?.id, bet?.room_id, bet?.dispute_window_ends_at, serverNow, processDisputeWindow, queryClient]);
+  }, [
+    dbStatus,
+    bet?.id,
+    bet?.room_id,
+    bet?.dispute_window_ends_at,
+    serverNow,
+    processDisputeWindow,
+    queryClient,
+  ]);
 
   // Realtime subscription for bet updates
   useEffect(() => {
@@ -442,10 +459,7 @@ export default function BetDetailScreen() {
   // Can submit outcome? Outcome windows are now indefinite - can always submit while PENDING_RESULT
   const isParticipant = !!myStake;
   const canSubmitOutcome =
-    isActive &&
-    isParticipant &&
-    !mySubmission &&
-    effectiveStatus === 'PENDING_RESULT';
+    isActive && isParticipant && !mySubmission && effectiveStatus === 'PENDING_RESULT';
 
   // Can resolve? Only DISPUTED bets need manual resolution by attestor/admin
   // PENDING_RESULT and PENDING_DISPUTE are handled automatically by timed windows
@@ -537,8 +551,8 @@ export default function BetDetailScreen() {
         {currentUserWon && (
           <View className="mx-4 mt-4 items-center rounded-2xl bg-primary px-6 py-5">
             <Crown size={32} color="#fff" weight="fill" />
-            <Text className="mt-1 text-xl font-black text-text-primary">YOU WON!</Text>
-            <Text className="text-3xl font-black text-text-primary">
+            <Text className="mt-1 text-xl font-black text-white">YOU WON!</Text>
+            <Text className="text-3xl font-black text-white">
               +{perWinnerPayout.toLocaleString('en-US')}
             </Text>
           </View>
@@ -596,7 +610,9 @@ export default function BetDetailScreen() {
             <View className="flex-row items-center gap-2">
               <Coins size={18} color={colors.chipsIcon} weight="fill" />
               <Text className="text-sm text-text-secondary">Entry</Text>
-              <Text className="font-bold text-text-primary">{bet.stake.toLocaleString('en-US')}</Text>
+              <Text className="font-bold text-text-primary">
+                {bet.stake.toLocaleString('en-US')}
+              </Text>
             </View>
             <View className="flex-row items-center gap-2">
               <Trophy size={18} color={colors.primary} weight="fill" />
@@ -718,11 +734,12 @@ export default function BetDetailScreen() {
               <Trophy size={20} color={colors.primary} weight="fill" />
               <View className="flex-1">
                 <Text className="text-base font-bold text-primary">
-                  Result: {bet.preliminary_outcome ? getDisplayLabel(bet.preliminary_outcome) : 'TBD'}
+                  Result:{' '}
+                  {bet.preliminary_outcome ? getDisplayLabel(bet.preliminary_outcome) : 'TBD'}
                 </Text>
-                {hasDisputeWindowSet(bet) && getDisputeWindowRemaining(bet) > 0 && (
+                {hasDisputeWindowSet(bet) && getDisputeWindowRemaining(bet, serverNow) > 0 && (
                   <Text className="mt-1 text-sm text-text-secondary">
-                    {getDisputeWindowRemaining(bet)}s to dispute
+                    {getDisputeWindowRemaining(bet, serverNow)}s to dispute
                   </Text>
                 )}
               </View>
@@ -941,7 +958,10 @@ export default function BetDetailScreen() {
                           roomId: bet.room_id!,
                         });
                       } catch (err) {
-                        Alert.alert('Could not raise dispute', getRpcErrorMessage(err, 'Please try again.'));
+                        Alert.alert(
+                          'Could not raise dispute',
+                          getRpcErrorMessage(err, 'Please try again.'),
+                        );
                       }
                     },
                   },
@@ -953,7 +973,7 @@ export default function BetDetailScreen() {
             className="flex-row items-center justify-center gap-2 rounded-xl bg-warning py-4"
           >
             <Warning size={20} color="#fff" weight="bold" />
-            <Text className="text-base font-bold text-text-primary">
+            <Text className="text-base font-bold text-white">
               {raiseDispute.isPending ? 'Raising Dispute...' : 'Raise Dispute'}
             </Text>
           </TouchableOpacity>

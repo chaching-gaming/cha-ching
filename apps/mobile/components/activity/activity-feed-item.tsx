@@ -33,7 +33,11 @@ import type {
   BetWithProfiles,
   ChipRequestWithProfile,
 } from '@/hooks/use-activity-feed';
-import { formatBetCountdown, formatRelativeActivityTime, parseApiTimestamp } from '@/lib/date-format';
+import {
+  formatBetCountdown,
+  formatRelativeActivityTime,
+  parseApiTimestamp,
+} from '@/lib/date-format';
 import {
   getEffectiveBetStatus,
   getDisputeWindowRemaining,
@@ -145,7 +149,7 @@ function BetActivityCard({
         onError: () => {
           processedRef.current = null;
         },
-      }
+      },
     );
   }, [bet.id, bet.expires_at, dbStatus, roomId, processExpiredBet, serverNow]);
 
@@ -180,7 +184,14 @@ function BetActivityCard({
         },
       },
     );
-  }, [bet.id, bet.dispute_window_ends_at, dbStatus, roomId, processDisputeWindow.isPending, serverNow]);
+  }, [
+    bet.id,
+    bet.dispute_window_ends_at,
+    dbStatus,
+    roomId,
+    processDisputeWindow.isPending,
+    serverNow,
+  ]);
 
   // Get template for contextual labels
   const { data: templates } = useQuestionTemplates('golf');
@@ -197,14 +208,10 @@ function BetActivityCard({
       if (lower === 'no') return betTemplate.negative_label;
       return rawOption;
     },
-    [betTemplate]
+    [betTemplate],
   );
 
-
-  const effectiveStatus = useMemo(
-    () => getEffectiveBetStatus(bet, serverNow),
-    [bet, serverNow],
-  );
+  const effectiveStatus = useMemo(() => getEffectiveBetStatus(bet, serverNow), [bet, serverNow]);
 
   const options = useMemo(() => {
     const raw = Array.isArray(bet.options) ? (bet.options as unknown[]) : [];
@@ -240,7 +247,8 @@ function BetActivityCard({
   // Note: Outcome windows are now indefinite - bets stay in PENDING_RESULT until all submit or admin resolves
 
   // Dispute window countdown for PENDING_DISPUTE status
-  const disputeWindowRemaining = dbStatus === 'PENDING_DISPUTE' ? getDisputeWindowRemaining(bet) : 0;
+  const disputeWindowRemaining =
+    dbStatus === 'PENDING_DISPUTE' ? getDisputeWindowRemaining(bet, serverNow) : 0;
 
   // Winners = stakes whose pick matches bet.outcome. Per-winner payout is the
   // pool split evenly (integer division; remainder truncated server-side too).
@@ -384,9 +392,9 @@ function BetActivityCard({
             <Text className="text-sm font-semibold text-primary">
               Result: {getDisplayLabel(bet.preliminary_outcome)}
             </Text>
-            {hasDisputeWindowSet(bet) && getDisputeWindowRemaining(bet) > 0 ? (
+            {hasDisputeWindowSet(bet) && getDisputeWindowRemaining(bet, serverNow) > 0 ? (
               <Text className="mt-0.5 text-xs text-text-secondary">
-                {getDisputeWindowRemaining(bet)}s to dispute
+                {getDisputeWindowRemaining(bet, serverNow)}s to dispute
               </Text>
             ) : null}
           </View>
@@ -436,19 +444,13 @@ function BetActivityCard({
             // User won - show their winnings prominently
             <>
               <Trophy size={14} color={colors.primary} weight="fill" />
-              <Text className="text-sm font-semibold text-primary">
-                You won +{perWinnerPayout}
-              </Text>
+              <Text className="text-sm font-semibold text-primary">You won +{perWinnerPayout}</Text>
             </>
           ) : currentUserLost ? (
             // User lost - show their loss clearly
             <>
-              <Text className="text-sm font-medium text-error">
-                You lost {bet.stake}
-              </Text>
-              <Text className="text-sm text-text-muted">
-                · {getDisplayLabel(bet.outcome)} won
-              </Text>
+              <Text className="text-sm font-medium text-error">You lost {bet.stake}</Text>
+              <Text className="text-sm text-text-muted">· {getDisplayLabel(bet.outcome)} won</Text>
             </>
           ) : (
             // User didn't participate - show outcome neutrally
@@ -490,8 +492,8 @@ function BetActivityCard({
           activeOpacity={0.8}
           className="mt-3 flex-row items-center justify-center gap-2 rounded-xl bg-primary py-3"
         >
-          <Check size={18} color={colors.textPrimary} weight="bold" />
-          <Text className="text-sm font-bold text-text-primary">Submit outcome</Text>
+          <Check size={18} color="#fff" weight="bold" />
+          <Text className="text-sm font-bold text-white">Submit outcome</Text>
         </TouchableOpacity>
       ) : null}
 
@@ -755,7 +757,11 @@ function PoolSide({
         ) : isDisabled ? (
           <Lock size={14} color={colors.textMuted} weight="bold" />
         ) : isSelected ? (
-          <Check size={14} color={tone === 'primary' ? colors.primary : colors.error} weight="bold" />
+          <Check
+            size={14}
+            color={tone === 'primary' ? colors.primary : colors.error}
+            weight="bold"
+          />
         ) : null}
       </View>
       <Text className="mt-1 text-xs text-text-secondary">
