@@ -4,7 +4,13 @@ import { useQueryClient } from '@tanstack/react-query';
 import { CaretDown, ChartBar } from 'phosphor-react-native';
 
 import { useTheme } from '@/providers/theme';
-import { Avatar, EmptyState, ScreenHeader, SectionHeader, SkeletonStatsCard } from '@/components/ui';
+import {
+  Avatar,
+  EmptyState,
+  ScreenHeader,
+  SectionHeader,
+  SkeletonStatsCard,
+} from '@/components/ui';
 import { RoomSelectionSheet } from '@/components/activity/room-selection-sheet';
 import { StatCard } from '@/components/stats/stat-card';
 import { MyBetsSection } from '@/components/stats/my-bets-section';
@@ -135,9 +141,7 @@ function TabButton({
       activeOpacity={0.8}
       className={`flex-1 items-center rounded-lg py-2.5 ${isActive ? 'bg-primary' : ''}`}
     >
-      <Text
-        className={`text-sm font-semibold ${isActive ? 'text-text-primary' : 'text-text-secondary'}`}
-      >
+      <Text className={`text-sm font-semibold ${isActive ? 'text-white' : 'text-text-secondary'}`}>
         {label}
       </Text>
     </TouchableOpacity>

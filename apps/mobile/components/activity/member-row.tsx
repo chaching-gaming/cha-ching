@@ -128,7 +128,7 @@ export function MemberRow({
             activeOpacity={0.85}
             style={{ alignSelf: 'stretch' }}
           >
-            <Text className="text-center text-base font-semibold leading-6 text-background">Remove</Text>
+            <Text className="text-center text-base font-semibold leading-6 text-white">Remove</Text>
           </TouchableOpacity>
         </View>
       )}

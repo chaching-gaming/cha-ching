@@ -10,9 +10,9 @@ const variants = {
 } as const;
 
 const textVariants = {
-  primary: 'text-background font-semibold',
+  primary: 'text-white font-semibold',
   secondary: 'text-text-secondary font-medium',
-  danger: 'text-background font-semibold',
+  danger: 'text-white font-semibold',
   outline: 'text-text-secondary font-medium',
 } as const;
 
@@ -50,7 +50,7 @@ export function Button({
       activeOpacity={0.7}
     >
       {loading ? (
-        <ActivityIndicator color={variant === 'primary' ? colors.textPrimary : colors.textSecondary} />
+        <ActivityIndicator color={variant === 'primary' || variant === 'danger' ? '#FFFFFF' : colors.textSecondary} />
       ) : (
         <Text className={`${s.label} ${textVariants[variant]}`}>{children}</Text>
       )}

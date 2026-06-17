@@ -67,7 +67,7 @@ export default function CreateRoomScreen() {
         {/* Create / Join toggle */}
         <View className="mb-6 flex-row rounded-xl bg-surface p-1">
           <View className="flex-1 items-center rounded-lg bg-primary py-2.5">
-            <Text className="text-base font-semibold text-background">Create</Text>
+            <Text className="text-base font-semibold text-white">Create</Text>
           </View>
           <TouchableOpacity
             className="flex-1 items-center rounded-lg py-2.5"

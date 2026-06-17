@@ -290,7 +290,7 @@ export default function JoinRoomScreen() {
             activeOpacity={0.7}
           >
             <Text
-              className={`text-sm font-semibold ${activeTab === 'code' ? 'text-background' : 'text-text-secondary'}`}
+              className={`text-sm font-semibold ${activeTab === 'code' ? 'text-white' : 'text-text-secondary'}`}
             >
               Invite Code
             </Text>
@@ -301,7 +301,7 @@ export default function JoinRoomScreen() {
             activeOpacity={0.7}
           >
             <Text
-              className={`text-sm font-semibold ${activeTab === 'qr' ? 'text-background' : 'text-text-secondary'}`}
+              className={`text-sm font-semibold ${activeTab === 'qr' ? 'text-white' : 'text-text-secondary'}`}
             >
               Scan QR
             </Text>

@@ -138,8 +138,8 @@ export function RoomHeaderBar({
           accessibilityLabel="Request chips from the room"
           className="mt-3 flex-row items-center justify-center gap-2 rounded-xl bg-warning py-3"
         >
-          <HandHeart size={18} color={colors.background} weight="fill" />
-          <Text className="text-sm font-bold text-background">Request chips</Text>
+          <HandHeart size={18} color="#FFFFFF" weight="fill" />
+          <Text className="text-sm font-bold text-white">Request chips</Text>
         </TouchableOpacity>
       ) : showPendingStatus ? (
         <View className="mt-3 rounded-xl border border-border bg-surface-light px-4 py-3">

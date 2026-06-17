@@ -45,7 +45,7 @@ export function BetFeedStatusFilter({
                 active ? 'bg-primary' : 'border border-border bg-surface-light'
               }`}
             >
-              <Text className={`text-sm font-bold ${active ? 'text-background' : 'text-text-secondary'}`}>
+              <Text className={`text-sm font-bold ${active ? 'text-white' : 'text-text-secondary'}`}>
                 {o.label}
               </Text>
             </TouchableOpacity>

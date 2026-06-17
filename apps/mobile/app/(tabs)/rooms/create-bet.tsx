@@ -437,7 +437,14 @@ export default function CreateBetScreen() {
                 {/* Players (required for templates with {player}, optional for custom) */}
                 <View className="mb-4">
                   <form.Subscribe
-                    selector={(state) => [state.values.memberId, state.values.templateId, state.values.offeredPick, state.values.writeInOpen] as const}
+                    selector={(state) =>
+                      [
+                        state.values.memberId,
+                        state.values.templateId,
+                        state.values.offeredPick,
+                        state.values.writeInOpen,
+                      ] as const
+                    }
                   >
                     {([memberId, templateId, offeredPick, writeInOpen]) => {
                       const tpl = templates?.find((t) => t.id === templateId);
@@ -622,7 +629,7 @@ export default function CreateBetScreen() {
                     className="flex-row items-center justify-center gap-2 rounded-xl bg-primary py-4"
                     style={{ opacity: sessionActive ? 1 : 0.5 }}
                   >
-                    <Text className="text-base font-bold text-text-primary">Next</Text>
+                    <Text className="text-base font-bold text-white">Next</Text>
                     <ArrowRight size={20} color="#FFFFFF" weight="bold" />
                   </TouchableOpacity>
                 </View>
@@ -669,7 +676,14 @@ export default function CreateBetScreen() {
                 {/* Players (required for templates with {player}, optional for custom) */}
                 <View className="mb-4">
                   <form.Subscribe
-                    selector={(state) => [state.values.memberId, state.values.templateId, state.values.offeredPick, state.values.writeInOpen] as const}
+                    selector={(state) =>
+                      [
+                        state.values.memberId,
+                        state.values.templateId,
+                        state.values.offeredPick,
+                        state.values.writeInOpen,
+                      ] as const
+                    }
                   >
                     {([memberId, templateId, offeredPick, writeInOpen]) => {
                       const tpl = templates?.find((t) => t.id === templateId);
@@ -1052,7 +1066,7 @@ export default function CreateBetScreen() {
                             >
                               <Text
                                 className={`text-sm font-semibold ${
-                                  customExpiryUnit === 'min' ? 'text-background' : 'text-text-secondary'
+                                  customExpiryUnit === 'min' ? 'text-white' : 'text-text-secondary'
                                 }`}
                               >
                                 min
@@ -1068,7 +1082,7 @@ export default function CreateBetScreen() {
                             >
                               <Text
                                 className={`text-sm font-semibold ${
-                                  customExpiryUnit === 'hr' ? 'text-background' : 'text-text-secondary'
+                                  customExpiryUnit === 'hr' ? 'text-white' : 'text-text-secondary'
                                 }`}
                               >
                                 hr

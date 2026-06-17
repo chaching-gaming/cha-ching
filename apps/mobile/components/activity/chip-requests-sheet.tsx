@@ -285,8 +285,8 @@ function ChipRequestRow({
           activeOpacity={0.8}
           className="mt-3 flex-row items-center justify-center gap-2 rounded-lg bg-primary py-2.5"
         >
-          <HandCoins size={16} color={colors.background} weight="bold" />
-          <Text className="text-sm font-bold text-background">Donate</Text>
+          <HandCoins size={16} color="#FFFFFF" weight="bold" />
+          <Text className="text-sm font-bold text-white">Donate</Text>
         </TouchableOpacity>
       ) : null}
     </View>

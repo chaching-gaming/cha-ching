@@ -127,7 +127,7 @@ function RoomSwipeRow({ item }: { item: RoomWithMembership }) {
               activeOpacity={0.85}
             >
               <Text
-                className="text-center text-sm font-semibold leading-5 text-background"
+                className="text-center text-sm font-semibold leading-5 text-white"
                 numberOfLines={2}
               >
                 End session
