@@ -27,31 +27,31 @@ export const lightColors = {
   confetti: ['#7DAE7E', '#4D8A8A', '#6BB5AC', '#16A34A', '#D97706', '#5B86A0'],
 } as const;
 
-/** Dark theme colors */
+/** Dark theme colors - Original green/teal palette */
 export const darkColors = {
-  background: '#111827',
-  surface: '#1F2937',
-  surfaceLight: '#374151',
-  surfaceAlt: '#1F2937',
-  border: '#374151',
-  primary: '#4D8A8A',
-  primaryDark: '#3D7A7A',
-  primaryLight: '#6BB5AC',
-  secondary: '#5B86A0',
-  accent: '#7DAE7E',
-  success: '#22C55E',
+  background: '#011E22',
+  surface: '#02353C',
+  surfaceLight: '#054550',
+  surfaceAlt: '#02353C',
+  border: '#086568',
+  primary: '#2EAF7D',
+  primaryDark: '#238F66',
+  primaryLight: '#3FD0C9',
+  secondary: '#3FD0C9',
+  accent: '#C1F6ED',
+  success: '#449342',
   error: '#EF4444',
-  warning: amber,
-  chipsIcon: amber,
-  textPrimary: '#F9FAFB',
-  textSecondary: '#D1D5DB',
-  textMuted: '#9CA3AF',
+  warning: '#F59E0B',
+  chipsIcon: '#F59E0B',
+  textPrimary: '#FFFFFF',
+  textSecondary: '#A8D5D0',
+  textMuted: '#6B9E99',
   medal: {
-    gold: '#D97706',
-    silver: '#9CA3AF',
-    bronze: '#B45309',
+    gold: '#F59E0B',
+    silver: '#A8D5D0',
+    bronze: '#B97F4C',
   },
-  confetti: ['#7DAE7E', '#4D8A8A', '#6BB5AC', '#16A34A', '#D97706', '#5B86A0'],
+  confetti: ['#C1F6ED', '#2EAF7D', '#3FD0C9', '#449342', '#F59E0B', '#EF476F'],
 } as const;
 
 /** Type for theme-aware colors - uses string for color values to allow both light/dark themes */

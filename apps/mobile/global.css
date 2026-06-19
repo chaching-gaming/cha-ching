@@ -20,27 +20,73 @@
   --color-text-secondary: 75 85 99; /* #4B5563 */
   --color-text-muted: 107 114 128; /* #6B7280 */
 
-  /* Status colors (slightly adjusted for light bg) */
+  /* Primary colors */
+  --color-primary: 77 138 138; /* #4D8A8A */
+  --color-primary-dark: 61 122 122; /* #3D7A7A */
+  --color-primary-light: 107 181 172; /* #6BB5AC */
+
+  /* Secondary & Accent */
+  --color-secondary: 91 134 160; /* #5B86A0 */
+  --color-accent: 125 174 126; /* #7DAE7E */
+
+  /* Status colors */
   --color-success: 22 163 74; /* #16A34A */
   --color-error: 220 38 38; /* #DC2626 */
+  --color-warning: 217 119 6; /* #D97706 */
+
+  /* Medal colors */
+  --color-medal-gold: 217 119 6; /* #D97706 */
+  --color-medal-silver: 107 114 128; /* #6B7280 */
+  --color-medal-bronze: 180 83 9; /* #B45309 */
+
+  /* Confetti colors */
+  --color-confetti-1: 125 174 126; /* #7DAE7E */
+  --color-confetti-2: 77 138 138; /* #4D8A8A */
+  --color-confetti-3: 107 181 172; /* #6BB5AC */
+  --color-confetti-4: 22 163 74; /* #16A34A */
+  --color-confetti-5: 217 119 6; /* #D97706 */
+  --color-confetti-6: 91 134 160; /* #5B86A0 */
 }
 
 .dark:root {
-  /* Backgrounds & Surfaces */
-  --color-background: 17 24 39; /* #111827 */
-  --color-surface: 31 41 55; /* #1F2937 */
-  --color-surface-light: 55 65 81; /* #374151 */
-  --color-surface-alt: 31 41 55; /* #1F2937 */
+  /* Backgrounds & Surfaces - Original green/teal palette */
+  --color-background: 1 30 34; /* #011E22 */
+  --color-surface: 2 53 60; /* #02353C */
+  --color-surface-light: 5 69 80; /* #054550 */
+  --color-surface-alt: 2 53 60; /* #02353C */
 
   /* Borders */
-  --color-border: 55 65 81; /* #374151 */
+  --color-border: 8 101 104; /* #086568 */
 
   /* Text */
-  --color-text-primary: 249 250 251; /* #F9FAFB */
-  --color-text-secondary: 209 213 219; /* #D1D5DB */
-  --color-text-muted: 156 163 175; /* #9CA3AF */
+  --color-text-primary: 255 255 255; /* #FFFFFF */
+  --color-text-secondary: 168 213 208; /* #A8D5D0 */
+  --color-text-muted: 107 158 153; /* #6B9E99 */
 
-  /* Status colors (brighter for dark bg) */
-  --color-success: 34 197 94; /* #22C55E */
+  /* Primary colors - Original vibrant green */
+  --color-primary: 46 175 125; /* #2EAF7D */
+  --color-primary-dark: 35 143 102; /* #238F66 */
+  --color-primary-light: 63 208 201; /* #3FD0C9 */
+
+  /* Secondary & Accent - Original cyan/teal */
+  --color-secondary: 63 208 201; /* #3FD0C9 */
+  --color-accent: 193 246 237; /* #C1F6ED */
+
+  /* Status colors */
+  --color-success: 68 147 66; /* #449342 */
   --color-error: 239 68 68; /* #EF4444 */
+  --color-warning: 245 158 11; /* #F59E0B */
+
+  /* Medal colors - Original with teal-tinted silver */
+  --color-medal-gold: 245 158 11; /* #F59E0B */
+  --color-medal-silver: 168 213 208; /* #A8D5D0 */
+  --color-medal-bronze: 185 127 76; /* #B97F4C */
+
+  /* Confetti colors - Original cyan/pink palette */
+  --color-confetti-1: 193 246 237; /* #C1F6ED */
+  --color-confetti-2: 46 175 125; /* #2EAF7D */
+  --color-confetti-3: 63 208 201; /* #3FD0C9 */
+  --color-confetti-4: 68 147 66; /* #449342 */
+  --color-confetti-5: 245 158 11; /* #F59E0B */
+  --color-confetti-6: 239 71 111; /* #EF476F */
 }

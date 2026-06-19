@@ -11,7 +11,7 @@ import {
   View,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { CaretRight, DeviceMobile, Moon, SignOut, Sun, Trash } from 'phosphor-react-native';
+import { CaretRight, Moon, SignOut, Sun, Trash } from 'phosphor-react-native';
 import * as ImagePicker from 'expo-image-picker';
 
 import { useProfile, useUpdateProfile } from '@/hooks/use-profile';
@@ -71,7 +71,6 @@ function ThemeSelector({
   const options: { key: ThemePreference; icon: typeof Sun }[] = [
     { key: 'light', icon: Sun },
     { key: 'dark', icon: Moon },
-    { key: 'system', icon: DeviceMobile },
   ];
 
   return (

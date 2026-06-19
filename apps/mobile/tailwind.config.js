@@ -17,29 +17,29 @@ module.exports = {
         'text-muted': 'rgb(var(--color-text-muted) / <alpha-value>)',
         success: 'rgb(var(--color-success) / <alpha-value>)',
         error: 'rgb(var(--color-error) / <alpha-value>)',
+        warning: 'rgb(var(--color-warning) / <alpha-value>)',
 
-        // Static colors (same in light & dark)
+        // Primary colors (theme-aware)
         primary: {
-          DEFAULT: '#4D8A8A',
-          dark: '#3D7A7A',
-          light: '#6BB5AC',
+          DEFAULT: 'rgb(var(--color-primary) / <alpha-value>)',
+          dark: 'rgb(var(--color-primary-dark) / <alpha-value>)',
+          light: 'rgb(var(--color-primary-light) / <alpha-value>)',
         },
-        secondary: '#5B86A0',
-        accent: '#7DAE7E',
-        warning: '#D97706',
+        secondary: 'rgb(var(--color-secondary) / <alpha-value>)',
+        accent: 'rgb(var(--color-accent) / <alpha-value>)',
 
-        // Medal colors for standings
-        'medal-gold': '#D97706',
-        'medal-silver': '#6B7280',
-        'medal-bronze': '#B45309',
+        // Medal colors for standings (theme-aware)
+        'medal-gold': 'rgb(var(--color-medal-gold) / <alpha-value>)',
+        'medal-silver': 'rgb(var(--color-medal-silver) / <alpha-value>)',
+        'medal-bronze': 'rgb(var(--color-medal-bronze) / <alpha-value>)',
 
-        // Confetti colors for celebrations
-        'confetti-1': '#7DAE7E',
-        'confetti-2': '#4D8A8A',
-        'confetti-3': '#6BB5AC',
-        'confetti-4': '#16A34A',
-        'confetti-5': '#D97706',
-        'confetti-6': '#5B86A0',
+        // Confetti colors for celebrations (theme-aware)
+        'confetti-1': 'rgb(var(--color-confetti-1) / <alpha-value>)',
+        'confetti-2': 'rgb(var(--color-confetti-2) / <alpha-value>)',
+        'confetti-3': 'rgb(var(--color-confetti-3) / <alpha-value>)',
+        'confetti-4': 'rgb(var(--color-confetti-4) / <alpha-value>)',
+        'confetti-5': 'rgb(var(--color-confetti-5) / <alpha-value>)',
+        'confetti-6': 'rgb(var(--color-confetti-6) / <alpha-value>)',
       },
       fontFamily: {
         mono: ['SpaceMono'],

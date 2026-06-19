@@ -1,5 +1,4 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
-import { useColorScheme as useSystemColorScheme } from 'react-native';
 import { useColorScheme } from 'nativewind';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -9,14 +8,11 @@ export type { ThemeColors };
 
 const STORAGE_KEY = 'pref.theme';
 
-export type ThemePreference = 'light' | 'dark' | 'system';
-export type ResolvedTheme = 'light' | 'dark';
+export type ThemePreference = 'light' | 'dark';
 
 type ThemeContextType = {
-  /** User's preference: light, dark, or system */
+  /** User's preference: light or dark */
   themePreference: ThemePreference;
-  /** Resolved theme after applying system preference */
-  resolvedTheme: ResolvedTheme;
   /** Set the theme preference */
   setThemePreference: (preference: ThemePreference) => void;
   /** Whether the theme has been loaded from storage */
@@ -28,24 +24,20 @@ type ThemeContextType = {
 const ThemeContext = createContext<ThemeContextType | null>(null);
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const systemColorScheme = useSystemColorScheme();
   const { setColorScheme } = useColorScheme();
   const [themePreference, setThemePreferenceState] = useState<ThemePreference>('light');
   const [isHydrated, setIsHydrated] = useState(false);
 
-  // Calculate resolved theme based on preference and system setting
-  const resolvedTheme: ResolvedTheme =
-    themePreference === 'system'
-      ? systemColorScheme === 'dark'
-        ? 'dark'
-        : 'light'
-      : themePreference;
-
   // Theme-aware colors for JS usage (icons, RefreshControl, etc.)
   const colors = useMemo(
-    () => (resolvedTheme === 'dark' ? darkColors : lightColors),
-    [resolvedTheme],
+    () => (themePreference === 'dark' ? darkColors : lightColors),
+    [themePreference],
   );
+
+  // Set NativeWind color scheme immediately on mount to prevent flash
+  useEffect(() => {
+    setColorScheme('light');
+  }, [setColorScheme]);
 
   // Load theme preference from storage on mount
   useEffect(() => {
@@ -53,8 +45,12 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     void AsyncStorage.getItem(STORAGE_KEY)
       .then((value) => {
         if (cancelled) return;
-        if (value === 'light' || value === 'dark' || value === 'system') {
+        // Migrate 'system' to 'light' for existing users
+        if (value === 'light' || value === 'dark') {
           setThemePreferenceState(value);
+        } else if (value === 'system') {
+          setThemePreferenceState('light');
+          void AsyncStorage.setItem(STORAGE_KEY, 'light');
         }
       })
       .finally(() => {
@@ -65,12 +61,12 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
-  // Apply color scheme to NativeWind when resolved theme changes
+  // Apply color scheme to NativeWind when theme preference changes after hydration
   useEffect(() => {
     if (isHydrated) {
-      setColorScheme(resolvedTheme);
+      setColorScheme(themePreference);
     }
-  }, [resolvedTheme, isHydrated, setColorScheme]);
+  }, [themePreference, isHydrated, setColorScheme]);
 
   const setThemePreference = useCallback((preference: ThemePreference) => {
     setThemePreferenceState(preference);
@@ -81,7 +77,6 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     <ThemeContext.Provider
       value={{
         themePreference,
-        resolvedTheme,
         setThemePreference,
         isHydrated,
         colors,

@@ -12,12 +12,12 @@ import { ToastProvider } from './toast';
 
 /** Wrapper that provides React Navigation theme based on our theme context */
 function NavigationTheme({ children }: { children: React.ReactNode }) {
-  const { colors, resolvedTheme } = useTheme();
+  const { colors, themePreference } = useTheme();
 
   const navigationTheme = useMemo(
     () => ({
       ...DefaultTheme,
-      dark: resolvedTheme === 'dark',
+      dark: themePreference === 'dark',
       colors: {
         ...DefaultTheme.colors,
         background: colors.background,
@@ -27,7 +27,7 @@ function NavigationTheme({ children }: { children: React.ReactNode }) {
         primary: colors.primary,
       },
     }),
-    [colors, resolvedTheme]
+    [colors, themePreference]
   );
 
   return <NavigationThemeProvider value={navigationTheme}>{children}</NavigationThemeProvider>;
