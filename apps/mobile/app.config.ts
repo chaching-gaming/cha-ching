@@ -48,6 +48,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     policy: 'appVersion',
   },
   plugins: [
+    './plugins/withModularHeaders',
     'expo-router',
     [
       'expo-notifications',
