@@ -265,7 +265,6 @@ export default function RoomDetailScreen() {
             roomActive={isActive}
             roomId={id}
             currentUserBalance={myBalance}
-            outcomeSubmissionWindowSeconds={room?.outcome_submission_window_seconds ?? 30}
           />
         )}
         contentContainerClassName="px-5 pb-24"

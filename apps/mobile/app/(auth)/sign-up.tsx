@@ -35,7 +35,7 @@ export default function SignUpScreen() {
       onSubmit: signUpSchema,
     },
     onSubmit: async ({ value, formApi }) => {
-      const { error } = await supabase.auth.signUp({
+      const { data, error } = await supabase.auth.signUp({
         email: value.email,
         password: value.password,
         options: {
@@ -47,6 +47,14 @@ export default function SignUpScreen() {
           onSubmit: {
             fields: {},
             form: error.message,
+          },
+        });
+      } else if (data.user?.identities?.length === 0) {
+        // Email already exists (OAuth or confirmed user)
+        formApi.setErrorMap({
+          onSubmit: {
+            fields: {},
+            form: 'An account with this email already exists. Please sign in instead.',
           },
         });
       } else {

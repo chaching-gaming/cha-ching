@@ -23,6 +23,8 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     infoPlist: {
       ITSAppUsesNonExemptEncryption: false,
       UIBackgroundModes: ['remote-notification'],
+      NSUserNotificationsUsageDescription:
+        'Cha-Ching sends notifications to alert you when bets are matched, settled, or disputed, and when friends request chips in your rooms.',
     },
   },
   android: {
@@ -60,6 +62,13 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       {
         photosPermission:
           'Allow Cha-Ching to access your photos to set a profile picture.',
+      },
+    ],
+    [
+      'expo-camera',
+      {
+        cameraPermission:
+          'Allow Cha-Ching to use your camera to scan QR codes for quickly joining betting rooms.',
       },
     ],
     [

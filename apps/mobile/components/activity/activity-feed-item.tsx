@@ -88,8 +88,6 @@ function BetActivityCard({
   onSelectPick,
   onJoinSuccess,
   onNavigate,
-  // Note: outcomeSubmissionWindowSeconds is deprecated - outcome windows are now indefinite
-  outcomeSubmissionWindowSeconds: _outcomeSubmissionWindowSeconds = 30,
 }: {
   bet: BetWithProfiles;
   timestamp: string;
@@ -102,7 +100,6 @@ function BetActivityCard({
   onSelectPick?: (pick: string) => void;
   onJoinSuccess?: () => void;
   onNavigate?: () => void;
-  outcomeSubmissionWindowSeconds?: number;
 }) {
   const { colors } = useTheme();
   const serverNow = useServerTimeTick();
@@ -835,8 +832,6 @@ interface ActivityFeedItemProps {
   roomId?: string;
   /** Current user's balance — forwarded to the donate sheet for validation. */
   currentUserBalance?: number;
-  /** Room's outcome submission window in seconds — for countdown calculation. */
-  outcomeSubmissionWindowSeconds?: number;
 }
 
 export function ActivityFeedItem({
@@ -846,7 +841,6 @@ export function ActivityFeedItem({
   roomActive,
   roomId,
   currentUserBalance,
-  outcomeSubmissionWindowSeconds,
 }: ActivityFeedItemProps) {
   if (item.type === 'bet') {
     return (
@@ -856,7 +850,6 @@ export function ActivityFeedItem({
         currentUserRole={currentUserRole}
         roomActive={roomActive}
         roomId={roomId}
-        outcomeSubmissionWindowSeconds={outcomeSubmissionWindowSeconds}
       />
     );
   }
@@ -879,14 +872,12 @@ function BetActivityFeedItem({
   currentUserRole,
   roomActive,
   roomId,
-  outcomeSubmissionWindowSeconds,
 }: {
   item: Extract<ActivityItem, { type: 'bet' }>;
   currentUserId?: string | null;
   currentUserRole?: 'PLAYER' | 'ATTESTOR' | 'ADMIN' | string | null;
   roomActive?: boolean;
   roomId?: string;
-  outcomeSubmissionWindowSeconds?: number;
 }) {
   const router = useRouter();
   const [selectedPick, setSelectedPick] = useState<string | null>(null);
@@ -929,7 +920,6 @@ function BetActivityFeedItem({
         onSelectPick={handleSelectPick}
         onJoinSuccess={handleJoinSuccess}
         onNavigate={handleBetPress}
-        outcomeSubmissionWindowSeconds={outcomeSubmissionWindowSeconds}
       />
     );
   }
@@ -943,7 +933,6 @@ function BetActivityFeedItem({
         currentUserRole={currentUserRole}
         roomActive={roomActive}
         roomId={roomId}
-        outcomeSubmissionWindowSeconds={outcomeSubmissionWindowSeconds}
       />
     </TouchableOpacity>
   );
