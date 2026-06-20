@@ -3,11 +3,14 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/providers/auth';
 
+export type SettlementStatus = 'PENDING' | 'SETTLED' | 'DISPUTED';
+
 export type MemberStats = {
   user_id: string;
   display_name: string | null;
   avatar_url: string | null;
   role: string | null;
+  joined_at: string | null;
   left_at: string | null;
   left_reason: string | null;
   balance: number;
@@ -16,6 +19,12 @@ export type MemberStats = {
   donation_count: number;
   chips_received: number;
   received_count: number;
+  settlement_status: SettlementStatus | null;
+  wins: number;
+  losses: number;
+  total_wagered: number;
+  biggest_win_net: number;
+  biggest_loss_net: number;
 };
 
 export const memberStatsKey = (roomId: string, userId: string) =>
@@ -45,6 +54,7 @@ export function useMemberStats(roomId: string | null, userId: string | null) {
         display_name: row.display_name as string | null,
         avatar_url: row.avatar_url as string | null,
         role: row.role as string | null,
+        joined_at: row.joined_at as string | null,
         left_at: row.left_at as string | null,
         left_reason: row.left_reason as string | null,
         balance: Number(row.balance) || 0,
@@ -53,6 +63,12 @@ export function useMemberStats(roomId: string | null, userId: string | null) {
         donation_count: Number(row.donation_count) || 0,
         chips_received: Number(row.chips_received) || 0,
         received_count: Number(row.received_count) || 0,
+        settlement_status: (row.settlement_status as SettlementStatus) ?? null,
+        wins: Number(row.wins) || 0,
+        losses: Number(row.losses) || 0,
+        total_wagered: Number(row.total_wagered) || 0,
+        biggest_win_net: Number(row.biggest_win_net) || 0,
+        biggest_loss_net: Number(row.biggest_loss_net) || 0,
       };
     },
     enabled: !!session?.user.id && !!roomId && !!userId,

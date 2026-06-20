@@ -142,6 +142,11 @@ export function ResolveDisputeSheet({
           <Text className="mb-2 text-sm font-medium text-text-secondary">
             Participants reported ({totalSubmissions})
           </Text>
+          {!isDispute && totalSubmissions === 0 ? (
+            <Text className="mb-3 text-xs text-text-muted">
+              No outcomes submitted yet — you're force-settling this bet.
+            </Text>
+          ) : null}
           <View className="mb-5 gap-2">
             {options.map((option, idx) => {
               const count = submissionsByOption[option] ?? 0;

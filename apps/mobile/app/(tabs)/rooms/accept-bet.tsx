@@ -186,7 +186,7 @@ export default function AcceptBetScreen() {
                 onPress={() => !disabled && setSelected(option)}
                 disabled={disabled}
                 activeOpacity={0.75}
-                className={`flex-1 items-center justify-center rounded-lg border-2 py-8 ${
+                className={`flex-1 items-center justify-center rounded-md border-2 py-12 ${
                   subjectDisallowed
                     ? 'border-border bg-surface opacity-40'
                     : isSelected
@@ -195,12 +195,12 @@ export default function AcceptBetScreen() {
                 }`}
               >
                 {subjectDisallowed ? (
-                  <Lock size={18} color={colors.textMuted} weight="bold" />
+                  <Lock size={24} color={colors.textMuted} weight="bold" />
                 ) : isSelected ? (
-                  <Check size={18} color={colors.primary} weight="bold" />
+                  <Check size={24} color={colors.primary} weight="bold" />
                 ) : null}
                 <Text
-                  className={`mt-1 text-xl font-bold ${
+                  className={`mt-1 text-2xl font-bold ${
                     subjectDisallowed
                       ? 'text-text-muted'
                       : isSelected
@@ -210,7 +210,7 @@ export default function AcceptBetScreen() {
                 >
                   {option}
                 </Text>
-                <Text className="mt-0.5 text-[11px] font-semibold text-text-muted">
+                <Text className="mt-1 text-sm font-semibold text-text-muted">
                   {count === 0 ? 'no backers' : count === 1 ? '1 backer' : `${count} backers`}
                 </Text>
               </TouchableOpacity>
@@ -241,7 +241,7 @@ export default function AcceptBetScreen() {
           loading={joinBet.isPending}
           disabled={!selected || !!blockingMessage}
           size="lg"
-          className="py-5 rounded-lg"
+          className="py-7 rounded-md"
         >
           {`Lock In \u00b7 ${bet.stake.toLocaleString('en-US')} chips`}
         </Button>

@@ -14,6 +14,7 @@ import {
   Copy,
   Crown,
   Gavel,
+  Handshake,
   Plus,
   Receipt,
   SignOut,
@@ -360,6 +361,13 @@ export default function RoomSettingsScreen() {
               label="Standings"
               subtitle="Chip leaderboard"
               onPress={() => router.push(`/(tabs)/rooms/standings?id=${id}`)}
+            />
+            <AdminActionRow
+              icon={<Handshake size={20} color={colors.primary} weight="bold" />}
+              tint="primary"
+              label="Settlements"
+              subtitle="Net balances & settlement status"
+              onPress={() => router.push(`/(tabs)/rooms/settlements?id=${id}`)}
             />
           </View>
         </View>

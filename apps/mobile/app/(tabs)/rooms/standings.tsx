@@ -6,15 +6,12 @@ import { Crown } from 'phosphor-react-native';
 
 import { useTheme, type ThemeColors } from '@/providers/theme';
 import { Avatar, Badge, EmptyState, ScreenHeader, SkeletonListItem } from '@/components/ui';
-import { SettlementStatusSheet } from '@/components/activity/settlement-status-sheet';
 import { useAuth } from '@/providers/auth';
-import { useRoomDetail, useRoomMembersWithHistory } from '@/hooks/use-rooms';
+import { useRoomDetail } from '@/hooks/use-rooms';
 import {
   useRoomMemberBalances,
   type RoomMemberBalance,
-  type SettlementStatus,
 } from '@/hooks/use-activity-feed';
-import { useUpdateSettlementStatus } from '@/hooks/use-settlement-status';
 import { formatBalance, netBalanceColorClass } from '@/lib/format-balance';
 
 // Podium medal colors from design tokens
@@ -26,39 +23,15 @@ function getRankBadgeColors(colors: ThemeColors): Record<1 | 2 | 3, { bg: string
   };
 }
 
-// Settlement status badge variants
-const SETTLEMENT_BADGE_VARIANTS: Record<SettlementStatus, 'warning' | 'success' | 'error'> = {
-  PENDING: 'warning',
-  SETTLED: 'success',
-  DISPUTED: 'error',
-};
-
-const SETTLEMENT_BADGE_LABELS: Record<SettlementStatus, string> = {
-  PENDING: 'Pending',
-  SETTLED: 'Settled',
-  DISPUTED: 'Disputed',
-};
-
 export default function StandingsScreen() {
   const { colors } = useTheme();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { session: authSession } = useAuth();
   const queryClient = useQueryClient();
   const router = useRouter();
-  const rankBadgeColors = useMemo(() => getRankBadgeColors(colors), [colors]);
 
   const { data: room, isLoading: roomLoading } = useRoomDetail(id);
   const { data: memberBalances, isLoading: balancesLoading } = useRoomMemberBalances(id);
-  const { data: roomMembers } = useRoomMembersWithHistory(id);
-  const updateSettlementStatus = useUpdateSettlementStatus();
-
-  // Sheet state for settlement status editing
-  const [sheetVisible, setSheetVisible] = useState(false);
-  const [selectedMember, setSelectedMember] = useState<RoomMemberBalance | null>(null);
-
-  // Determine if current user is admin
-  const currentMember = roomMembers?.find((m) => m.user_id === authSession?.user.id);
-  const isAdmin = currentMember?.role === 'ADMIN' && currentMember?.membershipStatus === 'active';
 
   const handleMemberPress = useCallback(
     (userId: string) => {
@@ -66,32 +39,6 @@ export default function StandingsScreen() {
     },
     [id, router],
   );
-
-  const handleBadgePress = useCallback(
-    (member: RoomMemberBalance) => {
-      if (!isAdmin) return;
-      setSelectedMember(member);
-      setSheetVisible(true);
-    },
-    [isAdmin],
-  );
-
-  const handleSelectStatus = useCallback(
-    (status: SettlementStatus) => {
-      if (!selectedMember) return;
-      updateSettlementStatus.mutate({
-        roomId: id,
-        userId: selectedMember.user_id,
-        status,
-      });
-    },
-    [id, selectedMember, updateSettlementStatus],
-  );
-
-  const handleSheetClose = useCallback(() => {
-    setSheetVisible(false);
-    setSelectedMember(null);
-  }, []);
 
   // Expo Router keeps the main room screen mounted in the stack while this page
   // is on top, so its `useRealtimeActivityFeed` subscription is still active and
@@ -168,9 +115,7 @@ export default function StandingsScreen() {
               rank={index + 4}
               isSelf={!!currentUserId && item.user_id === currentUserId}
               chipLimit={chipLimit}
-              isAdmin={isAdmin}
               onPress={() => handleMemberPress(item.user_id)}
-              onBadgePress={() => handleBadgePress(item)}
             />
           )}
           contentContainerClassName="pb-12"
@@ -186,21 +131,11 @@ export default function StandingsScreen() {
               members={podium}
               currentUserId={currentUserId}
               chipLimit={chipLimit}
-              isAdmin={isAdmin}
               onMemberPress={handleMemberPress}
-              onBadgePress={handleBadgePress}
             />
           }
         />
       )}
-
-      <SettlementStatusSheet
-        visible={sheetVisible}
-        onClose={handleSheetClose}
-        currentStatus={selectedMember?.settlement_status ?? null}
-        memberName={selectedMember?.display_name ?? 'Unknown'}
-        onSelectStatus={handleSelectStatus}
-      />
     </View>
   );
 }
@@ -213,16 +148,12 @@ function Podium({
   members,
   currentUserId,
   chipLimit,
-  isAdmin,
   onMemberPress,
-  onBadgePress,
 }: {
   members: RoomMemberBalance[];
   currentUserId: string | null;
   chipLimit: number | null;
-  isAdmin: boolean;
   onMemberPress: (userId: string) => void;
-  onBadgePress: (member: RoomMemberBalance) => void;
 }) {
   // Position: #2 on the left, #1 in the middle (tallest), #3 on the right.
   // For under-filled rooms we still center #1 and only render columns we have.
@@ -241,9 +172,7 @@ function Podium({
             pedestalHeight={96}
             isSelf={!!currentUserId && second.user_id === currentUserId}
             chipLimit={chipLimit}
-            isAdmin={isAdmin}
             onPress={() => onMemberPress(second.user_id)}
-            onBadgePress={() => onBadgePress(second)}
           />
         ) : (
           <View className="opacity-0">
@@ -260,9 +189,7 @@ function Podium({
             pedestalHeight={128}
             isSelf={!!currentUserId && first.user_id === currentUserId}
             chipLimit={chipLimit}
-            isAdmin={isAdmin}
             onPress={() => onMemberPress(first.user_id)}
-            onBadgePress={() => onBadgePress(first)}
           />
         ) : null}
       </View>
@@ -275,9 +202,7 @@ function Podium({
             pedestalHeight={80}
             isSelf={!!currentUserId && third.user_id === currentUserId}
             chipLimit={chipLimit}
-            isAdmin={isAdmin}
             onPress={() => onMemberPress(third.user_id)}
-            onBadgePress={() => onBadgePress(third)}
           />
         ) : (
           <View className="opacity-0">
@@ -296,9 +221,7 @@ function PodiumColumn({
   pedestalHeight,
   isSelf,
   chipLimit,
-  isAdmin,
   onPress,
-  onBadgePress,
 }: {
   member: RoomMemberBalance;
   rank: 1 | 2 | 3;
@@ -306,16 +229,12 @@ function PodiumColumn({
   pedestalHeight: number;
   isSelf: boolean;
   chipLimit: number | null;
-  isAdmin: boolean;
   onPress: () => void;
-  onBadgePress: () => void;
 }) {
   const { colors } = useTheme();
   const rankBadgeColors = useMemo(() => getRankBadgeColors(colors), [colors]);
   const badge = rankBadgeColors[rank];
   const belowLimit = chipLimit != null && member.balance <= chipLimit;
-  const hasNonZeroNet = member.net_balance !== 0;
-  const settlementStatus = member.settlement_status ?? (hasNonZeroNet ? 'PENDING' : null);
 
   return (
     <Pressable onPress={onPress} className="items-center active:opacity-70">
@@ -362,25 +281,6 @@ function PodiumColumn({
         />
       ) : null}
 
-      {/* Settlement status badge */}
-      {settlementStatus ? (
-        <Pressable
-          onPress={(e) => {
-            e.stopPropagation();
-            onBadgePress();
-          }}
-          disabled={!isAdmin}
-          className={isAdmin ? 'active:opacity-70' : ''}
-        >
-          <Badge
-            variant={SETTLEMENT_BADGE_VARIANTS[settlementStatus]}
-            label={SETTLEMENT_BADGE_LABELS[settlementStatus]}
-            className="mt-1 px-2 py-0.5"
-            labelClassName="text-[10px] font-bold tracking-wide"
-          />
-        </Pressable>
-      ) : null}
-
       {/* Pedestal */}
       <View
         className="mt-3 w-full items-center justify-center rounded-t-xl bg-surface"
@@ -415,21 +315,15 @@ function StandingsRow({
   rank,
   isSelf,
   chipLimit,
-  isAdmin,
   onPress,
-  onBadgePress,
 }: {
   member: RoomMemberBalance;
   rank: number;
   isSelf: boolean;
   chipLimit: number | null;
-  isAdmin: boolean;
   onPress: () => void;
-  onBadgePress: () => void;
 }) {
   const belowLimit = chipLimit != null && member.balance <= chipLimit;
-  const hasNonZeroNet = member.net_balance !== 0;
-  const settlementStatus = member.settlement_status ?? (hasNonZeroNet ? 'PENDING' : null);
 
   return (
     <Pressable
@@ -453,24 +347,6 @@ function StandingsRow({
             />
           ) : null}
         </View>
-        {/* Settlement badge on second line */}
-        {settlementStatus ? (
-          <Pressable
-            onPress={(e) => {
-              e.stopPropagation();
-              onBadgePress();
-            }}
-            disabled={!isAdmin}
-            className={`mt-1 self-start ${isAdmin ? 'active:opacity-70' : ''}`}
-          >
-            <Badge
-              variant={SETTLEMENT_BADGE_VARIANTS[settlementStatus]}
-              label={SETTLEMENT_BADGE_LABELS[settlementStatus]}
-              className="px-2 py-0.5"
-              labelClassName="text-[10px] font-bold tracking-wide"
-            />
-          </Pressable>
-        ) : null}
       </View>
       <View className="items-end">
         <Text className="text-base font-bold text-text-primary">

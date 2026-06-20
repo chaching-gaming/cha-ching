@@ -69,7 +69,7 @@ export function DiagonalOptionCard({
             flex: 1,
             paddingVertical: 10,
             borderRadius: 10,
-            backgroundColor: positiveSelected ? colors.primary : 'rgba(0,0,0,0.04)',
+            backgroundColor: positiveSelected ? colors.primary : colors.background,
             alignItems: 'center',
             justifyContent: 'center',
           }}
@@ -92,7 +92,7 @@ export function DiagonalOptionCard({
             flex: 1,
             paddingVertical: 10,
             borderRadius: 10,
-            backgroundColor: negativeSelected ? colors.error : 'rgba(0,0,0,0.04)',
+            backgroundColor: negativeSelected ? colors.error : colors.background,
             alignItems: 'center',
             justifyContent: 'center',
           }}

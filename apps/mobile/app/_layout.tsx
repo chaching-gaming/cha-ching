@@ -12,6 +12,7 @@ import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 
 import { Providers } from '@/providers';
 import { useAuth } from '@/providers/auth';
+import { useTheme } from '@/providers/theme';
 import { LoadingScreen } from '@/components/ui';
 import * as Sentry from '@sentry/react-native';
 import { env } from '@/lib/env';
@@ -46,6 +47,20 @@ export const unstable_settings = {
 void SplashScreen.preventAutoHideAsync().catch(() => {
   /* Dev / fast refresh: splash may already be hidden or not registered */
 });
+
+function SplashScreenController({ fontsReady }: { fontsReady: boolean }) {
+  const { isHydrated } = useTheme();
+
+  useEffect(() => {
+    if (fontsReady && isHydrated) {
+      void SplashScreen.hideAsync().catch(() => {
+        /* Dev / fast refresh: no native splash registered for this VC */
+      });
+    }
+  }, [fontsReady, isHydrated]);
+
+  return null;
+}
 
 function AuthGate({ children }: { children: React.ReactNode }) {
   const { session, isLoading, isPasswordRecovery, clearPasswordRecovery } = useAuth();
@@ -98,14 +113,6 @@ export default Sentry.wrap(function RootLayout() {
     ...FontAwesome.font,
   });
 
-  useEffect(() => {
-    if (loaded || fontError) {
-      void SplashScreen.hideAsync().catch(() => {
-        /* Dev / fast refresh: no native splash registered for this VC */
-      });
-    }
-  }, [loaded, fontError]);
-
   if (!loaded && !fontError) {
     return null;
   }
@@ -113,6 +120,7 @@ export default Sentry.wrap(function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <Providers>
+        <SplashScreenController fontsReady={loaded || !!fontError} />
         <BottomSheetModalProvider>
           <AuthGate>
             <Stack screenOptions={{ headerShown: false }}>

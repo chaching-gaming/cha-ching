@@ -297,13 +297,10 @@ function BetActivityCard({
     !mySubmission &&
     effectiveStatus === 'PENDING_RESULT';
 
-  // Allow resolve only for DISPUTED bets (attestor/admin manual resolution)
-  // PENDING_RESULT and PENDING_DISPUTE are handled automatically by timed windows
-  const allSubmitted = totalParticipants > 0 && submittedCount === totalParticipants;
   const canResolve =
     !!roomId &&
-    (currentUserRole === 'ATTESTOR' || currentUserRole === 'ADMIN') &&
-    dbStatus === 'DISPUTED';
+    (((currentUserRole === 'ATTESTOR' || currentUserRole === 'ADMIN') && dbStatus === 'DISPUTED') ||
+      (currentUserRole === 'ADMIN' && dbStatus === 'PENDING_RESULT'));
 
   const canVoid = !!roomId && currentUserRole === 'ADMIN' && dbStatus !== 'VOID';
 
@@ -520,13 +517,13 @@ function BetActivityCard({
               <Check size={18} color={colors.textPrimary} weight="bold" />
             )}
             <Text className="text-sm font-bold text-text-primary">
-              {dbStatus === 'DISPUTED' ? 'Resolve dispute' : 'Resolve'}
+              {dbStatus === 'DISPUTED' ? 'Resolve dispute' : 'Force Resolve'}
             </Text>
           </TouchableOpacity>
           <Text className="mt-1.5 text-center text-[11px] text-text-muted">
             {dbStatus === 'DISPUTED'
               ? 'Conflicting outcomes submitted'
-              : 'All participants submitted'}
+              : `${submittedCount} of ${totalParticipants} submitted · admin override`}
           </Text>
         </View>
       ) : null}

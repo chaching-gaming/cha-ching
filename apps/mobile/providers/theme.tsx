@@ -34,11 +34,6 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     [themePreference],
   );
 
-  // Set NativeWind color scheme immediately on mount to prevent flash
-  useEffect(() => {
-    setColorScheme('light');
-  }, [setColorScheme]);
-
   // Load theme preference from storage on mount
   useEffect(() => {
     let cancelled = false;
