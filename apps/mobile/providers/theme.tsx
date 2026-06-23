@@ -1,6 +1,8 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { StyleSheet, View } from 'react-native';
 import { useColorScheme } from 'nativewind';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { StatusBar } from 'expo-status-bar';
 
 import { lightColors, darkColors, type ThemeColors } from '@/constants/colors';
 
@@ -23,10 +25,13 @@ type ThemeContextType = {
 
 const ThemeContext = createContext<ThemeContextType | null>(null);
 
+const TRANSITION_DURATION = 200; // ms
+
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const { setColorScheme } = useColorScheme();
   const [themePreference, setThemePreferenceState] = useState<ThemePreference>('light');
   const [isHydrated, setIsHydrated] = useState(false);
+  const [isTransitioning, setIsTransitioning] = useState(false);
 
   // Theme-aware colors for JS usage (icons, RefreshControl, etc.)
   const colors = useMemo(
@@ -64,8 +69,15 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   }, [themePreference, isHydrated, setColorScheme]);
 
   const setThemePreference = useCallback((preference: ThemePreference) => {
+    // Show transition overlay to hide staggered UI updates
+    setIsTransitioning(true);
     setThemePreferenceState(preference);
     void AsyncStorage.setItem(STORAGE_KEY, preference);
+
+    // Hide overlay after NativeWind has propagated changes
+    setTimeout(() => {
+      setIsTransitioning(false);
+    }, TRANSITION_DURATION);
   }, []);
 
   return (
@@ -77,10 +89,23 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
         colors,
       }}
     >
+      {/* StatusBar style: 'dark' = dark icons (for light bg), 'light' = light icons (for dark bg) */}
+      <StatusBar style={themePreference === 'dark' ? 'light' : 'dark'} />
       {children}
+      {/* Theme transition overlay - hides staggered UI updates */}
+      {isTransitioning && (
+        <View style={[styles.overlay, { backgroundColor: colors.background }]} />
+      )}
     </ThemeContext.Provider>
   );
 }
+
+const styles = StyleSheet.create({
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 9999,
+  },
+});
 
 export function useTheme() {
   const context = useContext(ThemeContext);
