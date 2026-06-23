@@ -258,6 +258,8 @@ export function useRoomActivityFeedPaginated(roomId: string) {
 type RealtimeActivityFeedOptions = {
   /** Called when the current user is removed from the room */
   onCurrentUserRemoved?: () => void;
+  /** Called when another member leaves or is removed from the room */
+  onMemberLeft?: (userId: string, leftReason: 'VOLUNTARY' | 'REMOVED') => void;
 };
 
 /**
@@ -408,6 +410,23 @@ export function useRealtimeActivityFeed(roomId: string, options?: RealtimeActivi
             (payload.old as { user_id?: string }).user_id === currentUserId
           ) {
             options?.onCurrentUserRemoved?.();
+          }
+
+          // Detect when a member leaves/is removed (soft-delete: left_at changes from null to non-null)
+          if (payload.eventType === 'UPDATE') {
+            const oldRecord = payload.old as { user_id?: string; left_at?: string | null };
+            const newRecord = payload.new as { user_id?: string; left_at?: string | null; left_reason?: string };
+
+            // left_at changed from null to a value = member just left
+            if (
+              oldRecord?.left_at == null &&
+              newRecord?.left_at != null &&
+              newRecord?.user_id &&
+              newRecord.user_id !== currentUserId // Don't notify about self
+            ) {
+              const leftReason = newRecord.left_reason === 'REMOVED' ? 'REMOVED' : 'VOLUNTARY';
+              options?.onMemberLeft?.(newRecord.user_id, leftReason);
+            }
           }
         },
       )

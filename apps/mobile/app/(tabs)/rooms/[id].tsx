@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Gear, HandHeart, Plus } from 'phosphor-react-native';
+import { Gear, HandHeart, Plus, Warning } from 'phosphor-react-native';
 
 import { useTheme } from '@/providers/theme';
 import { ScreenHeader } from '@/components/ui/screen-header';
@@ -27,13 +27,18 @@ import { ChipRequestsSheet } from '@/components/activity/chip-requests-sheet';
 import { RoomHeaderBar } from '@/components/activity/room-header-bar';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/providers/auth';
-import { useRoomDetail, useRoomMembersWithHistory } from '@/hooks/use-rooms';
+import {
+  useRoomDetail,
+  useRoomMembersWithHistory,
+  createMembershipStatusMap,
+} from '@/hooks/use-rooms';
 import {
   useMyRoomBalance,
   useRealtimeActivityFeed,
   useRoomActivityFeedPaginated,
 } from '@/hooks/use-activity-feed';
 import { useWinnerCelebration } from '@/hooks/use-winner-celebration';
+import { useToast } from '@/providers/toast';
 
 /** Split room name like "Sunday golf - 2026-05-10" into { name, date } */
 function parseRoomName(fullName: string): { name: string; date: string | null } {
@@ -73,12 +78,24 @@ export default function RoomDetailScreen() {
     [allMembers],
   );
 
+  // Create membership status lookup for showing left/removed indicators
+  const membershipStatusMap = useMemo(
+    () => createMembershipStatusMap(allMembers),
+    [allMembers],
+  );
+
   // Check if current user is an active member (not left/removed)
   const currentUserMembership = useMemo(
     () => allMembers?.find((m) => m.user_id === authSession?.user.id),
     [allMembers, authSession?.user.id],
   );
   const isCurrentUserActiveMember = currentUserMembership?.membershipStatus === 'active';
+  const isPastMember = currentUserMembership != null && !isCurrentUserActiveMember;
+  const pastMemberStatusText = isPastMember
+    ? currentUserMembership.membershipStatus === 'removed'
+      ? 'You were removed from this room'
+      : 'You left this room'
+    : null;
   const {
     data: activityItems,
     isLoading: feedLoading,
@@ -87,8 +104,15 @@ export default function RoomDetailScreen() {
     fetchNextPage,
   } = useRoomActivityFeedPaginated(id);
 
+  // Toast for member leave/remove notifications
+  const toast = useToast();
+
   // Track if we've already shown the removal alert to prevent duplicates
   const hasShownRemovalAlert = useRef(false);
+
+  // Keep a ref to members for looking up names in realtime callbacks
+  const membersRef = useRef(allMembers);
+  membersRef.current = allMembers;
 
   const handleCurrentUserRemoved = useCallback(() => {
     if (hasShownRemovalAlert.current) return;
@@ -110,7 +134,26 @@ export default function RoomDetailScreen() {
     );
   }, [queryClient, router]);
 
-  useRealtimeActivityFeed(id, { onCurrentUserRemoved: handleCurrentUserRemoved });
+  const handleMemberLeft = useCallback(
+    (userId: string, leftReason: 'VOLUNTARY' | 'REMOVED') => {
+      // Look up the member's name from cached members
+      const member = membersRef.current?.find((m) => m.user_id === userId);
+      const memberName = member?.profiles?.display_name ?? 'A member';
+
+      const message =
+        leftReason === 'REMOVED'
+          ? `${memberName} was removed from the room`
+          : `${memberName} left the room`;
+
+      toast.show({ type: 'info', message });
+    },
+    [toast],
+  );
+
+  useRealtimeActivityFeed(id, {
+    onCurrentUserRemoved: handleCurrentUserRemoved,
+    onMemberLeft: handleMemberLeft,
+  });
 
   const currentUserId = authSession?.user.id ?? null;
 
@@ -162,15 +205,18 @@ export default function RoomDetailScreen() {
 
   // Only show bets in the main feed (chip requests moved to dedicated sheet)
   // When myBetsOnly is enabled, only show bets where the current user has a stake.
+  // Past members can ONLY see bets they participated in (read-only view).
   const visibleItems = useMemo(
     () =>
       feedItems.filter((item) => {
         if (item.type === 'chip_request') return false; // Chip requests shown in sheet only
+        // Past members can only see bets they're involved in
+        if (isPastMember && !betInvolvesUser(item.bet, currentUserId)) return false;
         if (!betMatchesFilter(item.bet, filter)) return false;
         if (myBetsOnly && !betInvolvesUser(item.bet, currentUserId)) return false;
         return true;
       }),
-    [feedItems, filter, myBetsOnly, currentUserId],
+    [feedItems, filter, myBetsOnly, currentUserId, isPastMember],
   );
 
   // All chip requests for the bottom sheet (includes all statuses)
@@ -262,9 +308,10 @@ export default function RoomDetailScreen() {
             item={item}
             currentUserId={authSession?.user.id}
             currentUserRole={currentMember?.role ?? null}
-            roomActive={isActive}
+            roomActive={isActive && isCurrentUserActiveMember}
             roomId={id}
             currentUserBalance={myBalance}
+            membershipStatusMap={membershipStatusMap}
           />
         )}
         contentContainerClassName="px-5 pb-24"
@@ -279,6 +326,20 @@ export default function RoomDetailScreen() {
         }
         ListHeaderComponent={
           <View>
+            {/* Past member banner */}
+            {isPastMember && pastMemberStatusText && (
+              <View className="mb-4 flex-row items-center gap-3 rounded-xl bg-warning/10 px-4 py-3">
+                <Warning size={20} color={colors.warning} weight="fill" />
+                <View className="flex-1">
+                  <Text className="text-sm font-semibold text-warning">
+                    {pastMemberStatusText}
+                  </Text>
+                  <Text className="mt-0.5 text-xs text-text-muted">
+                    You can only view bets you participated in
+                  </Text>
+                </View>
+              </View>
+            )}
             <RoomHeaderBar
               members={members ?? []}
               balance={myBalance}

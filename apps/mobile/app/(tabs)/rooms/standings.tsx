@@ -235,12 +235,13 @@ function PodiumColumn({
   const rankBadgeColors = useMemo(() => getRankBadgeColors(colors), [colors]);
   const badge = rankBadgeColors[rank];
   const belowLimit = chipLimit != null && member.balance <= chipLimit;
+  const isInactive = member.left_at != null;
 
   return (
-    <Pressable onPress={onPress} className="items-center active:opacity-70">
+    <Pressable onPress={onPress} className={`items-center active:opacity-70 ${isInactive ? 'opacity-60' : ''}`}>
       {/* Avatar with rank badge */}
       <View className="relative">
-        <Avatar uri={member.avatar_url} fallback={member.display_name ?? '?'} size={avatarSize} />
+        <Avatar uri={member.avatar_url} fallback={member.display_name ?? '?'} size={avatarSize} inactive={isInactive} />
         <View
           className="absolute -right-1 -top-1 h-6 w-6 items-center justify-center rounded-full border-2 border-background"
           style={{ backgroundColor: badge.bg }}
@@ -251,14 +252,24 @@ function PodiumColumn({
         </View>
       </View>
 
-      {/* Name */}
-      <Text
-        className="mt-2 max-w-full text-center text-sm font-semibold text-text-primary"
-        numberOfLines={1}
-      >
-        {member.display_name ?? 'Unknown'}
-        {isSelf ? <Text className="text-xs text-text-secondary"> (you)</Text> : null}
-      </Text>
+      {/* Name + Left badge */}
+      <View className="mt-2 flex-row items-center gap-1">
+        <Text
+          className="max-w-full text-center text-sm font-semibold text-text-primary"
+          numberOfLines={1}
+        >
+          {member.display_name ?? 'Unknown'}
+          {isSelf ? <Text className="text-xs text-text-secondary"> (you)</Text> : null}
+        </Text>
+        {isInactive ? (
+          <Badge
+            variant="default"
+            label="Left"
+            className="bg-surface-alt px-1.5 py-0.5"
+            labelClassName="text-[9px] font-semibold text-text-muted"
+          />
+        ) : null}
+      </View>
 
       {/* Balance with net balance below */}
       <View className="mt-1 items-center">
@@ -324,20 +335,29 @@ function StandingsRow({
   onPress: () => void;
 }) {
   const belowLimit = chipLimit != null && member.balance <= chipLimit;
+  const isInactive = member.left_at != null;
 
   return (
     <Pressable
       onPress={onPress}
-      className="flex-row items-center border-b border-border/40 px-5 py-4 active:bg-surface/50"
+      className={`flex-row items-center border-b border-border/40 px-5 py-4 active:bg-surface/50 ${isInactive ? 'opacity-60' : ''}`}
     >
       <Text className="w-8 text-base font-bold text-text-muted">{rank}</Text>
-      <Avatar uri={member.avatar_url} fallback={member.display_name ?? '?'} size="md" />
+      <Avatar uri={member.avatar_url} fallback={member.display_name ?? '?'} size="md" inactive={isInactive} />
       <View className="ml-3 min-w-0 flex-1">
         <View className="flex-row items-center gap-2">
           <Text className="min-w-0 shrink text-base text-text-primary" numberOfLines={1}>
             {member.display_name ?? 'Unknown'}
             {isSelf ? <Text className="text-sm text-text-secondary"> (you)</Text> : null}
           </Text>
+          {isInactive ? (
+            <Badge
+              variant="default"
+              label="Left"
+              className="bg-surface-alt px-2 py-0.5"
+              labelClassName="text-[10px] font-semibold text-text-muted"
+            />
+          ) : null}
           {belowLimit ? (
             <Badge
               variant="error"

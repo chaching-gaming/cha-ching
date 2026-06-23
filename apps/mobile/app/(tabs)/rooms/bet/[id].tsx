@@ -42,7 +42,15 @@ import {
   useBetDetail,
   type BetStakeWithProfile,
 } from '@/hooks/use-activity-feed';
-import { useRoomDetail, useRoomMembers, getRpcErrorMessage } from '@/hooks/use-rooms';
+import {
+  useRoomDetail,
+  useRoomMembersWithHistory,
+  getRpcErrorMessage,
+  createMembershipStatusMap,
+  isMemberInactive,
+  getMembershipStatusLabel,
+  type RoomMemberStatus,
+} from '@/hooks/use-rooms';
 import { useJoinBet } from '@/hooks/use-join-bet';
 import { useProcessExpiredBet } from '@/hooks/use-process-expired-bet';
 import { useQuestionTemplates } from '@/hooks/use-question-templates';
@@ -117,8 +125,14 @@ export default function BetDetailScreen() {
 
   const { data: bet, isLoading } = useBetDetail(id ?? '');
   const { data: room } = useRoomDetail(bet?.room_id ?? '');
-  const { data: members } = useRoomMembers(bet?.room_id ?? '');
+  const { data: members } = useRoomMembersWithHistory(bet?.room_id ?? '');
   const { data: templates } = useQuestionTemplates('golf');
+
+  // Create membership status lookup for showing left/removed indicators
+  const membershipStatusMap = useMemo(
+    () => createMembershipStatusMap(members),
+    [members],
+  );
   const joinBet = useJoinBet();
   const processExpiredBet = useProcessExpiredBet();
   const raiseDispute = useRaiseDispute();
@@ -374,6 +388,14 @@ export default function BetDetailScreen() {
   const subjectName = bet?.subject_profile?.display_name ?? null;
   const offererName = bet?.offered_by_profile?.display_name ?? 'Someone';
 
+  // Membership status for offerer and subject
+  const offererStatus = bet?.offered_by
+    ? membershipStatusMap.get(bet.offered_by)
+    : undefined;
+  const subjectStatus = bet?.subject_user_id
+    ? membershipStatusMap.get(bet.subject_user_id)
+    : undefined;
+
   // Show countdown for OPEN and MATCHED bets that haven't expired yet
   // (MATCHED means someone joined but not all members, so still waiting for expiry)
   const countdown =
@@ -445,8 +467,10 @@ export default function BetDetailScreen() {
     [options, stakesByPick],
   );
 
-  // Current user's role
-  const currentMember = members?.find((m) => m.user_id === currentUserId);
+  // Current user's role (only if still active member)
+  const currentMember = members?.find(
+    (m) => m.user_id === currentUserId && m.membershipStatus === 'active'
+  );
   const currentUserRole = currentMember?.role ?? null;
   const isAttestorOrAdmin = currentUserRole === 'ATTESTOR' || currentUserRole === 'ADMIN';
   const isActive = room?.is_active ?? false;
@@ -590,13 +614,33 @@ export default function BetDetailScreen() {
           {/* Question */}
           <Text className="mt-3 text-lg font-bold leading-6 text-text-primary">{bet.question}</Text>
 
-          <Text className="mt-1 text-sm text-text-secondary">
-            {subjectName
-              ? subjectName === offererName
-                ? `${offererName}'s offer`
-                : `${offererName} · about ${subjectName}`
-              : `${offererName}'s offer`}
-          </Text>
+          {/* Offerer/Subject with membership status badges */}
+          <View className="mt-1 flex-row flex-wrap items-center gap-1">
+            <Text className="text-sm text-text-secondary">{offererName}</Text>
+            {isMemberInactive(offererStatus) && (
+              <Badge
+                variant="default"
+                label={getMembershipStatusLabel(offererStatus) ?? ''}
+                className="bg-surface-alt px-2 py-0.5"
+                labelClassName="text-[10px] font-semibold text-text-muted"
+              />
+            )}
+            {subjectName && subjectName !== offererName ? (
+              <>
+                <Text className="text-sm text-text-secondary">· about {subjectName}</Text>
+                {isMemberInactive(subjectStatus) && (
+                  <Badge
+                    variant="default"
+                    label={getMembershipStatusLabel(subjectStatus) ?? ''}
+                    className="bg-surface-alt px-2 py-0.5"
+                    labelClassName="text-[10px] font-semibold text-text-muted"
+                  />
+                )}
+              </>
+            ) : (
+              <Text className="text-sm text-text-secondary">'s offer</Text>
+            )}
+          </View>
 
           {/* Countdown for OPEN/MATCHED bets */}
           {countdown && (
@@ -825,7 +869,7 @@ export default function BetDetailScreen() {
                 </View>
 
                 {/* Avatar stack summary */}
-                <SummaryAvatars stakes={optionStakes} />
+                <SummaryAvatars stakes={optionStakes} membershipStatusMap={membershipStatusMap} />
 
                 {/* Backer count */}
                 <Text className="mt-2 text-center text-xs text-text-secondary">
@@ -866,27 +910,40 @@ export default function BetDetailScreen() {
                 const isLoserPick = dbStatus === 'SETTLED' && !!bet.outcome && !isWinnerPick;
                 const isLeft =
                   options[0]?.trim().toLowerCase() === stake.pick.trim().toLowerCase();
+                const stakeMemberStatus = membershipStatusMap.get(stake.user_id);
+                const isInactiveMember = isMemberInactive(stakeMemberStatus);
 
                 return (
                   <View
                     key={stake.id}
                     className={`flex-row items-center gap-3 px-4 py-3 ${
                       idx < flatStakes.length - 1 ? 'border-b border-border/50' : ''
-                    }`}
+                    } ${isInactiveMember ? 'opacity-60' : ''}`}
                   >
                     <Avatar
                       uri={stake.user?.avatar_url}
                       fallback={stake.user?.display_name ?? '?'}
                       size="md"
+                      inactive={isInactiveMember}
                     />
                     <View className="min-w-0 flex-1">
-                      <Text
-                        className={`text-sm font-medium ${isCurrentUser ? 'text-primary' : 'text-text-primary'}`}
-                        numberOfLines={1}
-                      >
-                        {stake.user?.display_name ?? 'Unknown'}
-                        {isCurrentUser ? ' (you)' : ''}
-                      </Text>
+                      <View className="flex-row items-center gap-1.5">
+                        <Text
+                          className={`text-sm font-medium ${isCurrentUser ? 'text-primary' : 'text-text-primary'}`}
+                          numberOfLines={1}
+                        >
+                          {stake.user?.display_name ?? 'Unknown'}
+                          {isCurrentUser ? ' (you)' : ''}
+                        </Text>
+                        {isInactiveMember && (
+                          <Badge
+                            variant="default"
+                            label={getMembershipStatusLabel(stakeMemberStatus) ?? ''}
+                            className="bg-surface-alt px-2 py-0.5"
+                            labelClassName="text-[10px] font-semibold text-text-muted"
+                          />
+                        )}
+                      </View>
                       {dbStatus === 'PENDING_RESULT' && (
                         <View className="mt-0.5 flex-row items-center gap-1">
                           {submission ? (
@@ -1100,7 +1157,13 @@ function groupStakesByPick(
   return out;
 }
 
-function SummaryAvatars({ stakes }: { stakes: BetStakeWithProfile[] }) {
+function SummaryAvatars({
+  stakes,
+  membershipStatusMap,
+}: {
+  stakes: BetStakeWithProfile[];
+  membershipStatusMap?: Map<string, RoomMemberStatus>;
+}) {
   const shown = stakes.slice(0, 5);
   const overflow = stakes.length - shown.length;
   if (stakes.length === 0) {
@@ -1112,19 +1175,24 @@ function SummaryAvatars({ stakes }: { stakes: BetStakeWithProfile[] }) {
   }
   return (
     <View className="mt-2 flex-row justify-center">
-      {shown.map((stake, idx) => (
-        <View
-          key={stake.id}
-          className={`rounded-full border-2 border-surface ${idx > 0 ? '-ml-2' : ''}`}
-          style={{ zIndex: shown.length - idx }}
-        >
-          <Avatar
-            uri={stake.user?.avatar_url}
-            fallback={stake.user?.display_name ?? '?'}
-            size="sm"
-          />
-        </View>
-      ))}
+      {shown.map((stake, idx) => {
+        const status = membershipStatusMap?.get(stake.user_id);
+        const isInactive = isMemberInactive(status);
+        return (
+          <View
+            key={stake.id}
+            className={`rounded-full border-2 border-surface ${idx > 0 ? '-ml-2' : ''}`}
+            style={{ zIndex: shown.length - idx }}
+          >
+            <Avatar
+              uri={stake.user?.avatar_url}
+              fallback={stake.user?.display_name ?? '?'}
+              size="sm"
+              inactive={isInactive}
+            />
+          </View>
+        );
+      })}
       {overflow > 0 ? (
         <View className="-ml-2 h-8 w-8 items-center justify-center rounded-full border-2 border-surface bg-surface-light">
           <Text className="text-[10px] font-semibold text-text-secondary">+{overflow}</Text>

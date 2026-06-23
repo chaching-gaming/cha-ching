@@ -403,6 +403,37 @@ export type RoomMemberWithStatus = RoomMemberWithProfile & {
   membershipStatus: RoomMemberStatus;
 };
 
+/** Helper to create a lookup map of user_id -> membership status from room members */
+export function createMembershipStatusMap(
+  members: RoomMemberWithStatus[] | undefined
+): Map<string, RoomMemberStatus> {
+  const map = new Map<string, RoomMemberStatus>();
+  if (!members) return map;
+  for (const member of members) {
+    if (member.user_id) {
+      map.set(member.user_id, member.membershipStatus);
+    }
+  }
+  return map;
+}
+
+/** Check if a member is inactive (left or removed) */
+export function isMemberInactive(status: RoomMemberStatus | undefined): boolean {
+  return status === 'left' || status === 'removed';
+}
+
+/** Get display label for membership status */
+export function getMembershipStatusLabel(status: RoomMemberStatus | undefined): string | null {
+  switch (status) {
+    case 'left':
+      return 'Left';
+    case 'removed':
+      return 'Removed';
+    default:
+      return null;
+  }
+}
+
 export function useRoomMembersWithHistory(roomId: string) {
   const { session } = useAuth();
 

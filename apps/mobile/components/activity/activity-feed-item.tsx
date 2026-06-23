@@ -39,6 +39,10 @@ import {
   parseApiTimestamp,
 } from '@/lib/date-format';
 import {
+  isMemberInactive,
+  type RoomMemberStatus,
+} from '@/hooks/use-rooms';
+import {
   getEffectiveBetStatus,
   getDisputeWindowRemaining,
   hasDisputeWindowSet,
@@ -88,6 +92,7 @@ function BetActivityCard({
   onSelectPick,
   onJoinSuccess,
   onNavigate,
+  membershipStatusMap,
 }: {
   bet: BetWithProfiles;
   timestamp: string;
@@ -100,6 +105,7 @@ function BetActivityCard({
   onSelectPick?: (pick: string) => void;
   onJoinSuccess?: () => void;
   onNavigate?: () => void;
+  membershipStatusMap?: Map<string, RoomMemberStatus>;
 }) {
   const { colors } = useTheme();
   const serverNow = useServerTimeTick();
@@ -361,6 +367,7 @@ function BetActivityCard({
           onSelectPick={onSelectPick}
           subjectUserId={bet.subject_user_id}
           subjectPositiveOption={bet.subject_positive_option}
+          membershipStatusMap={membershipStatusMap}
         />
       ) : null}
 
@@ -611,6 +618,7 @@ function PoolTally({
   onSelectPick,
   subjectUserId,
   subjectPositiveOption,
+  membershipStatusMap,
 }: {
   options: string[];
   stakesByPick: Record<string, BetStakeWithProfile[]>;
@@ -623,6 +631,7 @@ function PoolTally({
   onSelectPick?: (pick: string) => void;
   subjectUserId?: string | null;
   subjectPositiveOption?: string | null;
+  membershipStatusMap?: Map<string, RoomMemberStatus>;
 }) {
   if (options.length === 0) return null;
 
@@ -658,6 +667,7 @@ function PoolTally({
             isSelected={isSelected}
             isDisabled={isDisabled}
             onPress={canJoin && !isDisabled ? onSelectPick : undefined}
+            membershipStatusMap={membershipStatusMap}
           />
         );
       })}
@@ -678,6 +688,7 @@ function PoolSide({
   isSelected,
   isDisabled,
   onPress,
+  membershipStatusMap,
 }: {
   option: string;
   label: string;
@@ -691,6 +702,7 @@ function PoolSide({
   isSelected?: boolean;
   isDisabled?: boolean;
   onPress?: (option: string) => void;
+  membershipStatusMap?: Map<string, RoomMemberStatus>;
 }) {
   const { colors } = useTheme();
   const handlePress = useCallback(() => {
@@ -762,7 +774,7 @@ function PoolSide({
         {count === 0 ? 'no backers' : count === 1 ? '1 backer' : `${count} backers`}
         {youLost ? ' · you lost' : youOnThisSide ? ' · you' : ''}
       </Text>
-      {count > 0 ? <StakeAvatars stakes={stakes} /> : null}
+      {count > 0 ? <StakeAvatars stakes={stakes} membershipStatusMap={membershipStatusMap} /> : null}
       {canJoin && !isDisabled && !isSelected ? (
         <Text className={`mt-2 text-center text-[10px] font-bold uppercase ${labelClass}`}>
           Tap to select
@@ -790,24 +802,35 @@ function PoolSide({
   );
 }
 
-function StakeAvatars({ stakes }: { stakes: BetStakeWithProfile[] }) {
+function StakeAvatars({
+  stakes,
+  membershipStatusMap,
+}: {
+  stakes: BetStakeWithProfile[];
+  membershipStatusMap?: Map<string, RoomMemberStatus>;
+}) {
   const shown = stakes.slice(0, 3);
   const overflow = stakes.length - shown.length;
   return (
     <View className="mt-2 flex-row items-center">
-      {shown.map((stake, idx) => (
-        <View
-          key={stake.id}
-          className={`rounded-full border-2 border-surface ${idx > 0 ? '-ml-2' : ''}`}
-          style={{ zIndex: 10 - idx }}
-        >
-          <Avatar
-            uri={stake.user?.avatar_url}
-            fallback={stake.user?.display_name ?? '?'}
-            size="sm"
-          />
-        </View>
-      ))}
+      {shown.map((stake, idx) => {
+        const status = membershipStatusMap?.get(stake.user_id);
+        const isInactive = isMemberInactive(status);
+        return (
+          <View
+            key={stake.id}
+            className={`rounded-full border-2 border-surface ${idx > 0 ? '-ml-2' : ''}`}
+            style={{ zIndex: 10 - idx }}
+          >
+            <Avatar
+              uri={stake.user?.avatar_url}
+              fallback={stake.user?.display_name ?? '?'}
+              size="sm"
+              inactive={isInactive}
+            />
+          </View>
+        );
+      })}
       {overflow > 0 ? (
         <View className="-ml-2 h-8 w-8 items-center justify-center rounded-full border-2 border-surface bg-surface-light">
           <Text className="text-[10px] font-semibold text-text-secondary">+{overflow}</Text>
@@ -829,6 +852,8 @@ interface ActivityFeedItemProps {
   roomId?: string;
   /** Current user's balance — forwarded to the donate sheet for validation. */
   currentUserBalance?: number;
+  /** Membership status lookup for showing left/removed indicators */
+  membershipStatusMap?: Map<string, RoomMemberStatus>;
 }
 
 export function ActivityFeedItem({
@@ -838,6 +863,7 @@ export function ActivityFeedItem({
   roomActive,
   roomId,
   currentUserBalance,
+  membershipStatusMap,
 }: ActivityFeedItemProps) {
   if (item.type === 'bet') {
     return (
@@ -847,6 +873,7 @@ export function ActivityFeedItem({
         currentUserRole={currentUserRole}
         roomActive={roomActive}
         roomId={roomId}
+        membershipStatusMap={membershipStatusMap}
       />
     );
   }
@@ -869,12 +896,14 @@ function BetActivityFeedItem({
   currentUserRole,
   roomActive,
   roomId,
+  membershipStatusMap,
 }: {
   item: Extract<ActivityItem, { type: 'bet' }>;
   currentUserId?: string | null;
   currentUserRole?: 'PLAYER' | 'ATTESTOR' | 'ADMIN' | string | null;
   roomActive?: boolean;
   roomId?: string;
+  membershipStatusMap?: Map<string, RoomMemberStatus>;
 }) {
   const router = useRouter();
   const [selectedPick, setSelectedPick] = useState<string | null>(null);
@@ -917,6 +946,7 @@ function BetActivityFeedItem({
         onSelectPick={handleSelectPick}
         onJoinSuccess={handleJoinSuccess}
         onNavigate={handleBetPress}
+        membershipStatusMap={membershipStatusMap}
       />
     );
   }
@@ -930,6 +960,7 @@ function BetActivityFeedItem({
         currentUserRole={currentUserRole}
         roomActive={roomActive}
         roomId={roomId}
+        membershipStatusMap={membershipStatusMap}
       />
     </TouchableOpacity>
   );
