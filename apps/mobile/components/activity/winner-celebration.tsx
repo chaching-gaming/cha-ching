@@ -77,7 +77,7 @@ function WinnerContent({
             size="xl"
           />
           <View className="absolute -right-2 -top-2 h-8 w-8 items-center justify-center rounded-full border-2 border-background bg-primary">
-            <Trophy size={16} color={colors.textPrimary} weight="fill" />
+            <Trophy size={16} color="#FFFFFF" weight="fill" />
           </View>
         </View>
 

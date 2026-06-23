@@ -53,7 +53,7 @@ export function Avatar({
       )}
       {showEditBadge && (
         <View className="absolute bottom-0 right-0 h-5 w-5 items-center justify-center rounded-full border-2 border-background bg-primary">
-          <FontAwesome name="pencil" size={10} color={colors.textPrimary} />
+          <FontAwesome name="pencil" size={10} color="#FFFFFF" />
         </View>
       )}
     </View>

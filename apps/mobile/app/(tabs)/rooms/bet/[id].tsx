@@ -1070,16 +1070,14 @@ export default function BetDetailScreen() {
           <TouchableOpacity
             onPress={() => setDisputeSheetOpen(true)}
             activeOpacity={0.8}
-            className={`flex-row items-center justify-center gap-2 rounded-xl py-4 ${
-              dbStatus === 'DISPUTED' ? 'bg-warning' : 'bg-primary'
-            }`}
+            className="flex-row items-center justify-center gap-2 rounded-xl bg-warning py-4"
           >
             {dbStatus === 'DISPUTED' ? (
               <Gavel size={20} color="#fff" weight="bold" />
             ) : (
               <Check size={20} color="#fff" weight="bold" />
             )}
-            <Text className="text-base font-bold text-text-primary">
+            <Text className="text-base font-bold text-white">
               {dbStatus === 'DISPUTED' ? 'Resolve Dispute' : 'Force Resolve'}
             </Text>
           </TouchableOpacity>

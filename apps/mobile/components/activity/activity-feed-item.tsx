@@ -478,6 +478,7 @@ function BetActivityCard({
         <Text className="text-xs text-text-muted">· {formatRelativeActivityTime(timestamp)}</Text>
       </View>
 
+      {/* Action buttons - only one primary action at a time (matches bet details page) */}
       {canJoin ? (
         <SwipeToConfirmButton
           bet={bet}
@@ -485,9 +486,7 @@ function BetActivityCard({
           displayLabel={selectedPick ? getDisplayLabel(selectedPick) : null}
           onSuccess={onJoinSuccess}
         />
-      ) : null}
-
-      {canSubmitOutcome ? (
+      ) : canSubmitOutcome ? (
         <TouchableOpacity
           onPress={() => setSubmitSheetOpen(true)}
           activeOpacity={0.8}
@@ -496,34 +495,19 @@ function BetActivityCard({
           <Check size={18} color="#fff" weight="bold" />
           <Text className="text-sm font-bold text-white">Submit outcome</Text>
         </TouchableOpacity>
-      ) : null}
-
-      {canSubmitOutcome && roomId ? (
-        <SubmitOutcomeSheet
-          visible={submitSheetOpen}
-          onClose={() => setSubmitSheetOpen(false)}
-          bet={bet}
-          roomId={roomId}
-          positiveLabel={betTemplate?.positive_label}
-          negativeLabel={betTemplate?.negative_label}
-        />
-      ) : null}
-
-      {canResolve ? (
+      ) : canResolve ? (
         <View className="mt-3">
           <TouchableOpacity
             onPress={() => setDisputeSheetOpen(true)}
             activeOpacity={0.8}
-            className={`flex-row items-center justify-center gap-2 rounded-xl py-3 ${
-              dbStatus === 'DISPUTED' ? 'bg-warning' : 'bg-primary'
-            }`}
+            className="flex-row items-center justify-center gap-2 rounded-xl bg-warning py-3"
           >
             {dbStatus === 'DISPUTED' ? (
-              <Warning size={18} color={colors.textPrimary} weight="bold" />
+              <Warning size={18} color="#FFFFFF" weight="bold" />
             ) : (
-              <Check size={18} color={colors.textPrimary} weight="bold" />
+              <Check size={18} color="#FFFFFF" weight="bold" />
             )}
-            <Text className="text-sm font-bold text-text-primary">
+            <Text className="text-sm font-bold text-white">
               {dbStatus === 'DISPUTED' ? 'Resolve dispute' : 'Force Resolve'}
             </Text>
           </TouchableOpacity>
@@ -533,20 +517,7 @@ function BetActivityCard({
               : `${submittedCount} of ${totalParticipants} submitted · admin override`}
           </Text>
         </View>
-      ) : null}
-
-      {canResolve && roomId ? (
-        <ResolveDisputeSheet
-          visible={disputeSheetOpen}
-          onClose={() => setDisputeSheetOpen(false)}
-          bet={bet}
-          roomId={roomId}
-          positiveLabel={betTemplate?.positive_label}
-          negativeLabel={betTemplate?.negative_label}
-        />
-      ) : null}
-
-      {canVoid ? (
+      ) : canVoid ? (
         <TouchableOpacity
           onPress={() => setVoidSheetOpen(true)}
           activeOpacity={0.8}
@@ -558,7 +529,30 @@ function BetActivityCard({
         </TouchableOpacity>
       ) : null}
 
-      {canVoid && roomId ? (
+      {/* Sheets - rendered separately so they work regardless of which button triggered them */}
+      {roomId ? (
+        <SubmitOutcomeSheet
+          visible={submitSheetOpen}
+          onClose={() => setSubmitSheetOpen(false)}
+          bet={bet}
+          roomId={roomId}
+          positiveLabel={betTemplate?.positive_label}
+          negativeLabel={betTemplate?.negative_label}
+        />
+      ) : null}
+
+      {roomId ? (
+        <ResolveDisputeSheet
+          visible={disputeSheetOpen}
+          onClose={() => setDisputeSheetOpen(false)}
+          bet={bet}
+          roomId={roomId}
+          positiveLabel={betTemplate?.positive_label}
+          negativeLabel={betTemplate?.negative_label}
+        />
+      ) : null}
+
+      {roomId ? (
         <VoidBetSheet
           visible={voidSheetOpen}
           onClose={() => setVoidSheetOpen(false)}
@@ -1109,8 +1103,8 @@ function ChipRequestActivityCard({
           accessibilityLabel={`Donate chips to ${requesterName}`}
           className="mt-3 flex-row items-center justify-center gap-2 rounded-xl bg-primary py-3"
         >
-          <HandCoins size={18} color={colors.textPrimary} weight="bold" />
-          <Text className="text-sm font-bold text-text-primary">Donate chips</Text>
+          <HandCoins size={18} color="#FFFFFF" weight="bold" />
+          <Text className="text-sm font-bold text-white">Donate chips</Text>
         </TouchableOpacity>
       ) : null}
 
