@@ -39,6 +39,7 @@ import {
 } from '@/hooks/use-activity-feed';
 import { useWinnerCelebration } from '@/hooks/use-winner-celebration';
 import { useToast } from '@/providers/toast';
+import { useServerTimeTick } from '@/providers/time';
 
 /** Split room name like "Sunday golf - 2026-05-10" into { name, date } */
 function parseRoomName(fullName: string): { name: string; date: string | null } {
@@ -71,6 +72,7 @@ export default function RoomDetailScreen() {
   const { data: room, isLoading: roomLoading } = useRoomDetail(id);
   const { data: allMembers } = useRoomMembersWithHistory(id);
   const { data: balance } = useMyRoomBalance(id);
+  const serverNow = useServerTimeTick();
 
   // Filter to only active members for display
   const members = useMemo(
@@ -212,11 +214,11 @@ export default function RoomDetailScreen() {
         if (item.type === 'chip_request') return false; // Chip requests shown in sheet only
         // Past members can only see bets they're involved in
         if (isPastMember && !betInvolvesUser(item.bet, currentUserId)) return false;
-        if (!betMatchesFilter(item.bet, filter)) return false;
+        if (!betMatchesFilter(item.bet, filter, serverNow)) return false;
         if (myBetsOnly && !betInvolvesUser(item.bet, currentUserId)) return false;
         return true;
       }),
-    [feedItems, filter, myBetsOnly, currentUserId, isPastMember],
+    [feedItems, filter, myBetsOnly, currentUserId, isPastMember, serverNow],
   );
 
   // All chip requests for the bottom sheet (includes all statuses)

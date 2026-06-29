@@ -101,19 +101,6 @@ function formatStakeChips(stake: number): string {
   return `${stake.toLocaleString('en-US')} chips`;
 }
 
-function getSettlementMethodLabel(method: string | null | undefined): string {
-  switch (method) {
-    case 'CONSENSUS':
-      return 'consensus';
-    case 'MAJORITY_VOTE':
-      return 'majority vote';
-    case 'ATTESTOR':
-      return 'attestor decision';
-    default:
-      return method?.toLowerCase().replace(/_/g, ' ') ?? '';
-  }
-}
-
 export default function BetDetailScreen() {
   const { colors } = useTheme();
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -191,15 +178,23 @@ export default function BetDetailScreen() {
       trigger('bet_matched');
     }
 
-    // → SETTLED: Win/loss celebration (only if not already celebrated elsewhere)
-    if (prevStatus !== 'SETTLED' && dbStatus === 'SETTLED' && !hasBetBeenCelebrated(bet.id)) {
+    // → PENDING_DISPUTE or SETTLED: Win/loss celebration
+    // With first-submission flow, celebration triggers on PENDING_DISPUTE (using preliminary_outcome)
+    // Also triggers on SETTLED for edge cases (attestor resolution after DISPUTED)
+    const isCelebrationWorthy =
+      (dbStatus === 'PENDING_DISPUTE' && prevStatus !== 'PENDING_DISPUTE') ||
+      (dbStatus === 'SETTLED' && prevStatus !== 'SETTLED');
+
+    if (isCelebrationWorthy && !hasBetBeenCelebrated(bet.id)) {
+      // Use preliminary_outcome for PENDING_DISPUTE, outcome for SETTLED
+      const effectiveOutcome = bet.outcome ?? bet.preliminary_outcome;
       const userWon =
         currentUserId &&
-        bet.outcome &&
+        effectiveOutcome &&
         (bet.stakes ?? []).some(
           (s) =>
             s.user_id === currentUserId &&
-            s.pick.trim().toLowerCase() === bet.outcome!.trim().toLowerCase(),
+            s.pick.trim().toLowerCase() === effectiveOutcome.trim().toLowerCase(),
         );
 
       // Mark as celebrated globally to prevent duplicate celebrations
@@ -224,8 +219,8 @@ export default function BetDetailScreen() {
     if (!bet.expires_at) return;
 
     // Client-side expiry check using server-synced time
-    const expiresAt = new Date(bet.expires_at);
-    if (expiresAt > serverNow) return;
+    const expiresAt = parseApiTimestamp(bet.expires_at);
+    if (!expiresAt || expiresAt > serverNow) return;
 
     // Don't call RPC again if we're already waiting for retry
     if (processedBetRef.current === bet.id) return;
@@ -425,24 +420,11 @@ export default function BetDetailScreen() {
     () => bet?.outcome_submissions ?? [],
     [bet?.outcome_submissions],
   );
-  const submittedCount = outcomeSubmissions.length;
-  const totalParticipants = stakes.length;
   const mySubmission = useMemo(
     () =>
       currentUserId ? (outcomeSubmissions.find((s) => s.user_id === currentUserId) ?? null) : null,
     [outcomeSubmissions, currentUserId],
   );
-
-  // Participants who haven't submitted yet
-  const pendingParticipants = useMemo(() => {
-    const submittedUserIds = new Set(outcomeSubmissions.map((s) => s.user_id));
-    return stakes
-      .filter((s) => !submittedUserIds.has(s.user_id))
-      .map((s) => ({
-        user_id: s.user_id,
-        display_name: s.user?.display_name ?? 'Unknown',
-      }));
-  }, [stakes, outcomeSubmissions]);
 
   // Group submissions by option for attestor view
   const submissionsByOption = useMemo(() => {
@@ -694,12 +676,6 @@ export default function BetDetailScreen() {
               <Trophy size={16} color={colors.primary} weight="fill" />
               <Text className="text-sm font-medium text-primary">
                 Result: {getDisplayLabel(bet.outcome)}
-                {bet.settlement_method && (
-                  <Text className="text-text-muted">
-                    {' '}
-                    · via {getSettlementMethodLabel(bet.settlement_method)}
-                  </Text>
-                )}
               </Text>
             </View>
           )}
@@ -741,39 +717,8 @@ export default function BetDetailScreen() {
           </View>
         )}
 
-        {/* PENDING_RESULT - Submission Progress */}
-        {dbStatus === 'PENDING_RESULT' && (
-          <View className="mx-4 mt-3 rounded-xl bg-surface px-4 py-3">
-            {/* Header row */}
-            <View className="flex-row items-center justify-between">
-              <View className="flex-row items-center gap-2">
-                <Text className="text-sm text-text-secondary">Submissions</Text>
-                <Text className="font-bold text-primary">
-                  {submittedCount}/{totalParticipants}
-                </Text>
-              </View>
-              {mySubmission ? (
-                <View className="flex-row items-center gap-1">
-                  <Check size={14} color={colors.primary} weight="bold" />
-                  <Text className="text-sm text-primary">
-                    {getDisplayLabel(mySubmission.selected_option)}
-                  </Text>
-                </View>
-              ) : isParticipant ? (
-                <Text className="text-sm text-warning">Submit your outcome</Text>
-              ) : null}
-            </View>
-
-            {/* Note: Outcome windows are now indefinite - no countdown needed */}
-
-            {/* Show who's waiting */}
-            {pendingParticipants.length > 0 && (
-              <Text className="mt-2 text-xs text-text-muted">
-                Waiting for {pendingParticipants.map((p) => p.display_name).join(', ')}
-              </Text>
-            )}
-          </View>
-        )}
+        {/* Note: PENDING_RESULT submission count UI removed - with first-submission flow,
+            PENDING_RESULT is brief (until first submission), then moves to PENDING_DISPUTE. */}
 
         {/* PENDING_DISPUTE - Preliminary Result Confirmation */}
         {dbStatus === 'PENDING_DISPUTE' && (

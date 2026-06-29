@@ -79,8 +79,8 @@ export function BetFeedStatusFilter({
   );
 }
 
-export function betMatchesFilter(bet: BetWithProfiles, filter: BetFilter): boolean {
-  const effectiveStatus = getEffectiveBetStatus(bet);
+export function betMatchesFilter(bet: BetWithProfiles, filter: BetFilter, serverNow?: Date): boolean {
+  const effectiveStatus = getEffectiveBetStatus(bet, serverNow);
 
   if (filter === 'active') {
     // All non-terminal bets: OPEN, MATCHED, PENDING_RESULT, PENDING_DISPUTE, DISPUTED

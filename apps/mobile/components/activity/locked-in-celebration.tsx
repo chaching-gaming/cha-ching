@@ -97,11 +97,11 @@ function LockedInContent({
           </View>
         </View>
 
-        <Text className="mt-6 text-3xl font-black uppercase tracking-wider text-text-primary">
+        <Text className="mt-6 text-3xl font-black uppercase tracking-wider text-white">
           You&apos;re locked in
         </Text>
         {subjectName ? (
-          <Text className="mt-2 text-base text-text-secondary" numberOfLines={1}>
+          <Text className="mt-2 text-base text-white/70" numberOfLines={1}>
             About {subjectName}
           </Text>
         ) : null}
@@ -122,7 +122,7 @@ function LockedInContent({
         ) : null}
 
         <Text
-          className="mt-4 max-w-[300px] text-center text-sm text-text-secondary"
+          className="mt-4 max-w-[300px] text-center text-sm text-white/70"
           numberOfLines={3}
         >
           {bet.question}
@@ -130,7 +130,7 @@ function LockedInContent({
       </View>
 
       {/* Auto-dismiss progress bar - using regular View with width percentage */}
-      <View className="absolute bottom-12 left-8 right-8 h-1 overflow-hidden rounded-full bg-surface">
+      <View className="absolute bottom-12 left-8 right-8 h-1 overflow-hidden rounded-full bg-white/20">
         <View
           style={{
             height: '100%',

@@ -128,8 +128,8 @@ function BetActivityCard({
     if (!bet.expires_at) return;
 
     // Client-side expiry check using server-synced time
-    const expiresAt = new Date(bet.expires_at);
-    if (expiresAt > serverNow) return;
+    const expiresAt = parseApiTimestamp(bet.expires_at);
+    if (!expiresAt || expiresAt > serverNow) return;
 
     // Don't call RPC again if we're already waiting for retry
     if (processedRef.current === bet.id) return;
@@ -279,12 +279,11 @@ function BetActivityCard({
   const bothSidesStaked = distinctPicksStaked >= 2;
 
   // Show submission status only when bet is PENDING_RESULT (after expiry)
-  const showSubmissionStatus = effectiveStatus === 'PENDING_RESULT';
+  // Note: Submission count UI removed - with first-submission flow, PENDING_RESULT
+  // is brief (until first submission), then moves to PENDING_DISPUTE.
 
   // Show "waiting" message when bet is OPEN with both sides staked
   const showWaitingForClose = dbStatus === 'OPEN' && bothSidesStaked;
-  const totalParticipants = stakes.length;
-  const submittedCount = bet.outcome_submissions.length;
   const mySubmission = useMemo(
     () =>
       currentUserId
@@ -369,21 +368,6 @@ function BetActivityCard({
           subjectPositiveOption={bet.subject_positive_option}
           membershipStatusMap={membershipStatusMap}
         />
-      ) : null}
-
-      {showSubmissionStatus ? (
-        <View className="mt-2 flex-row items-center gap-3 rounded-xl border border-border bg-surface-light px-3 py-2">
-          <View className="min-w-0 flex-1">
-            <Text className="text-sm font-semibold text-text-primary">
-              {submittedCount}/{totalParticipants} submitted
-            </Text>
-            {mySubmission ? (
-              <Text className="mt-0.5 text-xs font-medium text-primary" numberOfLines={1}>
-                ✓ You reported &ldquo;{getDisplayLabel(mySubmission.selected_option)}&rdquo;
-              </Text>
-            ) : null}
-          </View>
-        </View>
       ) : null}
 
       {dbStatus === 'PENDING_DISPUTE' && bet.preliminary_outcome ? (
@@ -514,7 +498,7 @@ function BetActivityCard({
           <Text className="mt-1.5 text-center text-[11px] text-text-muted">
             {dbStatus === 'DISPUTED'
               ? 'Conflicting outcomes submitted'
-              : `${submittedCount} of ${totalParticipants} submitted · admin override`}
+              : 'Awaiting outcome · admin override'}
           </Text>
         </View>
       ) : canVoid ? (
@@ -900,6 +884,7 @@ function BetActivityFeedItem({
   membershipStatusMap?: Map<string, RoomMemberStatus>;
 }) {
   const router = useRouter();
+  const serverNow = useServerTimeTick();
   const [selectedPick, setSelectedPick] = useState<string | null>(null);
 
   const stakes = item.bet.stakes ?? [];
@@ -910,7 +895,7 @@ function BetActivityFeedItem({
     !!currentUserId &&
     (item.bet.status === 'OPEN' || item.bet.status === 'MATCHED') &&
     !alreadyStaked &&
-    getEffectiveBetStatus(item.bet) !== 'EXPIRED';
+    getEffectiveBetStatus(item.bet, serverNow) !== 'EXPIRED';
 
   const handleBetPress = useCallback(() => {
     router.push(`/(tabs)/rooms/bet/${item.bet.id}`);

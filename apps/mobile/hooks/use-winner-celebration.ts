@@ -22,7 +22,9 @@ export function hasBetBeenCelebrated(betId: string): boolean {
 }
 
 function didUserWin(bet: BetWithProfiles, userId: string | null): boolean {
-  const outcomeKey = bet.outcome?.trim().toLowerCase() ?? '';
+  // Use preliminary_outcome for PENDING_DISPUTE, outcome for SETTLED
+  const effectiveOutcome = bet.outcome ?? bet.preliminary_outcome;
+  const outcomeKey = effectiveOutcome?.trim().toLowerCase() ?? '';
   if (!userId || !outcomeKey) return false;
   // Multi-player: current user wins if any of their stakes matched the outcome.
   return (bet.stakes ?? []).some(
@@ -36,9 +38,13 @@ function didUserParticipate(bet: BetWithProfiles, userId: string | null): boolea
 }
 
 /**
- * Detects live bet.status → SETTLED transitions in the activity feed. Fires:
+ * Detects live bet status transitions to celebration-worthy states. Fires:
  *   - Overlay + `bet_won` feedback when the current user won.
  *   - `bet_lost` feedback when the user participated but didn't win (no overlay).
+ *
+ * Celebration triggers on:
+ *   - PENDING_DISPUTE: First outcome submission declares provisional winner
+ *   - SETTLED: Final settlement (only if not already celebrated at PENDING_DISPUTE)
  *
  * On first data load we seed the "seen" set so we don't fire for historical
  * settlements. When paginating, we also seed new bets rather than celebrating
@@ -51,7 +57,7 @@ export function useWinnerCelebration(
   isLoading: boolean,
   isFetchingNextPage: boolean = false,
 ) {
-  const seenSettled = useRef<Set<string>>(new Set());
+  const seenCelebrationWorthy = useRef<Set<string>>(new Set());
   const initialized = useRef(false);
   const wasFetchingNextPage = useRef(false);
   const [celebratingBet, setCelebratingBet] = useState<BetWithProfiles | null>(null);
@@ -59,7 +65,7 @@ export function useWinnerCelebration(
 
   useEffect(() => {
     // Wait until the query has actually returned before seeding. Otherwise the empty
-    // first-render `items` marks us initialized and every historical SETTLED bet
+    // first-render `items` marks us initialized and every historical bet
     // arriving on the next render fires as a "new" transition.
     if (isLoading) return;
 
@@ -72,32 +78,33 @@ export function useWinnerCelebration(
     // While actively fetching, do nothing - wait for data to arrive
     if (isFetchingNextPage) return;
 
-    const settledBets: BetWithProfiles[] = items
+    // Celebration-worthy statuses: PENDING_DISPUTE (first submission) or SETTLED
+    const celebrationWorthyBets: BetWithProfiles[] = items
       .filter((it): it is Extract<ActivityItem, { type: 'bet' }> => it.type === 'bet')
       .map((it) => it.bet)
-      .filter((b) => b.status === 'SETTLED');
+      .filter((b) => b.status === 'PENDING_DISPUTE' || b.status === 'SETTLED');
 
     // On initial load OR after pagination completes, seed the set without celebrating.
-    // We only want to celebrate real-time settlements, not historical ones.
+    // We only want to celebrate real-time transitions, not historical ones.
     if (!initialized.current || justFinishedPaginating) {
-      for (const bet of settledBets) seenSettled.current.add(bet.id);
+      for (const bet of celebrationWorthyBets) seenCelebrationWorthy.current.add(bet.id);
       if (!initialized.current) initialized.current = true;
       return;
     }
 
-    const newlySettled: BetWithProfiles[] = [];
-    for (const bet of settledBets) {
+    const newlyCelebrationWorthy: BetWithProfiles[] = [];
+    for (const bet of celebrationWorthyBets) {
       // Skip if already seen in this session OR already celebrated globally
-      if (seenSettled.current.has(bet.id) || globalCelebratedBets.has(bet.id)) continue;
-      seenSettled.current.add(bet.id);
-      newlySettled.push(bet);
+      if (seenCelebrationWorthy.current.has(bet.id) || globalCelebratedBets.has(bet.id)) continue;
+      seenCelebrationWorthy.current.add(bet.id);
+      newlyCelebrationWorthy.push(bet);
     }
-    if (newlySettled.length === 0) return;
+    if (newlyCelebrationWorthy.length === 0) return;
 
     // Win takes priority over loss; fall back to a loss if no win was found.
     let winBet: BetWithProfiles | null = null;
     let lossBet: BetWithProfiles | null = null;
-    for (const bet of newlySettled) {
+    for (const bet of newlyCelebrationWorthy) {
       if (didUserWin(bet, currentUserId)) {
         winBet = bet;
         break;

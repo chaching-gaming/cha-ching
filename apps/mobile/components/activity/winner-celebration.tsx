@@ -45,8 +45,10 @@ function WinnerContent({
   const { colors } = useTheme();
   // Derive winners from stakes that matched the outcome; compute per-winner
   // payout as floor(total_pool / n_winners) — mirrors the server math.
+  // Use preliminary_outcome for PENDING_DISPUTE, outcome for SETTLED.
   const stakes = bet.stakes ?? [];
-  const outcomeKey = bet.outcome?.trim().toLowerCase() ?? '';
+  const effectiveOutcome = bet.outcome ?? bet.preliminary_outcome;
+  const outcomeKey = effectiveOutcome?.trim().toLowerCase() ?? '';
   const winningStakes = stakes.filter((s) => s.pick.trim().toLowerCase() === outcomeKey);
   const totalPool = stakes.length * (bet.stake ?? 0);
   const payout = winningStakes.length > 0 ? Math.floor(totalPool / winningStakes.length) : 0;
@@ -57,7 +59,7 @@ function WinnerContent({
       ? 'No winners'
       : winningStakes.length === 1
         ? `${winningStakes[0].user?.display_name ?? 'Someone'} won!`
-        : `${winningStakes.length} winners · ${bet.outcome ?? ''}`;
+        : `${winningStakes.length} winners · ${effectiveOutcome ?? ''}`;
 
   return (
     <Pressable className="flex-1 items-center justify-center bg-black/85" onPress={onDismiss}>
@@ -76,12 +78,12 @@ function WinnerContent({
             fallback={myStake?.user?.display_name ?? winningStakes[0]?.user?.display_name ?? '?'}
             size="xl"
           />
-          <View className="absolute -right-2 -top-2 h-8 w-8 items-center justify-center rounded-full border-2 border-background bg-primary">
+          <View className="absolute -right-2 -top-2 h-8 w-8 items-center justify-center rounded-full border-2 border-black bg-primary">
             <Trophy size={16} color="#FFFFFF" weight="fill" />
           </View>
         </View>
 
-        <Text className="text-center text-3xl font-bold text-text-primary">
+        <Text className="text-center text-3xl font-bold text-white">
           {meWon ? 'You won!' : winnerLabel}
         </Text>
 
@@ -95,7 +97,7 @@ function WinnerContent({
         ) : null}
 
         <Text
-          className="mt-1 max-w-[280px] text-center text-sm text-text-secondary"
+          className="mt-1 max-w-[280px] text-center text-sm text-white/70"
           numberOfLines={3}
         >
           {bet.question}
