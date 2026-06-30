@@ -433,10 +433,7 @@ function BetActivityCard({
             </>
           ) : currentUserLost ? (
             // User lost - show their loss clearly
-            <>
-              <Text className="text-sm font-medium text-error">You lost {bet.stake}</Text>
-              <Text className="text-sm text-text-muted">· {getDisplayLabel(bet.outcome)} won</Text>
-            </>
+            <Text className="text-sm font-medium text-error">You lost {bet.stake}</Text>
           ) : (
             // User didn't participate - show outcome neutrally
             <>
