@@ -321,8 +321,11 @@ export function useRealtimeActivityFeed(roomId: string, options?: RealtimeActivi
         'postgres_changes',
         { event: '*', schema: 'public', table: 'bets', filter: `room_id=eq.${roomId}` },
         () => {
-          invalidate(roomBetsKey(roomId));
-          invalidate(roomActivityKey(roomId));
+          // Use refetchQueries (immediate) for critical bet data to prevent
+          // stale data + server time tick from showing wrong effective status
+          void queryClient.refetchQueries({ queryKey: roomBetsKey(roomId) });
+          void queryClient.refetchQueries({ queryKey: roomActivityKey(roomId) });
+          // Use debounced invalidate for less time-critical data
           invalidate(roomBalanceKey(roomId));
           invalidate(roomMemberBalancesKey(roomId));
           // Also update rooms list so balance shows correctly on the list page
@@ -361,8 +364,9 @@ export function useRealtimeActivityFeed(roomId: string, options?: RealtimeActivi
         'postgres_changes',
         { event: '*', schema: 'public', table: 'outcome_submissions' },
         () => {
-          invalidate(roomBetsKey(roomId));
-          invalidate(roomActivityKey(roomId));
+          // Use refetchQueries (immediate) - outcome submissions trigger status changes
+          void queryClient.refetchQueries({ queryKey: roomBetsKey(roomId) });
+          void queryClient.refetchQueries({ queryKey: roomActivityKey(roomId) });
         },
       )
       .subscribe();
@@ -372,8 +376,10 @@ export function useRealtimeActivityFeed(roomId: string, options?: RealtimeActivi
     const betStakesChannel = supabase
       .channel(`cc-feed:${roomId}:stakes:${token}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'bet_stakes' }, () => {
-        invalidate(roomBetsKey(roomId));
-        invalidate(roomActivityKey(roomId));
+        // Use refetchQueries (immediate) - stakes affect effective status calculation
+        void queryClient.refetchQueries({ queryKey: roomBetsKey(roomId) });
+        void queryClient.refetchQueries({ queryKey: roomActivityKey(roomId) });
+        // Use debounced invalidate for less time-critical data
         invalidate(roomBalanceKey(roomId));
         invalidate(roomMemberBalancesKey(roomId));
         // Also update rooms list so balance shows correctly on the list page
