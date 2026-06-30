@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 import { supabase } from '@/lib/supabase';
-import { betDetailKey, roomBetsKey, roomBalanceKey } from './use-activity-feed';
+import { betDetailKey, roomActivityKey, roomBetsKey, roomBalanceKey } from './use-activity-feed';
 
 /**
  * Hook to process the outcome window for a bet.
@@ -21,6 +21,7 @@ export function useProcessOutcomeWindow() {
       await Promise.all([
         queryClient.refetchQueries({ queryKey: betDetailKey(p_bet_id) }),
         queryClient.refetchQueries({ queryKey: roomBetsKey(roomId) }),
+        queryClient.refetchQueries({ queryKey: roomActivityKey(roomId) }),
       ]);
     },
   });
@@ -44,6 +45,7 @@ export function useProcessDisputeWindow() {
       await Promise.all([
         queryClient.refetchQueries({ queryKey: betDetailKey(p_bet_id) }),
         queryClient.refetchQueries({ queryKey: roomBetsKey(roomId) }),
+        queryClient.refetchQueries({ queryKey: roomActivityKey(roomId) }),
         queryClient.refetchQueries({ queryKey: roomBalanceKey(roomId) }),
       ]);
     },

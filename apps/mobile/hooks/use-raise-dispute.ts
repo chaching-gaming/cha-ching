@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 import { supabase } from '@/lib/supabase';
-import { betDetailKey, roomBetsKey } from './use-activity-feed';
+import { betDetailKey, roomActivityKey, roomBetsKey } from './use-activity-feed';
 
 /**
  * Hook to raise a dispute on a bet during the PENDING_DISPUTE window.
@@ -18,6 +18,7 @@ export function useRaiseDispute() {
     },
     onSuccess: (_, { roomId, p_bet_id }) => {
       queryClient.invalidateQueries({ queryKey: roomBetsKey(roomId) });
+      queryClient.invalidateQueries({ queryKey: roomActivityKey(roomId) });
       queryClient.invalidateQueries({ queryKey: betDetailKey(p_bet_id) });
     },
   });
