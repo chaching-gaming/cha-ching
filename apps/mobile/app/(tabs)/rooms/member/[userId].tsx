@@ -52,12 +52,12 @@ function StatRow({
   isLast?: boolean;
 }) {
   return (
-    <View className={`flex-row items-center justify-between px-4 py-4 ${isLast ? '' : 'border-b border-border/40'}`}>
+    <View
+      className={`flex-row items-center justify-between px-4 py-4 ${isLast ? '' : 'border-b border-border/40'}`}
+    >
       <View className="flex-1">
         <Text className="text-base font-medium text-text-primary">{label}</Text>
-        {subtitle ? (
-          <Text className="mt-0.5 text-sm text-text-muted">{subtitle}</Text>
-        ) : null}
+        {subtitle ? <Text className="mt-0.5 text-sm text-text-muted">{subtitle}</Text> : null}
       </View>
       <View className="flex-row items-center gap-2">
         {badge}
@@ -137,11 +137,8 @@ export default function MemberStatsScreen() {
   const biggestLossFormatted =
     stats.biggest_loss_net > 0 ? formatBalance(-stats.biggest_loss_net) : '—';
   const roiFormatted =
-    stats.total_wagered > 0
-      ? `${((netProfitLoss / stats.total_wagered) * 100).toFixed(1)}%`
-      : '—';
-  const roiColor =
-    stats.total_wagered > 0 ? balanceColorClass(netProfitLoss) : 'text-text-primary';
+    stats.total_wagered > 0 ? `${((netProfitLoss / stats.total_wagered) * 100).toFixed(1)}%` : '—';
+  const roiColor = stats.total_wagered > 0 ? balanceColorClass(netProfitLoss) : 'text-text-primary';
 
   // Generosity
   const donated = formatChipsWithCount(stats.chips_donated, stats.donation_count);
@@ -164,21 +161,11 @@ export default function MemberStatsScreen() {
       <ScrollView contentContainerClassName="px-5 pb-12">
         {/* Profile Header */}
         <View className="items-center pt-4">
-          <Avatar
-            uri={stats.avatar_url}
-            fallback={stats.display_name ?? '?'}
-            size="xl"
-          />
+          <Avatar uri={stats.avatar_url} fallback={stats.display_name ?? '?'} size="xl" />
           <Text className="mt-4 text-center text-2xl font-bold text-text-primary">
             {stats.display_name ?? 'Unknown'}
             {isSelf ? <Text className="text-lg text-text-secondary"> (you)</Text> : null}
           </Text>
-
-          {stats.joined_at ? (
-            <Text className="mt-1 text-sm text-text-muted">
-              {`Member since ${formatMemberSince(stats.joined_at)}`}
-            </Text>
-          ) : null}
 
           {/* Badges */}
           <View className="mt-3 flex-row items-center gap-2">
@@ -202,19 +189,9 @@ export default function MemberStatsScreen() {
         {/* Performance Overview */}
         <SectionHeader>Performance</SectionHeader>
         <View className="overflow-hidden rounded-2xl border border-border bg-surface">
-          <StatRow
-            label="Current Balance"
-            value={balanceFormatted}
-            valueClassName={balanceColor}
-          />
-          <StatRow
-            label="Win Rate"
-            value={winRateFormatted}
-          />
-          <StatRow
-            label="Record"
-            value={recordFormatted}
-          />
+          <StatRow label="Current Balance" value={balanceFormatted} valueClassName={balanceColor} />
+          <StatRow label="Win Rate" value={winRateFormatted} />
+          <StatRow label="Record" value={recordFormatted} />
           <StatRow
             label="Net Profit / Loss"
             value={netProfitLossFormatted}
@@ -227,14 +204,8 @@ export default function MemberStatsScreen() {
         {/* Betting Activity */}
         <SectionHeader>Betting Activity</SectionHeader>
         <View className="overflow-hidden rounded-2xl border border-border bg-surface">
-          <StatRow
-            label="Total Wagered"
-            value={totalWageredFormatted}
-          />
-          <StatRow
-            label="Avg Bet Size"
-            value={avgBetFormatted}
-          />
+          <StatRow label="Total Wagered" value={totalWageredFormatted} />
+          <StatRow label="Avg Bet Size" value={avgBetFormatted} />
           <StatRow
             label="Biggest Win"
             value={biggestWinFormatted}
@@ -245,12 +216,7 @@ export default function MemberStatsScreen() {
             value={biggestLossFormatted}
             valueClassName={stats.biggest_loss_net > 0 ? 'text-error' : 'text-text-primary'}
           />
-          <StatRow
-            label="ROI"
-            value={roiFormatted}
-            valueClassName={roiColor}
-            isLast
-          />
+          <StatRow label="ROI" value={roiFormatted} valueClassName={roiColor} isLast />
         </View>
 
         {/* Generosity */}
