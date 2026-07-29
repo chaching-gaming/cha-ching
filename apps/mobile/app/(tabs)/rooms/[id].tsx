@@ -74,10 +74,14 @@ export default function RoomDetailScreen() {
   const { data: balance } = useMyRoomBalance(id);
   const serverNow = useServerTimeTick();
 
-  // Filter to only active members for display
+  // For active rooms, show only active members. For closed rooms, show all members.
+  const isRoomActive = room?.is_active ?? false;
   const members = useMemo(
-    () => allMembers?.filter((m) => m.membershipStatus === 'active') ?? [],
-    [allMembers],
+    () =>
+      isRoomActive
+        ? allMembers?.filter((m) => m.membershipStatus === 'active') ?? []
+        : allMembers ?? [],
+    [allMembers, isRoomActive],
   );
 
   // Create membership status lookup for showing left/removed indicators
@@ -199,9 +203,8 @@ export default function RoomDetailScreen() {
   }, [id, queryClient]);
 
   const currentMember = currentUserMembership;
-  const isActive = room?.is_active ?? false;
   // Can create bets only if room is active AND user is an active member
-  const canCreateBet = isActive && isCurrentUserActiveMember;
+  const canCreateBet = isRoomActive && isCurrentUserActiveMember;
 
   const feedItems = useMemo(() => activityItems ?? [], [activityItems]);
 
@@ -310,7 +313,7 @@ export default function RoomDetailScreen() {
             item={item}
             currentUserId={authSession?.user.id}
             currentUserRole={currentMember?.role ?? null}
-            roomActive={isActive && isCurrentUserActiveMember}
+            roomActive={isRoomActive && isCurrentUserActiveMember}
             roomId={id}
             currentUserBalance={myBalance}
             membershipStatusMap={membershipStatusMap}
@@ -328,18 +331,29 @@ export default function RoomDetailScreen() {
         }
         ListHeaderComponent={
           <View>
-            {/* Past member banner */}
-            {isPastMember && pastMemberStatusText && (
-              <View className="mb-4 flex-row items-center gap-3 rounded-xl bg-warning/10 px-4 py-3">
-                <Warning size={20} color={colors.warning} weight="fill" />
-                <View className="flex-1">
-                  <Text className="text-sm font-semibold text-warning">
-                    {pastMemberStatusText}
-                  </Text>
-                  <Text className="mt-0.5 text-xs text-text-muted">
-                    You can only view bets you participated in
-                  </Text>
+            {/* Closed room banner - show for all members when room is inactive */}
+            {!isRoomActive && (
+              <View className="mb-4 rounded-xl bg-surface-alt px-4 py-3">
+                <View className="flex-row items-center gap-3">
+                  <Warning size={20} color={colors.textMuted} weight="fill" />
+                  <View className="flex-1">
+                    <Text className="text-sm font-semibold text-text-primary">
+                      Session ended
+                    </Text>
+                    <Text className="mt-0.5 text-xs text-text-muted">
+                      {isPastMember
+                        ? 'You can only view bets you participated in'
+                        : 'This room is now read-only'}
+                    </Text>
+                  </View>
                 </View>
+                <TouchableOpacity
+                  onPress={() => router.push(`/(tabs)/rooms/standings?id=${id}`)}
+                  activeOpacity={0.7}
+                  className="mt-3 flex-row items-center justify-center gap-2 rounded-lg bg-primary py-2.5"
+                >
+                  <Text className="text-sm font-semibold text-white">View Final Standings</Text>
+                </TouchableOpacity>
               </View>
             )}
             <RoomHeaderBar
@@ -347,7 +361,7 @@ export default function RoomDetailScreen() {
               balance={myBalance}
               onOpenStandings={() => router.push(`/(tabs)/rooms/standings?id=${id}`)}
               roomId={id}
-              roomActive={isActive}
+              roomActive={isRoomActive}
               myOpenChipRequest={myOpenChipRequest}
               isActiveMember={isCurrentUserActiveMember}
             />
@@ -417,7 +431,7 @@ export default function RoomDetailScreen() {
         chipRequests={allChipRequests}
         currentUserId={currentUserId}
         roomId={id}
-        roomActive={isActive}
+        roomActive={isRoomActive}
         currentUserBalance={myBalance}
         isActiveMember={isCurrentUserActiveMember}
       />

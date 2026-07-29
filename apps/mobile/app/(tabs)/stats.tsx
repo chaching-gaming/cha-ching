@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { RefreshControl, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { useQueryClient } from '@tanstack/react-query';
-import { CaretDown, ChartBar } from 'phosphor-react-native';
+import { CaretDown, ChartBar, Globe } from 'phosphor-react-native';
 
 import { useTheme } from '@/providers/theme';
 import {
@@ -15,8 +15,15 @@ import { RoomSelectionSheet } from '@/components/activity/room-selection-sheet';
 import { StatCard } from '@/components/stats/stat-card';
 import { MyBetsSection } from '@/components/stats/my-bets-section';
 import { useRooms } from '@/hooks/use-rooms';
-import { useRoomEventStats, useRoomPlayerStats, type PlayerStat } from '@/hooks/use-room-stats';
-import { balanceColorClass, formatBalance } from '@/lib/format-balance';
+import {
+  useRoomEventStats,
+  useRoomPlayerStats,
+  useAllRoomsPlayerStats,
+  useAllRoomsEventStats,
+  type PlayerStat,
+  type AggregatePlayerStat,
+} from '@/hooks/use-room-stats';
+import { balanceColorClass, formatBalance, netBalanceColorClass } from '@/lib/format-balance';
 
 type StatsTab = 'leaderboard' | 'my-bets';
 
@@ -26,29 +33,30 @@ function formatChipCount(n: number): string {
 
 export default function StatsScreen() {
   const { data: rooms, isLoading: roomsLoading } = useRooms('active');
+  // Default to null = "All Rooms" aggregate view
   const [selectedRoomId, setSelectedRoomId] = useState<string | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<StatsTab>('leaderboard');
 
   const selectedRoom = useMemo(
-    () => rooms?.find((r) => r.room.id === selectedRoomId) ?? null,
+    () => (selectedRoomId ? rooms?.find((r) => r.room.id === selectedRoomId) ?? null : null),
     [rooms, selectedRoomId],
   );
 
-  // Default-select the first room once rooms land (keeps selection sticky if
-  // the user switches away and back while the tab stays mounted). If the
-  // currently-selected room is no longer in the list (left / ended), fall back
-  // to the first available.
+  // Keep "All Rooms" (null) as default. Only reset to null if selected room is gone.
   useEffect(() => {
-    if (!rooms) return;
-    const stillPresent = selectedRoomId ? rooms.some((r) => r.room.id === selectedRoomId) : false;
-    if (!stillPresent) setSelectedRoomId(rooms[0]?.room.id ?? null);
+    if (!rooms || selectedRoomId === null) return;
+    const stillPresent = rooms.some((r) => r.room.id === selectedRoomId);
+    if (!stillPresent) setSelectedRoomId(null);
   }, [rooms, selectedRoomId]);
 
-  const handleSelectRoom = useCallback((roomId: string) => {
+  const handleSelectRoom = useCallback((roomId: string | null) => {
     setSelectedRoomId(roomId);
     setPickerOpen(false);
   }, []);
+
+  // Display name for dropdown
+  const dropdownLabel = selectedRoomId === null ? 'All Rooms' : (selectedRoom?.room.name ?? 'Select a room');
 
   if (roomsLoading) {
     return (
@@ -80,6 +88,15 @@ export default function StatsScreen() {
     <View className="flex-1 bg-background">
       <ScreenHeader title="Stats" />
 
+      {/* Room dropdown - above tabs since it applies to both */}
+      <View className="px-5 pb-3">
+        <RoomDropdown
+          roomName={dropdownLabel}
+          isAllRooms={selectedRoomId === null}
+          onPress={() => setPickerOpen(true)}
+        />
+      </View>
+
       {/* Tab switcher */}
       <View className="mx-5 mb-3 flex-row rounded-xl bg-surface p-1">
         <TabButton
@@ -94,21 +111,13 @@ export default function StatsScreen() {
         />
       </View>
 
-      {/* Room dropdown (only for leaderboard) */}
-      {activeTab === 'leaderboard' && (
-        <View className="px-5 pb-3">
-          <RoomDropdown
-            roomName={selectedRoom?.room.name ?? 'Select a room'}
-            onPress={() => setPickerOpen(true)}
-          />
-        </View>
-      )}
-
       {/* Tab content */}
       {activeTab === 'leaderboard' ? (
-        selectedRoomId ? (
+        selectedRoomId === null ? (
+          <AllRoomsStats />
+        ) : (
           <RoomStats roomId={selectedRoomId} />
-        ) : null
+        )
       ) : (
         <MyBetsSection roomId={selectedRoomId} />
       )}
@@ -117,6 +126,9 @@ export default function StatsScreen() {
         visible={pickerOpen}
         onClose={() => setPickerOpen(false)}
         onSelectRoom={handleSelectRoom}
+        showAllRoomsOption
+        title="Select room"
+        selectedRoomId={selectedRoomId}
       />
     </View>
   );
@@ -152,7 +164,15 @@ function TabButton({
 // Room dropdown — tappable bar that opens the RoomSelectionSheet
 // ============================================================================
 
-function RoomDropdown({ roomName, onPress }: { roomName: string; onPress: () => void }) {
+function RoomDropdown({
+  roomName,
+  isAllRooms,
+  onPress,
+}: {
+  roomName: string;
+  isAllRooms?: boolean;
+  onPress: () => void;
+}) {
   const { colors } = useTheme();
   return (
     <TouchableOpacity
@@ -162,8 +182,9 @@ function RoomDropdown({ roomName, onPress }: { roomName: string; onPress: () => 
       accessibilityLabel="Pick a room"
       className="flex-row items-center justify-between rounded-2xl border border-border bg-surface px-4 py-3"
     >
-      <View className="min-w-0 flex-1">
-        <Text className="mt-0.5 text-base font-bold text-text-primary" numberOfLines={1}>
+      <View className="min-w-0 flex-1 flex-row items-center gap-2">
+        {isAllRooms && <Globe size={20} color={colors.primary} weight="fill" />}
+        <Text className="text-base font-bold text-text-primary" numberOfLines={1}>
           {roomName}
         </Text>
       </View>
@@ -279,6 +300,119 @@ function RoomStats({ roomId }: { roomId: string }) {
         )}
       </View>
     </ScrollView>
+  );
+}
+
+// ============================================================================
+// All rooms aggregate stats — cross-room leaderboard
+// ============================================================================
+
+function AllRoomsStats() {
+  const { colors } = useTheme();
+  const queryClient = useQueryClient();
+  const { data: event, isLoading: eventLoading } = useAllRoomsEventStats();
+  const { data: players, isLoading: playersLoading } = useAllRoomsPlayerStats();
+
+  const [refreshing, setRefreshing] = useState(false);
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await queryClient.invalidateQueries({ queryKey: ['all-rooms'] });
+    setRefreshing(false);
+  }, [queryClient]);
+
+  const loading = eventLoading || playersLoading;
+
+  if (loading && !event) {
+    return (
+      <View className="px-5 pt-4 gap-3">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <SkeletonStatsCard key={i} />
+        ))}
+      </View>
+    );
+  }
+
+  return (
+    <ScrollView
+      contentContainerClassName="pb-12"
+      refreshControl={
+        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
+      }
+    >
+      <View className="px-5">
+        <SectionHeader>Overview</SectionHeader>
+        <View className="flex-row gap-3">
+          <StatCard label="Total rooms" value={formatChipCount(event?.total_rooms ?? 0)} />
+          <StatCard
+            label="Total bets"
+            value={formatChipCount(event?.total_bets ?? 0)}
+            tone="primary"
+          />
+        </View>
+        <View className="mt-3 flex-row gap-3">
+          <StatCard
+            label="Chips wagered"
+            value={formatChipCount(event?.total_chips_wagered ?? 0)}
+          />
+          <StatCard
+            label="Donations"
+            value={formatChipCount(event?.total_donations ?? 0)}
+            tone="warning"
+          />
+        </View>
+
+        <SectionHeader>Global Leaderboard</SectionHeader>
+        {players && players.length > 0 ? (
+          <View className="overflow-hidden rounded-2xl border border-border bg-surface">
+            {players.map((p, idx) => (
+              <AggregatePlayerRow key={p.user_id} player={p} rank={idx + 1} isLast={idx === players.length - 1} />
+            ))}
+          </View>
+        ) : (
+          <View className="rounded-2xl border border-border bg-surface px-4 py-6">
+            <Text className="text-center text-base text-text-secondary">No data yet</Text>
+          </View>
+        )}
+      </View>
+    </ScrollView>
+  );
+}
+
+// ============================================================================
+// Aggregate player row for cross-room leaderboard
+// ============================================================================
+
+function AggregatePlayerRow({
+  player,
+  rank,
+  isLast,
+}: {
+  player: AggregatePlayerStat;
+  rank: number;
+  isLast: boolean;
+}) {
+  const winRate = useMemo(() => {
+    const total = player.total_wins + player.total_losses;
+    if (total === 0) return null;
+    return Math.round((player.total_wins / total) * 100);
+  }, [player.total_wins, player.total_losses]);
+
+  return (
+    <View className={`flex-row items-center px-4 py-3 ${isLast ? '' : 'border-b border-border/40'}`}>
+      <Text className="w-8 text-base font-bold text-text-muted">{rank}</Text>
+      <Avatar uri={player.avatar_url} fallback={player.display_name ?? '?'} size="sm" />
+      <View className="ml-3 min-w-0 flex-1">
+        <Text className="text-base text-text-primary" numberOfLines={1}>
+          {player.display_name ?? 'Unknown'}
+        </Text>
+        <Text className="mt-0.5 text-xs font-medium text-text-muted">
+          {player.total_wins}W · {player.total_losses}L{winRate != null ? ` · ${winRate}%` : ''} · {player.rooms_count} {player.rooms_count === 1 ? 'room' : 'rooms'}
+        </Text>
+      </View>
+      <Text className={`text-base font-bold ${netBalanceColorClass(player.total_net_balance)}`}>
+        {formatBalance(player.total_net_balance)}
+      </Text>
+    </View>
   );
 }
 

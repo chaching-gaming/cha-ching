@@ -315,10 +315,18 @@ export default function BetDetailScreen() {
 
     const roomId = bet.room_id;
 
+    // Clean up any existing bet-detail channels for this bet to prevent subscription errors
+    const baseTopic = `bet-detail:${id}`;
+    for (const ch of [...supabase.getChannels()]) {
+      if (ch.topic.startsWith(`realtime:${baseTopic}`)) {
+        void supabase.removeChannel(ch);
+      }
+    }
+
     // Unique token prevents reusing an already-subscribed channel on re-mount
     const token = `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
     const channel = supabase
-      .channel(`bet-detail:${id}:${token}`)
+      .channel(`${baseTopic}:${token}`)
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'bets', filter: `id=eq.${id}` },

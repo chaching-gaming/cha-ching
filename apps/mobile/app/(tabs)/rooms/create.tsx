@@ -10,8 +10,13 @@ import { useCreateRoom } from '@/hooks/use-rooms';
 import { useForm } from '@/hooks/use-form';
 import { formatSessionDateShort, formatTodayCalendarDate } from '@/lib/date-format';
 
+const ROOM_NAME_MAX_LENGTH = 25;
+
 const createRoomSchema = z.object({
-  name: z.string().min(1, 'Room name is required'),
+  name: z
+    .string()
+    .min(1, 'Room name is required')
+    .max(ROOM_NAME_MAX_LENGTH, `Room name must be ${ROOM_NAME_MAX_LENGTH} characters or less`),
   startingChips: z
     .string()
     .min(1, 'Starting chips is required')
@@ -89,8 +94,14 @@ export default function CreateRoomScreen() {
             {(field) => (
               <field.TextField
                 label="Room name *"
+                labelRight={
+                  <Text className="text-sm text-text-muted">
+                    {field.state.value.length}/{ROOM_NAME_MAX_LENGTH}
+                  </Text>
+                }
                 placeholder="e.g. Sunday Golf"
                 autoCorrect={false}
+                maxLength={ROOM_NAME_MAX_LENGTH}
               />
             )}
           </form.AppField>

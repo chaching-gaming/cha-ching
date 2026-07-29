@@ -1,4 +1,4 @@
-import { useInfiniteQuery } from '@tanstack/react-query';
+import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/providers/auth';
@@ -30,6 +30,15 @@ export type MyBetsStats = {
 export const MY_BETS_PAGE_SIZE = 20;
 
 export const myBetsKey = (roomId: string | null) => ['my-bets', roomId ?? 'all'] as const;
+export const myBetsStatsKey = (roomId: string | null) => ['my-bets-stats', roomId ?? 'all'] as const;
+
+// Aggregate stats from backend RPC (accurate across all bets, not just loaded pages)
+export type MyBetsAggregateStats = {
+  total_bets: number;
+  wins: number;
+  losses: number;
+  net_chips: number;
+};
 
 export function useMyBets(roomId?: string | null) {
   const { session } = useAuth();
@@ -40,11 +49,19 @@ export function useMyBets(roomId?: string | null) {
     queryFn: async ({ pageParam }): Promise<MyBet[]> => {
       // Note: 'get_my_bets' RPC defined in migration 20260520000001_my_bets_rpc.sql
       // Types will be generated after migration is applied
-      const { data, error } = await supabase.rpc('get_my_bets' as 'get_room_event_stats', {
-        p_room_id: roomId ?? null,
+      // When roomId is null/undefined, omit p_room_id to let PostgreSQL use DEFAULT NULL
+      const params: Record<string, unknown> = {
         p_limit: MY_BETS_PAGE_SIZE,
         p_offset: pageParam,
-      } as unknown as { p_room_id: string });
+      };
+      // Only include p_room_id when we have a specific room
+      if (roomId) {
+        params.p_room_id = roomId;
+      }
+      const { data, error } = await supabase.rpc(
+        'get_my_bets' as 'get_room_event_stats',
+        params as unknown as { p_room_id: string },
+      );
       if (error) throw error;
       return (data as unknown as MyBet[] | null) ?? [];
     },
@@ -52,6 +69,33 @@ export function useMyBets(roomId?: string | null) {
       lastPage.length === MY_BETS_PAGE_SIZE
         ? allPages.length * MY_BETS_PAGE_SIZE
         : undefined,
+    enabled: !!session?.user.id,
+  });
+}
+
+/**
+ * Fetch aggregate stats for My Bets from backend RPC.
+ * This is accurate across ALL bets, not just loaded pages.
+ */
+export function useMyBetsAggregateStats(roomId?: string | null) {
+  const { session } = useAuth();
+
+  return useQuery({
+    queryKey: myBetsStatsKey(roomId ?? null),
+    queryFn: async (): Promise<MyBetsAggregateStats | null> => {
+      // Build params - omit p_room_id when null to use PostgreSQL DEFAULT
+      const params: Record<string, unknown> = {};
+      if (roomId) {
+        params.p_room_id = roomId;
+      }
+      const { data, error } = await supabase.rpc(
+        'get_my_bets_aggregate_stats' as 'get_room_event_stats',
+        params as unknown as { p_room_id: string },
+      );
+      if (error) throw error;
+      const row = Array.isArray(data) ? (data[0] as MyBetsAggregateStats | undefined) : null;
+      return row ?? null;
+    },
     enabled: !!session?.user.id,
   });
 }

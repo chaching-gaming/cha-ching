@@ -55,9 +55,12 @@ export default function TabLayout() {
   }, [queryClient, markAsRead]);
 
   const handleSelectRoom = useCallback(
-    (roomId: string) => {
+    (roomId: string | null) => {
       setSheetOpen(false);
-      router.push(`/(tabs)/rooms/create-bet?id=${roomId}`);
+      // Ignore null selection (All Rooms doesn't apply for creating bets)
+      if (roomId) {
+        router.push(`/(tabs)/rooms/create-bet?id=${roomId}`);
+      }
     },
     [router],
   );

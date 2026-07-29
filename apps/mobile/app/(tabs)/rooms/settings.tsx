@@ -15,6 +15,7 @@ import {
   Crown,
   Gavel,
   Handshake,
+  Info,
   Plus,
   Receipt,
   SignOut,
@@ -72,10 +73,10 @@ function SettingsRow({
     rightIcon ?? (onPress ? <CaretRight size={18} color={colors.textMuted} weight="bold" /> : null);
   const content = (
     <View className="flex-row items-center justify-between border-b border-border px-4 py-4">
-      <Text className="text-base font-semibold text-text-primary">{label}</Text>
-      <View className="flex-row items-center gap-2">
+      <Text className="shrink-0 text-base font-semibold text-text-primary">{label}</Text>
+      <View className="ml-3 min-w-0 shrink flex-row items-center gap-2">
         <Text
-          className={`text-base font-semibold ${valueClassName ?? 'text-text-secondary'}`}
+          className={`min-w-0 shrink text-base font-semibold ${valueClassName ?? 'text-text-secondary'}`}
           numberOfLines={1}
         >
           {value}
@@ -332,6 +333,20 @@ export default function RoomSettingsScreen() {
       <ScreenHeader title="Room Settings" showBack showHome titleClassName="text-xl font-bold text-text-primary" />
 
       <ScrollView contentContainerClassName="pb-12">
+        {/* Closed room retention notice */}
+        {!isActive && (
+          <View className="mx-5 mt-4 flex-row items-start gap-3 rounded-xl bg-surface-alt px-4 py-3">
+            <Info size={20} color={colors.textMuted} weight="fill" />
+            <View className="flex-1">
+              <Text className="text-sm font-semibold text-text-primary">Session ended</Text>
+              <Text className="mt-0.5 text-xs leading-4 text-text-muted">
+                Closed rooms are kept up to a limit of 10 per admin. Oldest rooms are automatically
+                deleted when this limit is exceeded.
+              </Text>
+            </View>
+          </View>
+        )}
+
         {/* Room settings */}
         <View className="px-5">
           <SectionLabel>Room settings</SectionLabel>

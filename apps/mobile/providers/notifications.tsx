@@ -304,8 +304,19 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
   useEffect(() => {
     if (!session?.user.id) return;
 
+    // Clean up any existing notification channels to prevent "cannot add callbacks after subscribe" error
+    // This can happen on rapid navigation or when app resumes from background
+    const baseTopic = `user-notifications:${session.user.id}`;
+    for (const ch of [...supabase.getChannels()]) {
+      if (ch.topic.startsWith(`realtime:${baseTopic}`)) {
+        void supabase.removeChannel(ch);
+      }
+    }
+
+    // Use unique token to ensure fresh channel on each mount
+    const token = `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
     const channel = supabase
-      .channel(`user-notifications:${session.user.id}`)
+      .channel(`${baseTopic}:${token}`)
       .on(
         'postgres_changes',
         {

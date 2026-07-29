@@ -41,6 +41,28 @@ export type RoomEventStats = {
 
 export const roomPlayerStatsKey = (roomId: string) => ['rooms', roomId, 'player-stats'] as const;
 export const roomEventStatsKey = (roomId: string) => ['rooms', roomId, 'event-stats'] as const;
+export const allRoomsPlayerStatsKey = () => ['all-rooms', 'player-stats'] as const;
+export const allRoomsEventStatsKey = () => ['all-rooms', 'event-stats'] as const;
+
+// Aggregate player stats across all rooms
+export type AggregatePlayerStat = {
+  user_id: string;
+  display_name: string | null;
+  avatar_url: string | null;
+  total_net_balance: number;
+  total_wins: number;
+  total_losses: number;
+  rooms_count: number;
+};
+
+// Aggregate event stats across all rooms
+export type AggregateEventStats = {
+  total_rooms: number;
+  total_bets: number;
+  settled_bets: number;
+  total_chips_wagered: number;
+  total_donations: number;
+};
 
 export function useRoomPlayerStats(roomId: string | null) {
   const { session } = useAuth();
@@ -77,5 +99,37 @@ export function useRoomEventStats(roomId: string | null) {
       };
     },
     enabled: !!session?.user.id && !!roomId,
+  });
+}
+
+// Aggregate stats across all rooms the user has been a member of
+export function useAllRoomsPlayerStats() {
+  const { session } = useAuth();
+
+  return useQuery({
+    queryKey: allRoomsPlayerStatsKey(),
+    queryFn: async (): Promise<AggregatePlayerStat[]> => {
+      // Type assertion needed until migration is applied and types are regenerated
+      const { data, error } = await (supabase.rpc as Function)('get_all_rooms_player_stats');
+      if (error) throw error;
+      return (data as AggregatePlayerStat[] | null) ?? [];
+    },
+    enabled: !!session?.user.id,
+  });
+}
+
+export function useAllRoomsEventStats() {
+  const { session } = useAuth();
+
+  return useQuery({
+    queryKey: allRoomsEventStatsKey(),
+    queryFn: async (): Promise<AggregateEventStats | null> => {
+      // Type assertion needed until migration is applied and types are regenerated
+      const { data, error } = await (supabase.rpc as Function)('get_all_rooms_event_stats');
+      if (error) throw error;
+      const row = Array.isArray(data) ? (data[0] as AggregateEventStats | undefined) : null;
+      return row ?? null;
+    },
+    enabled: !!session?.user.id,
   });
 }
