@@ -4,7 +4,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
   name: 'Cha-Ching',
   slug: 'mobile',
-  version: '1.0.0',
+  version: '1.0.1',
   orientation: 'portrait',
   icon: './assets/images/icon.png',
   scheme: 'chaching',
@@ -61,8 +61,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     [
       'expo-image-picker',
       {
-        photosPermission:
-          'Allow Cha-Ching to access your photos to set a profile picture.',
+        photosPermission: 'Allow Cha-Ching to access your photos to set a profile picture.',
       },
     ],
     [
@@ -75,7 +74,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     [
       '@sentry/react-native/expo',
       {
-        organization: 'cha-ching',
+        organization: 'cha-ching-gaming-llc',
         project: 'cha-ching',
       },
     ],
@@ -99,5 +98,5 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       projectId: 'dc228f01-efda-4fc0-a714-6d455f6461e6',
     },
   },
-  owner: 'navatejatechnologies',
+  owner: 'cha-ching-gaming-llc',
 });
