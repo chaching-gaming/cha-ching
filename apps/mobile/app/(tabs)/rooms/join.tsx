@@ -12,6 +12,7 @@ import { ScreenHeader } from '@/components/ui/screen-header';
 import { supabase } from '@/lib/supabase';
 import { useJoinRoom, getRpcErrorMessage } from '@/hooks/use-rooms';
 import { WarningCircle } from 'phosphor-react-native';
+import { SplashCelebration } from '@/components/activity/splash-celebration';
 
 const CODE_LENGTH = 6;
 
@@ -137,6 +138,8 @@ export default function JoinRoomScreen() {
   const [roomPreview, setRoomPreview] = useState<RoomPreview>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
   const [previewNotFound, setPreviewNotFound] = useState(false);
+  const [showSplash, setShowSplash] = useState(false);
+  const [joinedRoomId, setJoinedRoomId] = useState<string | null>(null);
 
   const fullCode = code.join('');
   const isComplete = fullCode.length === CODE_LENGTH && code.every((c) => c !== '');
@@ -240,9 +243,18 @@ export default function JoinRoomScreen() {
 
     try {
       const room = await joinRoom.mutateAsync({ p_invite_code: codeToUse });
-      router.replace(`./${room.id}`);
+      // Show splash celebration before navigating
+      setJoinedRoomId(room.id);
+      setShowSplash(true);
     } catch (err) {
       setError(getRpcErrorMessage(err, 'Failed to join room'));
+    }
+  }
+
+  function handleSplashDismiss() {
+    setShowSplash(false);
+    if (joinedRoomId) {
+      router.replace(`./${joinedRoomId}`);
     }
   }
 
@@ -425,6 +437,11 @@ export default function JoinRoomScreen() {
           </>
         )}
       </KeyboardAwareScrollView>
+      <SplashCelebration
+        visible={showSplash}
+        action="round_started"
+        onDone={handleSplashDismiss}
+      />
     </View>
   );
 }

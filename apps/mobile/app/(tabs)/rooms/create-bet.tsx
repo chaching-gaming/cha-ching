@@ -46,6 +46,7 @@ import {
   templateRequiresPlayer,
   type ExpiryUnit,
 } from '@/lib/bet-create-ui';
+import { SplashCelebration } from '@/components/activity/splash-celebration';
 
 const BINARY_OPTIONS = ['Yes', 'No'] as const;
 
@@ -134,6 +135,7 @@ export default function CreateBetScreen() {
   const [step, setStep] = useState(1);
   const [keyboardVisible, setKeyboardVisible] = useState(false);
   const [reviewOpen, setReviewOpen] = useState(false);
+  const [showSplash, setShowSplash] = useState(false);
 
   // Track keyboard visibility for iOS sticky footer
   useEffect(() => {
@@ -210,8 +212,8 @@ export default function CreateBetScreen() {
         });
         setReviewOpen(false);
         setReviewPayload(null);
-        // Always navigate to room detail page after creating bet
-        router.replace(`/(tabs)/rooms/${roomId}`);
+        // Show splash celebration before navigating
+        setShowSplash(true);
       } catch (err) {
         formApi.setErrorMap({
           onSubmit: { fields: {}, form: getRpcErrorMessage(err) },
@@ -337,6 +339,11 @@ export default function CreateBetScreen() {
     setReviewPayload(null);
     form.setErrorMap({});
   }, [form]);
+
+  const handleSplashDismiss = useCallback(() => {
+    setShowSplash(false);
+    router.replace(`/(tabs)/rooms/${roomId}`);
+  }, [router, roomId]);
 
   const reviewTemplate = useMemo(
     () => templates?.find((t) => t.id === reviewPayload?.templateId) ?? null,
@@ -1232,6 +1239,11 @@ export default function CreateBetScreen() {
           </GestureHandlerRootView>
         </Modal>
       </form.AppForm>
+      <SplashCelebration
+        visible={showSplash}
+        action="wager_placed"
+        onDone={handleSplashDismiss}
+      />
     </View>
   );
 }

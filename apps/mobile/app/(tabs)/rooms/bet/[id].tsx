@@ -33,7 +33,7 @@ import { LockedInCelebration } from '@/components/activity/locked-in-celebration
 import { ResolveDisputeSheet } from '@/components/activity/resolve-dispute-sheet';
 import { SubmitOutcomeSheet } from '@/components/activity/submit-outcome-sheet';
 import { VoidBetSheet } from '@/components/activity/void-bet-sheet';
-import { WinnerCelebration } from '@/components/activity/winner-celebration';
+import { SplashCelebration } from '@/components/activity/splash-celebration';
 import { useFeedback } from '@/providers/feedback';
 import { useServerTimeTick } from '@/providers/time';
 import {
@@ -1086,10 +1086,10 @@ export default function BetDetailScreen() {
       />
 
       {/* Winner celebration - shows on live SETTLED transition */}
-      <WinnerCelebration
-        bet={showWinCelebration ? bet : null}
-        currentUserId={currentUserId}
-        onDismiss={() => setShowWinCelebration(false)}
+      <SplashCelebration
+        visible={showWinCelebration}
+        action="you_won"
+        onDone={() => setShowWinCelebration(false)}
       />
     </View>
   );

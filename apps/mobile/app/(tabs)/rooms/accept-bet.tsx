@@ -8,6 +8,7 @@ import { useTheme } from '@/providers/theme';
 import { Avatar } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { ScreenHeader } from '@/components/ui/screen-header';
+import { SplashCelebration } from '@/components/activity/splash-celebration';
 import { useBetDetail } from '@/hooks/use-activity-feed';
 import { useJoinBet } from '@/hooks/use-join-bet';
 import { useQuestionTemplates } from '@/hooks/use-question-templates';
@@ -51,6 +52,7 @@ export default function AcceptBetScreen() {
   const subjectAllowedOption = bet?.subject_positive_option ?? null;
 
   const [selected, setSelected] = useState<string | null>(null);
+  const [showSplash, setShowSplash] = useState(false);
 
   const subjectName = bet?.subject_profile?.display_name ?? 'the subject';
   const offererName = bet?.offered_by_profile?.display_name ?? 'Someone';
@@ -79,7 +81,7 @@ export default function AcceptBetScreen() {
                 p_pick: selected,
                 roomId: bet.room_id,
               });
-              router.back();
+              setShowSplash(true);
             } catch (err) {
               Alert.alert('Could not lock in bet', getRpcErrorMessage(err, 'Please try again.'));
             }
@@ -87,7 +89,12 @@ export default function AcceptBetScreen() {
         },
       ],
     );
-  }, [joinBet, bet, router, selected]);
+  }, [joinBet, bet, selected]);
+
+  const handleSplashDismiss = useCallback(() => {
+    setShowSplash(false);
+    router.back();
+  }, [router]);
 
   if (isLoading) {
     return (
@@ -246,6 +253,12 @@ export default function AcceptBetScreen() {
           {`Lock In \u00b7 ${bet.stake.toLocaleString('en-US')} chips`}
         </Button>
       </View>
+
+      <SplashCelebration
+        visible={showSplash}
+        action="bet_accepted"
+        onDone={handleSplashDismiss}
+      />
     </View>
   );
 }

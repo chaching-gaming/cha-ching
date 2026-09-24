@@ -3,6 +3,8 @@ import '../global.css';
 
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useFonts } from 'expo-font';
+import { LilitaOne_400Regular } from '@expo-google-fonts/lilita-one';
+import { Fredoka_600SemiBold } from '@expo-google-fonts/fredoka';
 import { Stack, useRouter, useSegments, type Href } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
@@ -111,6 +113,8 @@ export default Sentry.wrap(function RootLayout() {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
     ...FontAwesome.font,
+    LilitaOne_400Regular,
+    Fredoka_600SemiBold,
   });
 
   if (!loaded && !fontError) {

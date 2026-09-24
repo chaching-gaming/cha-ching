@@ -15,6 +15,8 @@
   "dependencies": {
     "@cha-ching/types": "workspace:*",
     "@cha-ching/utils": "workspace:*",
+    "@expo-google-fonts/fredoka": "^0.4.1",
+    "@expo-google-fonts/lilita-one": "^0.4.1",
     "@expo/vector-icons": "^15.0.3",
     "@gorhom/bottom-sheet": "^5.2.9",
     "@react-native-async-storage/async-storage": "^2.1.0",

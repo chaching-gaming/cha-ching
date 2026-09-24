@@ -16,7 +16,7 @@ import { Gear, HandHeart, Plus, Warning } from 'phosphor-react-native';
 import { useTheme } from '@/providers/theme';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { ActivityFeedItem } from '@/components/activity/activity-feed-item';
-import { WinnerCelebration } from '@/components/activity/winner-celebration';
+import { SplashCelebration } from '@/components/activity/splash-celebration';
 import {
   BetFeedStatusFilter,
   betMatchesFilter,
@@ -418,10 +418,10 @@ export default function RoomDetailScreen() {
       ) : null}
 
       {/* Winner celebration on live bet settlement */}
-      <WinnerCelebration
-        bet={celebratingBet}
-        currentUserId={currentUserId}
-        onDismiss={dismissCelebration}
+      <SplashCelebration
+        visible={celebratingBet !== null}
+        action="you_won"
+        onDone={dismissCelebration}
       />
 
       {/* Chip requests bottom sheet */}
