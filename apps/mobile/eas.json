@@ -6,7 +6,7 @@
   "build": {
     "base": {
       "env": {
-        "GOOGLE_IOS_URL_SCHEME": "com.googleusercontent.apps.1070930457721-pnuevds8ka750f5h8m1h7mtsrbr8e2s9",
+        "GOOGLE_IOS_URL_SCHEME": "com.googleusercontent.apps.428135878479-o5qbv1adoccg0tt33hng0ksj6h61usph",
         "EXPO_PUBLIC_PROJECT_ID": "dc228f01-efda-4fc0-a714-6d455f6461e6"
       }
     },
