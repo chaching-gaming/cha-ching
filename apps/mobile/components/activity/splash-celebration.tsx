@@ -77,7 +77,7 @@ const T = {
   HEAD_NUDGE_END: 850, // 30.36%
   SUB_START: 850, // 30.36%
   SUB_END: 1100, // 39.29%
-  HOLD_END: 2000, // Hand off at 2.0s
+  HOLD_END: 2500, // Hand off at 2.5s - extra time to read the message
 };
 
 // Easing curves from CSS

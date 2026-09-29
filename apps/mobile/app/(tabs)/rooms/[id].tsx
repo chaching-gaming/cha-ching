@@ -171,6 +171,12 @@ export default function RoomDetailScreen() {
     isFetchingNextPage,
   );
 
+  // Join bet celebration
+  const [showJoinSplash, setShowJoinSplash] = useState(false);
+  const handleJoinSuccess = useCallback(() => {
+    setShowJoinSplash(true);
+  }, []);
+
   const myBalance = balance ?? 0;
 
   // Parse room name into display name and date
@@ -317,6 +323,7 @@ export default function RoomDetailScreen() {
             roomId={id}
             currentUserBalance={myBalance}
             membershipStatusMap={membershipStatusMap}
+            onJoinSuccess={handleJoinSuccess}
           />
         )}
         contentContainerClassName="px-5 pb-24"
@@ -422,6 +429,13 @@ export default function RoomDetailScreen() {
         visible={celebratingBet !== null}
         action="you_won"
         onDone={dismissCelebration}
+      />
+
+      {/* Join bet celebration */}
+      <SplashCelebration
+        visible={showJoinSplash}
+        action="bet_accepted"
+        onDone={() => setShowJoinSplash(false)}
       />
 
       {/* Chip requests bottom sheet */}

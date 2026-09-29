@@ -829,6 +829,8 @@ interface ActivityFeedItemProps {
   currentUserBalance?: number;
   /** Membership status lookup for showing left/removed indicators */
   membershipStatusMap?: Map<string, RoomMemberStatus>;
+  /** Callback fired after successfully joining a bet */
+  onJoinSuccess?: () => void;
 }
 
 export function ActivityFeedItem({
@@ -839,6 +841,7 @@ export function ActivityFeedItem({
   roomId,
   currentUserBalance,
   membershipStatusMap,
+  onJoinSuccess,
 }: ActivityFeedItemProps) {
   if (item.type === 'bet') {
     return (
@@ -849,6 +852,7 @@ export function ActivityFeedItem({
         roomActive={roomActive}
         roomId={roomId}
         membershipStatusMap={membershipStatusMap}
+        onJoinSuccess={onJoinSuccess}
       />
     );
   }
@@ -872,6 +876,7 @@ function BetActivityFeedItem({
   roomActive,
   roomId,
   membershipStatusMap,
+  onJoinSuccess: onJoinSuccessExternal,
 }: {
   item: Extract<ActivityItem, { type: 'bet' }>;
   currentUserId?: string | null;
@@ -879,6 +884,7 @@ function BetActivityFeedItem({
   roomActive?: boolean;
   roomId?: string;
   membershipStatusMap?: Map<string, RoomMemberStatus>;
+  onJoinSuccess?: () => void;
 }) {
   const router = useRouter();
   const serverNow = useServerTimeTick();
@@ -904,7 +910,8 @@ function BetActivityFeedItem({
 
   const handleJoinSuccess = useCallback(() => {
     setSelectedPick(null);
-  }, []);
+    onJoinSuccessExternal?.();
+  }, [onJoinSuccessExternal]);
 
   // When user can join, we use a View wrapper to prevent accidental navigation
   // The card content has a separate tap area for navigation (header)

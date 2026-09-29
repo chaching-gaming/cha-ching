@@ -154,6 +154,7 @@ export default function BetDetailScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [showWinCelebration, setShowWinCelebration] = useState(false);
   const [showLockedInCelebration, setShowLockedInCelebration] = useState(false);
+  const [showJoinSplash, setShowJoinSplash] = useState(false);
   const { trigger } = useFeedback();
 
   const dbStatus = bet?.status ?? '';
@@ -521,6 +522,7 @@ export default function BetDetailScreen() {
                   p_pick: option,
                   roomId: bet.room_id!,
                 });
+                setShowJoinSplash(true);
               } catch (err) {
                 Alert.alert('Could not join bet', getRpcErrorMessage(err, 'Please try again.'));
               }
@@ -1090,6 +1092,13 @@ export default function BetDetailScreen() {
         visible={showWinCelebration}
         action="you_won"
         onDone={() => setShowWinCelebration(false)}
+      />
+
+      {/* Join bet celebration - shows when user joins a bet from this screen */}
+      <SplashCelebration
+        visible={showJoinSplash}
+        action="bet_accepted"
+        onDone={() => setShowJoinSplash(false)}
       />
     </View>
   );
