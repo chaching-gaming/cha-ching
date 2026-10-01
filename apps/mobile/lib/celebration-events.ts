@@ -4,9 +4,11 @@
  */
 
 export type CelebrationEvent = {
-  type: 'win' | 'loss';
+  type: 'win' | 'loss' | 'pending_result';
   betId: string;
   roomId?: string;
+  /** The outcome from the notification (used for duplicate checking) */
+  outcome?: string;
 };
 
 type CelebrationListener = (event: CelebrationEvent) => void;

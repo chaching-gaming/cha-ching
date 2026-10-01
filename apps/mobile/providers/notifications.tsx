@@ -56,6 +56,10 @@ type NotificationData = {
   room_id?: string;
   bet_id?: string;
   chip_request_id?: string;
+  /** For bet_pending_dispute notifications */
+  preliminary_outcome?: string;
+  /** For bet_won/bet_lost notifications - the final outcome */
+  outcome?: string;
 };
 
 type NotificationContextType = {
@@ -277,13 +281,22 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       // Refresh badge count when notification arrives
       void refreshUnreadCount();
 
-      // Emit celebration events for win/loss notifications
+      // Emit celebration events for win/loss/pending notifications
       const data = notification.request.content.data as NotificationData;
       if (data?.bet_id) {
         if (data.type === 'bet_won') {
-          emitCelebration({ type: 'win', betId: data.bet_id, roomId: data.room_id });
+          // Include outcome from notification for correct duplicate checking after dispute resolution
+          emitCelebration({ type: 'win', betId: data.bet_id, roomId: data.room_id, outcome: data.outcome });
         } else if (data.type === 'bet_lost') {
-          emitCelebration({ type: 'loss', betId: data.bet_id, roomId: data.room_id });
+          emitCelebration({ type: 'loss', betId: data.bet_id, roomId: data.room_id, outcome: data.outcome });
+        } else if (data.type === 'bet_pending_dispute' && data.preliminary_outcome) {
+          // Outcome submitted - page will check if user won based on preliminary_outcome
+          emitCelebration({
+            type: 'pending_result',
+            betId: data.bet_id,
+            roomId: data.room_id,
+            outcome: data.preliminary_outcome,
+          });
         }
       }
     });

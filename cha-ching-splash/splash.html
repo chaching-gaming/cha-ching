@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cha Ching splash — reference</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lilita+One&family=Fredoka:wght@500;600&display=swap">
+<link rel="stylesheet" href="splash.css">
+<style>
+  body{margin:0;min-height:100vh;display:flex;flex-direction:column;align-items:center;gap:20px;padding:24px;box-sizing:border-box;background:#0F1712;font-family:'Fredoka',sans-serif;color:#EAF3EC}
+  .controls{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+  .controls select,.controls button{font:inherit;font-size:16px;padding:10px 16px;border-radius:10px;border:1px solid #3a5a44;background:#17231b;color:#EAF3EC;min-height:44px}
+  .controls button{background:#A6F852;color:#0A2E17;border:0;font-weight:600;cursor:pointer}
+  /* The splash itself: 390x844 reference frame */
+  .splash{position:relative;width:390px;height:844px;overflow:hidden;background:#1FAE45;font-family:'Fredoka','Trebuchet MS',sans-serif;color:#fff;border-radius:24px}
+  .splash .bg{position:absolute;inset:0;background:radial-gradient(circle at 50% 45%,#6EDC4C 0%,#34BE47 40%,#1A9F40 100%)}
+  .splash .word{position:absolute;left:-40px;right:-40px;top:222px;text-align:center;font-family:'Lilita One','Arial Black',sans-serif;font-size:150px;line-height:.86;letter-spacing:2px;color:rgba(6,70,32,.14);white-space:pre-line;transform:rotate(-8deg)}
+  .splash .dim{position:absolute;inset:0;background:radial-gradient(circle at 50% 45%,#0E4F2B 0%,#052A17 72%)}
+  .splash .shadow{position:absolute;left:85px;top:526px;width:220px;height:34px;border-radius:50%;background:radial-gradient(ellipse at center,rgba(3,45,20,.6) 0%,rgba(3,45,20,0) 70%)}
+  .splash .ring{position:absolute;left:45px;top:230px;width:300px;height:300px;box-sizing:border-box;border-radius:50%;border:4px solid rgba(255,255,255,.8)}
+  .splash .ball{position:absolute;left:45px;top:230px;width:300px;height:300px}
+  .splash .ball img{position:absolute;inset:0;width:300px;height:300px;filter:drop-shadow(0 14px 20px rgba(3,40,18,.35))}
+  .splash .copy{position:absolute;left:20px;right:20px;top:584px;display:flex;flex-direction:column;align-items:center;gap:16px}
+  .splash h1{margin:0;font-family:'Lilita One','Arial Black',sans-serif;font-weight:400;font-size:60px;line-height:.94;letter-spacing:1px;text-align:center;white-space:pre-line;color:#fff;-webkit-text-stroke:7px #0A4F24;paint-order:stroke fill;text-shadow:0 4px 0 #073D1B}
+  .splash p{margin:0;padding:10px 20px;border-radius:999px;background:rgba(4,46,24,.72);font-size:18px;font-weight:600;line-height:1.2;text-align:center}
+  /* In the app the splash plays once; this reference page replays on demand */
+  .splash .cc-a{animation-iteration-count:1}
+</style>
+</head>
+<body>
+<div class="controls">
+  <label for="action">Action</label>
+  <select id="action">
+    <option>Round started</option>
+    <option selected>Wager placed</option>
+    <option>Bet accepted</option>
+    <option>Birdie</option>
+    <option>You won</option>
+    <option>Paid out</option>
+  </select>
+  <button type="button" id="replay">Replay</button>
+</div>
+
+<div class="splash" id="splash">
+  <div class="bg"></div>
+  <div class="cc-a cc-word word">CHA
+CHING</div>
+  <div class="cc-a cc-dim dim"></div>
+  <div class="cc-a cc-shadow shadow"></div>
+  <div class="cc-a cc-ring ring"></div>
+  <div class="cc-a cc-ball ball"><img src="assets/chaching-ball.webp" alt="Cha Ching golf ball logo"></div>
+  <div class="copy">
+    <h1 class="cc-a cc-head" id="headline">WAGER
+PLACED!</h1>
+    <p class="cc-a cc-sub" id="sub">You're locked in. Game on.</p>
+  </div>
+</div>
+
+<script>
+  const ACTIONS = {
+    'Wager placed': ['WAGER\nPLACED!', "You're locked in. Game on."],
+    'Bet accepted': ['BET\nACCEPTED!', 'Your opponent is in.'],
+    'You won': ['YOU\nWON!', 'Winnings are on the way.'],
+    'Birdie': ['BIRDIE!', 'That one pays.'],
+    'Paid out': ['PAID\nOUT!', 'Winnings sent to your wallet.'],
+    'Round started': ['TEE IT\nUP!', "Round's live. Bets are on."]
+  };
+  const splash = document.getElementById('splash');
+  function play() {
+    const [h, s] = ACTIONS[document.getElementById('action').value];
+    document.getElementById('headline').textContent = h;
+    document.getElementById('sub').textContent = s;
+    // restart every CSS animation
+    splash.querySelectorAll('.cc-a').forEach(el => { el.style.animation = 'none'; void el.offsetWidth; el.style.animation = ''; });
+  }
+  document.getElementById('replay').addEventListener('click', play);
+  document.getElementById('action').addEventListener('change', play);
+</script>
+</body>
+</html>
