@@ -11,6 +11,7 @@ import { useToast } from './toast';
 import { env } from '@/lib/env';
 import { supabase } from '@/lib/supabase';
 import { notificationsKey } from '@/hooks/use-notifications-feed';
+import { emitCelebration } from '@/lib/celebration-events';
 
 // Storage keys matching preferences provider
 const STORAGE_KEY_SOUND = 'pref.sound';
@@ -272,9 +273,19 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     void refreshUnreadCount();
 
     // Handle notification received while app is foregrounded
-    notificationListener.current = Notifications.addNotificationReceivedListener(() => {
+    notificationListener.current = Notifications.addNotificationReceivedListener((notification) => {
       // Refresh badge count when notification arrives
       void refreshUnreadCount();
+
+      // Emit celebration events for win/loss notifications
+      const data = notification.request.content.data as NotificationData;
+      if (data?.bet_id) {
+        if (data.type === 'bet_won') {
+          emitCelebration({ type: 'win', betId: data.bet_id, roomId: data.room_id });
+        } else if (data.type === 'bet_lost') {
+          emitCelebration({ type: 'loss', betId: data.bet_id, roomId: data.room_id });
+        }
+      }
     });
 
     // Handle notification tap

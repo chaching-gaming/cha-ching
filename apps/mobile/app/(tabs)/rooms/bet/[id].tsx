@@ -67,7 +67,7 @@ import {
 } from '@/lib/effective-bet-status';
 import { useRaiseDispute } from '@/hooks/use-raise-dispute';
 import { useProcessDisputeWindow } from '@/hooks/use-process-settlement-windows';
-import { markBetCelebrated, hasBetBeenCelebrated } from '@/hooks/use-winner-celebration';
+import { useBetCelebration, markBetCelebrated, hasBetBeenCelebrated } from '@/hooks/use-winner-celebration';
 import { supabase } from '@/lib/supabase';
 
 function getBetStatusPill(status: string | null | undefined): {
@@ -151,7 +151,6 @@ export default function BetDetailScreen() {
   const [disputeSheetOpen, setDisputeSheetOpen] = useState(false);
   const [voidSheetOpen, setVoidSheetOpen] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
-  const [showWinCelebration, setShowWinCelebration] = useState(false);
   const [showLockedInCelebration, setShowLockedInCelebration] = useState(false);
   const [showJoinSplash, setShowJoinSplash] = useState(false);
   const { trigger } = useFeedback();
@@ -159,7 +158,10 @@ export default function BetDetailScreen() {
   const dbStatus = bet?.status ?? '';
   const prevStatusRef = useRef<string | null>(null);
 
-  // Detect status transitions and trigger celebrations
+  // Win/loss celebration triggered by notifications
+  const { showWinCelebration, dismissWinCelebration } = useBetCelebration(bet, currentUserId);
+
+  // Detect OPEN → MATCHED transition for "locked in" celebration
   useEffect(() => {
     if (!bet || isLoading) return;
 
@@ -176,37 +178,6 @@ export default function BetDetailScreen() {
     if (prevStatus === 'OPEN' && dbStatus === 'MATCHED' && userParticipated) {
       setShowLockedInCelebration(true);
       trigger('bet_matched');
-    }
-
-    // → PENDING_DISPUTE or SETTLED: Win/loss celebration
-    // With first-submission flow, celebration triggers on PENDING_DISPUTE (using preliminary_outcome)
-    // Also triggers on SETTLED for edge cases (attestor resolution after DISPUTED)
-    const isCelebrationWorthy =
-      (dbStatus === 'PENDING_DISPUTE' && prevStatus !== 'PENDING_DISPUTE') ||
-      (dbStatus === 'SETTLED' && prevStatus !== 'SETTLED');
-
-    // Use preliminary_outcome for PENDING_DISPUTE, outcome for SETTLED
-    const effectiveOutcome = bet.outcome ?? bet.preliminary_outcome ?? '';
-
-    if (isCelebrationWorthy && !hasBetBeenCelebrated(bet.id, effectiveOutcome)) {
-      const userWon =
-        currentUserId &&
-        effectiveOutcome &&
-        (bet.stakes ?? []).some(
-          (s) =>
-            s.user_id === currentUserId &&
-            s.pick.trim().toLowerCase() === effectiveOutcome.trim().toLowerCase(),
-        );
-
-      // Mark as celebrated globally with outcome to allow re-celebration if outcome changes after dispute
-      markBetCelebrated(bet.id, effectiveOutcome);
-
-      if (userWon) {
-        setShowWinCelebration(true);
-        trigger('bet_won');
-      } else if (userParticipated) {
-        trigger('bet_lost');
-      }
     }
   }, [bet, dbStatus, isLoading, currentUserId, trigger]);
 
@@ -1087,11 +1058,11 @@ export default function BetDetailScreen() {
         onDone={() => setShowLockedInCelebration(false)}
       />
 
-      {/* Winner celebration - shows on live SETTLED transition */}
+      {/* Winner celebration - triggered by notification */}
       <SplashCelebration
         visible={showWinCelebration}
         action="you_won"
-        onDone={() => setShowWinCelebration(false)}
+        onDone={dismissWinCelebration}
       />
 
       {/* Join bet celebration - shows when user joins a bet from this screen */}
