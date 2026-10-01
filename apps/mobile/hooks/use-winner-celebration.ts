@@ -4,21 +4,25 @@ import type { ActivityItem, BetWithProfiles } from '@/hooks/use-activity-feed';
 import { useFeedback } from '@/providers/feedback';
 
 /**
- * Global set of bet IDs that have been celebrated.
+ * Global map of bet IDs to the outcome that was celebrated/feedback-given.
  * Module-level to persist across component mounts/navigation.
  * This prevents showing the same celebration twice when navigating
- * between bet detail and room pages.
+ * between bet detail and room pages, BUT allows re-celebration if
+ * the outcome changes (e.g., after dispute resolution).
  */
-const globalCelebratedBets = new Set<string>();
+const globalCelebratedBets = new Map<string, string>();
 
-/** Mark a bet as celebrated (called from any page that shows celebration) */
-export function markBetCelebrated(betId: string): void {
-  globalCelebratedBets.add(betId);
+/** Mark a bet as celebrated with a specific outcome */
+export function markBetCelebrated(betId: string, outcome: string): void {
+  globalCelebratedBets.set(betId, outcome.trim().toLowerCase());
 }
 
-/** Check if a bet has already been celebrated */
-export function hasBetBeenCelebrated(betId: string): boolean {
-  return globalCelebratedBets.has(betId);
+/** Check if a bet has already been celebrated for the given outcome */
+export function hasBetBeenCelebrated(betId: string, outcome: string): boolean {
+  const celebratedOutcome = globalCelebratedBets.get(betId);
+  if (!celebratedOutcome) return false;
+  // Only consider celebrated if the outcome matches
+  return celebratedOutcome === outcome.trim().toLowerCase();
 }
 
 function didUserWin(bet: BetWithProfiles, userId: string | null): boolean {
@@ -89,30 +93,39 @@ export function useWinnerCelebration(
 
     // DEBUG: Log celebration-worthy bets
     if (__DEV__ && celebrationWorthyBets.length > 0) {
-      console.log('[WinCelebration] celebrationWorthyBets:', celebrationWorthyBets.map(b => ({
-        id: b.id,
-        status: b.status,
-        outcome: b.outcome,
-        preliminary_outcome: b.preliminary_outcome,
-        alreadySeen: seenCelebrationWorthy.current.has(b.id),
-        alreadyCelebrated: globalCelebratedBets.has(b.id),
-      })));
+      console.log('[WinCelebration] celebrationWorthyBets:', celebrationWorthyBets.map(b => {
+        const effectiveOutcome = b.outcome ?? b.preliminary_outcome ?? '';
+        return {
+          id: b.id,
+          status: b.status,
+          outcome: b.outcome,
+          preliminary_outcome: b.preliminary_outcome,
+          alreadySeen: seenCelebrationWorthy.current.has(`${b.id}:${effectiveOutcome}`),
+          alreadyCelebrated: hasBetBeenCelebrated(b.id, effectiveOutcome),
+        };
+      }));
     }
 
     // On initial load OR after pagination completes, seed the set without celebrating.
     // We only want to celebrate real-time transitions, not historical ones.
     if (!initialized.current || justFinishedPaginating) {
       if (__DEV__) console.log('[WinCelebration] Seeding', celebrationWorthyBets.length, 'bets (init:', !initialized.current, 'paginated:', justFinishedPaginating, ')');
-      for (const bet of celebrationWorthyBets) seenCelebrationWorthy.current.add(bet.id);
+      for (const bet of celebrationWorthyBets) {
+        const effectiveOutcome = bet.outcome ?? bet.preliminary_outcome ?? '';
+        // Use bet ID + outcome as key to allow re-celebration if outcome changes
+        seenCelebrationWorthy.current.add(`${bet.id}:${effectiveOutcome}`);
+      }
       if (!initialized.current) initialized.current = true;
       return;
     }
 
     const newlyCelebrationWorthy: BetWithProfiles[] = [];
     for (const bet of celebrationWorthyBets) {
-      // Skip if already seen in this session OR already celebrated globally
-      if (seenCelebrationWorthy.current.has(bet.id) || globalCelebratedBets.has(bet.id)) continue;
-      seenCelebrationWorthy.current.add(bet.id);
+      const effectiveOutcome = bet.outcome ?? bet.preliminary_outcome ?? '';
+      const seenKey = `${bet.id}:${effectiveOutcome}`;
+      // Skip if already seen this bet+outcome in this session OR already celebrated globally for this outcome
+      if (seenCelebrationWorthy.current.has(seenKey) || hasBetBeenCelebrated(bet.id, effectiveOutcome)) continue;
+      seenCelebrationWorthy.current.add(seenKey);
       newlyCelebrationWorthy.push(bet);
     }
 
@@ -139,13 +152,15 @@ export function useWinnerCelebration(
     }
 
     if (winBet) {
-      if (__DEV__) console.log('[WinCelebration] 🎉 Triggering WIN celebration for bet', winBet.id);
-      globalCelebratedBets.add(winBet.id); // Mark globally to prevent duplicate celebrations
+      const winOutcome = winBet.outcome ?? winBet.preliminary_outcome ?? '';
+      if (__DEV__) console.log('[WinCelebration] 🎉 Triggering WIN celebration for bet', winBet.id, 'outcome:', winOutcome);
+      markBetCelebrated(winBet.id, winOutcome); // Mark globally with outcome to allow re-celebration if outcome changes
       setCelebratingBet(winBet);
       trigger('bet_won');
     } else if (lossBet) {
-      if (__DEV__) console.log('[WinCelebration] 😢 Triggering LOSS feedback for bet', lossBet.id);
-      globalCelebratedBets.add(lossBet.id); // Mark globally even for losses
+      const lossOutcome = lossBet.outcome ?? lossBet.preliminary_outcome ?? '';
+      if (__DEV__) console.log('[WinCelebration] 😢 Triggering LOSS feedback for bet', lossBet.id, 'outcome:', lossOutcome);
+      markBetCelebrated(lossBet.id, lossOutcome); // Mark globally with outcome to allow win celebration if dispute changes outcome
       trigger('bet_lost');
     }
   }, [items, currentUserId, isLoading, isFetchingNextPage, trigger]);

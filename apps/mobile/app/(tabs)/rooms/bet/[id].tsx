@@ -185,9 +185,10 @@ export default function BetDetailScreen() {
       (dbStatus === 'PENDING_DISPUTE' && prevStatus !== 'PENDING_DISPUTE') ||
       (dbStatus === 'SETTLED' && prevStatus !== 'SETTLED');
 
-    if (isCelebrationWorthy && !hasBetBeenCelebrated(bet.id)) {
-      // Use preliminary_outcome for PENDING_DISPUTE, outcome for SETTLED
-      const effectiveOutcome = bet.outcome ?? bet.preliminary_outcome;
+    // Use preliminary_outcome for PENDING_DISPUTE, outcome for SETTLED
+    const effectiveOutcome = bet.outcome ?? bet.preliminary_outcome ?? '';
+
+    if (isCelebrationWorthy && !hasBetBeenCelebrated(bet.id, effectiveOutcome)) {
       const userWon =
         currentUserId &&
         effectiveOutcome &&
@@ -197,8 +198,8 @@ export default function BetDetailScreen() {
             s.pick.trim().toLowerCase() === effectiveOutcome.trim().toLowerCase(),
         );
 
-      // Mark as celebrated globally to prevent duplicate celebrations
-      markBetCelebrated(bet.id);
+      // Mark as celebrated globally with outcome to allow re-celebration if outcome changes after dispute
+      markBetCelebrated(bet.id, effectiveOutcome);
 
       if (userWon) {
         setShowWinCelebration(true);
