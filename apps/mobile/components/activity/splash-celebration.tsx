@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { AccessibilityInfo, Dimensions, Image, Pressable, StyleSheet, View } from 'react-native';
 import Animated, {
   useSharedValue,
@@ -6,7 +6,6 @@ import Animated, {
   withDelay,
   withSequence,
   withTiming,
-  runOnJS,
   Easing,
 } from 'react-native-reanimated';
 
@@ -90,6 +89,10 @@ export function SplashCelebration({ visible, action, onDone }: SplashCelebration
   const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
   const scale = Math.min(screenWidth / REF_WIDTH, screenHeight / REF_HEIGHT);
 
+  // Store onDone in a ref to avoid restarting animation when callback reference changes
+  const onDoneRef = useRef(onDone);
+  onDoneRef.current = onDone;
+
   // Check reduced motion preference
   useEffect(() => {
     AccessibilityInfo.isReduceMotionEnabled().then(setReduceMotion);
@@ -136,7 +139,7 @@ export function SplashCelebration({ visible, action, onDone }: SplashCelebration
         subOpacity.value = 1;
         subY.value = 0;
 
-        const timer = setTimeout(() => runOnJS(onDone)(), T.HOLD_END);
+        const timer = setTimeout(() => onDoneRef.current(), T.HOLD_END);
         return () => clearTimeout(timer);
       }
 
@@ -315,11 +318,11 @@ export function SplashCelebration({ visible, action, onDone }: SplashCelebration
         withTiming(0, { duration: T.SUB_END - T.SUB_START, easing: EASE_SOFT })
       );
 
-      // Hand off at 2.0s
-      const timer = setTimeout(() => runOnJS(onDone)(), T.HOLD_END);
+      // Hand off at 2.5s
+      const timer = setTimeout(() => onDoneRef.current(), T.HOLD_END);
       return () => clearTimeout(timer);
     }
-  }, [visible, reduceMotion, onDone, dimOpacity, wordOpacity, ballOpacity, ballY, ballScale, ballScaleX, ballScaleY, shadowOpacity, shadowScale, ringOpacity, ringScale, headOpacity, headY, headScale, subOpacity, subY]);
+  }, [visible, reduceMotion, dimOpacity, wordOpacity, ballOpacity, ballY, ballScale, ballScaleX, ballScaleY, shadowOpacity, shadowScale, ringOpacity, ringScale, headOpacity, headY, headScale, subOpacity, subY]);
 
   // Animated styles
   const dimStyle = useAnimatedStyle(() => ({ opacity: dimOpacity.value }));

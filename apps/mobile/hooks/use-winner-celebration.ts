@@ -69,6 +69,9 @@ export function useWinnerCelebration(
     // arriving on the next render fires as a "new" transition.
     if (isLoading) return;
 
+    // Log items count for debugging realtime updates
+    if (__DEV__) console.log('[WinCelebration] Effect running, items count:', items.length, 'initialized:', initialized.current);
+
     // Detect if we just finished paginating (transition from fetching to not fetching).
     // When pagination completes, isFetchingNextPage becomes false and new items arrive
     // in the same render, so we need to track the previous state.
@@ -84,9 +87,22 @@ export function useWinnerCelebration(
       .map((it) => it.bet)
       .filter((b) => b.status === 'PENDING_DISPUTE' || b.status === 'SETTLED');
 
+    // DEBUG: Log celebration-worthy bets
+    if (__DEV__ && celebrationWorthyBets.length > 0) {
+      console.log('[WinCelebration] celebrationWorthyBets:', celebrationWorthyBets.map(b => ({
+        id: b.id,
+        status: b.status,
+        outcome: b.outcome,
+        preliminary_outcome: b.preliminary_outcome,
+        alreadySeen: seenCelebrationWorthy.current.has(b.id),
+        alreadyCelebrated: globalCelebratedBets.has(b.id),
+      })));
+    }
+
     // On initial load OR after pagination completes, seed the set without celebrating.
     // We only want to celebrate real-time transitions, not historical ones.
     if (!initialized.current || justFinishedPaginating) {
+      if (__DEV__) console.log('[WinCelebration] Seeding', celebrationWorthyBets.length, 'bets (init:', !initialized.current, 'paginated:', justFinishedPaginating, ')');
       for (const bet of celebrationWorthyBets) seenCelebrationWorthy.current.add(bet.id);
       if (!initialized.current) initialized.current = true;
       return;
@@ -99,26 +115,36 @@ export function useWinnerCelebration(
       seenCelebrationWorthy.current.add(bet.id);
       newlyCelebrationWorthy.push(bet);
     }
+
+    if (__DEV__ && newlyCelebrationWorthy.length > 0) {
+      console.log('[WinCelebration] New celebration-worthy bets:', newlyCelebrationWorthy.map(b => b.id));
+    }
+
     if (newlyCelebrationWorthy.length === 0) return;
 
     // Win takes priority over loss; fall back to a loss if no win was found.
     let winBet: BetWithProfiles | null = null;
     let lossBet: BetWithProfiles | null = null;
     for (const bet of newlyCelebrationWorthy) {
-      if (didUserWin(bet, currentUserId)) {
+      const won = didUserWin(bet, currentUserId);
+      const participated = didUserParticipate(bet, currentUserId);
+      if (__DEV__) console.log('[WinCelebration] Checking bet', bet.id, '- won:', won, 'participated:', participated);
+      if (won) {
         winBet = bet;
         break;
       }
-      if (!lossBet && didUserParticipate(bet, currentUserId)) {
+      if (!lossBet && participated) {
         lossBet = bet;
       }
     }
 
     if (winBet) {
+      if (__DEV__) console.log('[WinCelebration] 🎉 Triggering WIN celebration for bet', winBet.id);
       globalCelebratedBets.add(winBet.id); // Mark globally to prevent duplicate celebrations
       setCelebratingBet(winBet);
       trigger('bet_won');
     } else if (lossBet) {
+      if (__DEV__) console.log('[WinCelebration] 😢 Triggering LOSS feedback for bet', lossBet.id);
       globalCelebratedBets.add(lossBet.id); // Mark globally even for losses
       trigger('bet_lost');
     }

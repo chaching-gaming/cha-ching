@@ -29,7 +29,6 @@ import { Avatar } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ScreenHeader } from '@/components/ui/screen-header';
-import { LockedInCelebration } from '@/components/activity/locked-in-celebration';
 import { ResolveDisputeSheet } from '@/components/activity/resolve-dispute-sheet';
 import { SubmitOutcomeSheet } from '@/components/activity/submit-outcome-sheet';
 import { VoidBetSheet } from '@/components/activity/void-bet-sheet';
@@ -1081,10 +1080,10 @@ export default function BetDetailScreen() {
       )}
 
       {/* Locked-in celebration - shows on OPEN → MATCHED transition */}
-      <LockedInCelebration
-        bet={showLockedInCelebration ? bet : null}
-        currentUserId={currentUserId}
-        onDismiss={() => setShowLockedInCelebration(false)}
+      <SplashCelebration
+        visible={showLockedInCelebration}
+        action="bet_accepted"
+        onDone={() => setShowLockedInCelebration(false)}
       />
 
       {/* Winner celebration - shows on live SETTLED transition */}

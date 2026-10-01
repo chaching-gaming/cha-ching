@@ -292,6 +292,12 @@ export function useRealtimeActivityFeed(roomId: string, options?: RealtimeActivi
   const { session } = useAuth();
   const currentUserId = session?.user.id;
 
+  // Store options in a ref to prevent re-subscriptions when callbacks change
+  // This is critical - without this, every parent re-render would tear down and recreate
+  // all subscriptions, causing events to be missed during the gap
+  const optionsRef = useRef(options);
+  optionsRef.current = options;
+
   // Create a stable debounced invalidator to batch rapid realtime events
   const invalidatorRef = useRef<ReturnType<typeof createDebouncedInvalidator> | null>(null);
   if (!invalidatorRef.current) {
@@ -320,7 +326,8 @@ export function useRealtimeActivityFeed(roomId: string, options?: RealtimeActivi
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'bets', filter: `room_id=eq.${roomId}` },
-        () => {
+        (payload) => {
+          if (__DEV__) console.log('[Realtime] bets change:', payload.eventType, payload.new);
           // Use refetchQueries (immediate) for critical bet data to prevent
           // stale data + server time tick from showing wrong effective status
           void queryClient.refetchQueries({ queryKey: roomBetsKey(roomId) });
@@ -333,7 +340,9 @@ export function useRealtimeActivityFeed(roomId: string, options?: RealtimeActivi
           invalidate(ROOMS_HISTORY_KEY);
         },
       )
-      .subscribe();
+      .subscribe((status, err) => {
+        if (__DEV__) console.log('[Realtime] bets subscription status:', status, err?.message);
+      });
 
     const chipRequestsChannel = supabase
       .channel(`cc-feed:${roomId}:chips:${token}`)
@@ -363,13 +372,16 @@ export function useRealtimeActivityFeed(roomId: string, options?: RealtimeActivi
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'outcome_submissions' },
-        () => {
+        (payload) => {
+          if (__DEV__) console.log('[Realtime] outcome_submissions change:', payload.eventType, payload.new);
           // Use refetchQueries (immediate) - outcome submissions trigger status changes
           void queryClient.refetchQueries({ queryKey: roomBetsKey(roomId) });
           void queryClient.refetchQueries({ queryKey: roomActivityKey(roomId) });
         },
       )
-      .subscribe();
+      .subscribe((status, err) => {
+        if (__DEV__) console.log('[Realtime] outcomes subscription status:', status, err?.message);
+      });
 
     // bet_stakes also has no room_id column; same client-side invalidation.
     // Drives per-side tallies, subject-rule UI, and "you joined" celebration.
@@ -415,7 +427,7 @@ export function useRealtimeActivityFeed(roomId: string, options?: RealtimeActivi
             payload.old &&
             (payload.old as { user_id?: string }).user_id === currentUserId
           ) {
-            options?.onCurrentUserRemoved?.();
+            optionsRef.current?.onCurrentUserRemoved?.();
           }
 
           // Detect when a member leaves/is removed (soft-delete: left_at changes from null to non-null)
@@ -431,7 +443,7 @@ export function useRealtimeActivityFeed(roomId: string, options?: RealtimeActivi
               newRecord.user_id !== currentUserId // Don't notify about self
             ) {
               const leftReason = newRecord.left_reason === 'REMOVED' ? 'REMOVED' : 'VOLUNTARY';
-              options?.onMemberLeft?.(newRecord.user_id, leftReason);
+              optionsRef.current?.onMemberLeft?.(newRecord.user_id, leftReason);
             }
           }
         },
@@ -488,5 +500,7 @@ export function useRealtimeActivityFeed(roomId: string, options?: RealtimeActivi
         await supabase.removeChannel(memberSettlementsChannel);
       })();
     };
-  }, [roomId, queryClient, currentUserId, options]);
+  // Note: options is intentionally NOT in the dependency array.
+  // We use optionsRef to access callbacks to prevent re-subscriptions on every render.
+  }, [roomId, queryClient, currentUserId, invalidate]);
 }
