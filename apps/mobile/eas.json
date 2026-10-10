@@ -48,9 +48,9 @@
   "submit": {
     "production": {
       "ios": {
-        "appleId": "tchandler@visual-globe.com",
+        "appleId": "chaching@chachinggaming.com",
         "ascAppId": "6768984349",
-        "appleTeamId": "QTYQ77K492"
+        "appleTeamId": "YDPPPHLB3D"
       },
       "android": {
         "serviceAccountKeyPath": "./play-store-service-account.json",
