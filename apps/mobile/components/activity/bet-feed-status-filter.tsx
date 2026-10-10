@@ -1,15 +1,15 @@
 import { Text, TouchableOpacity, View } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { CheckSquare, Square } from 'phosphor-react-native';
 
 import { getEffectiveBetStatus } from '@/lib/effective-bet-status';
 import { useTheme } from '@/providers/theme';
 import type { BetWithProfiles } from '@/hooks/use-activity-feed';
 
-export type BetFilter = 'active' | 'open' | 'matched' | 'settled';
+export type BetFilter = 'active' | 'matched' | 'settled';
 
 const OPTIONS: { key: BetFilter; label: string }[] = [
   { key: 'active', label: 'Active' },
-  { key: 'open', label: 'Open' },
   { key: 'matched', label: 'Matched' },
   { key: 'settled', label: 'Settled' },
 ];
@@ -19,6 +19,7 @@ interface BetFeedStatusFilterProps {
   onChange: (v: BetFilter) => void;
   myBetsOnly?: boolean;
   onMyBetsChange?: (v: boolean) => void;
+  onOpenStandings?: () => void;
 }
 
 export function BetFeedStatusFilter({
@@ -26,12 +27,38 @@ export function BetFeedStatusFilter({
   onChange,
   myBetsOnly = false,
   onMyBetsChange,
+  onOpenStandings,
 }: BetFeedStatusFilterProps) {
   const { colors } = useTheme();
   return (
     <View className="mb-3">
-      {/* Status filters */}
+      {/* Standings button + Status filters */}
       <View className="flex-row gap-2">
+        {/* Standings navigation button */}
+        {onOpenStandings ? (
+          <LinearGradient
+            colors={['#FFE4A0', '#E5C367']}
+            start={{ x: 0.5, y: 0 }}
+            end={{ x: 0.5, y: 1 }}
+            style={{
+              borderRadius: 12,
+              borderWidth: 1,
+              borderColor: '#D4AD3A',
+              overflow: 'hidden',
+            }}
+          >
+            <TouchableOpacity
+              onPress={onOpenStandings}
+              activeOpacity={0.8}
+              accessibilityRole="button"
+              accessibilityLabel="View standings"
+              className="items-center justify-center px-4 py-2.5"
+            >
+              <Text className="text-sm font-bold text-amber-800">Standings</Text>
+            </TouchableOpacity>
+          </LinearGradient>
+        ) : null}
+
         {OPTIONS.map((o) => {
           const active = o.key === value;
           return (
@@ -92,7 +119,6 @@ export function betMatchesFilter(bet: BetWithProfiles, filter: BetFilter, server
       bet.status === 'MATCHED'
     );
   }
-  if (filter === 'open') return effectiveStatus === 'OPEN';
   if (filter === 'matched') {
     // Includes bets that are matched/pending/disputed in DB,
     // or OPEN in DB but effectively PENDING_RESULT (matched + expired)

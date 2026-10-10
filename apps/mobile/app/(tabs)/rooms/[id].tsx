@@ -56,7 +56,6 @@ function parseRoomName(fullName: string): { name: string; date: string | null } 
 
 const EMPTY_STATE_COPY: Record<BetFilter, { title: string; subtitle: string }> = {
   active: { title: 'No active bets', subtitle: 'Create a bet or wait for action.' },
-  open: { title: 'No open bets', subtitle: 'Create a new bet or wait for one to open.' },
   matched: { title: 'No matched bets', subtitle: 'Bets show up here once both sides are staked.' },
   settled: { title: 'No settled bets', subtitle: 'Finished bets will appear here.' },
 };
@@ -377,6 +376,7 @@ export default function RoomDetailScreen() {
               onChange={setFilter}
               myBetsOnly={myBetsOnly}
               onMyBetsChange={setMyBetsOnly}
+              onOpenStandings={() => router.push(`/(tabs)/rooms/standings?id=${id}`)}
             />
           </View>
         }

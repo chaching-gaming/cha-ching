@@ -115,7 +115,7 @@ export function RoomHeaderBar({
             )}
           </View>
           <Text className="mt-1 text-xs font-semibold uppercase tracking-wide text-text-muted">
-            Standings
+            Current Players
           </Text>
         </TouchableOpacity>
 
