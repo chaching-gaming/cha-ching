@@ -33,7 +33,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       backgroundColor: '#F3F4F6',
     },
     edgeToEdgeEnabled: true,
-    package: 'com.visualglobe.chaching',
+    package: 'com.chaching.golf',
     googleServicesFile: './google-services.json',
   },
   web: {
@@ -83,7 +83,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       {
         iosUrlScheme:
           process.env.GOOGLE_IOS_URL_SCHEME ||
-          'com.googleusercontent.apps.1070930457721-pnuevds8ka750f5h8m1h7mtsrbr8e2s9',
+          'com.googleusercontent.apps.692754456856-5g4te7hf8do0k0an5c502evi2qshv8fh',
       },
     ],
     'expo-apple-authentication',

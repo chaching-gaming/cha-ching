@@ -6,7 +6,7 @@
   "build": {
     "base": {
       "env": {
-        "GOOGLE_IOS_URL_SCHEME": "com.googleusercontent.apps.1070930457721-pnuevds8ka750f5h8m1h7mtsrbr8e2s9",
+        "GOOGLE_IOS_URL_SCHEME": "com.googleusercontent.apps.692754456856-5g4te7hf8do0k0an5c502evi2qshv8fh",
         "EXPO_PUBLIC_PROJECT_ID": "dc228f01-efda-4fc0-a714-6d455f6461e6"
       }
     },
@@ -43,6 +43,16 @@
       "android": {
         "buildType": "app-bundle"
       }
+    },
+    "production-apk": {
+      "extends": "production",
+      "environment": "production",
+      "distribution": "internal",
+      "channel": "production-apk",
+      "autoIncrement": false,
+      "android": {
+        "buildType": "apk"
+      }
     }
   },
   "submit": {
@@ -53,7 +63,6 @@
         "appleTeamId": "YDPPPHLB3D"
       },
       "android": {
-        "serviceAccountKeyPath": "./play-store-service-account.json",
         "track": "internal"
       }
     }

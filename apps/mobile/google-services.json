@@ -1,21 +1,21 @@
 {
   "project_info": {
-    "project_number": "428135878479",
-    "project_id": "cha-ching-e0f38",
-    "storage_bucket": "cha-ching-e0f38.firebasestorage.app"
+    "project_number": "692754456856",
+    "project_id": "cha-ching-golf",
+    "storage_bucket": "cha-ching-golf.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:428135878479:android:b543550fb8325c3f767f3a",
+        "mobilesdk_app_id": "1:692754456856:android:a5a1feb17b844a52337e6d",
         "android_client_info": {
-          "package_name": "com.visualglobe.chaching"
+          "package_name": "com.chaching.golf"
         }
       },
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyBSYVOO3oMFBPQypK4SRCETXaJXKR66y94"
+          "current_key": "AIzaSyDxOxmfaUuHi78Jf9VLhUBZZn99wEF8G_k"
         }
       ],
       "services": {
