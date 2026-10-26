@@ -40,6 +40,9 @@ GoogleService-Info.plist
 # Google Play Store service account (for automated uploads)
 play-store-service-account.json
 
+# Google Cloud service account keys (FCM, Play submit)
+cha-ching-*.json
+
 # Firebase Admin SDK (contains private keys)
 *-firebase-adminsdk-*.json
 
