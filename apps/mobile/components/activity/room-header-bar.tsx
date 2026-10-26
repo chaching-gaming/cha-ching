@@ -2,7 +2,7 @@ import { useCallback, useState } from 'react';
 import { Alert, Text, TouchableOpacity, View } from 'react-native';
 import { Coins, HandHeart, UsersThree, X } from 'phosphor-react-native';
 
-import { colors } from '@/constants/colors';
+import { useTheme } from '@/providers/theme';
 import { Avatar } from '@/components/ui/avatar';
 import { RequestChipsSheet } from '@/components/activity/request-chips-sheet';
 import { useCancelChipRequest } from '@/hooks/use-chip-requests';
@@ -36,6 +36,7 @@ export function RoomHeaderBar({
   myOpenChipRequest,
   isActiveMember = true,
 }: RoomHeaderBarProps) {
+  const { colors } = useTheme();
   const [requestOpen, setRequestOpen] = useState(false);
   const cancelRequest = useCancelChipRequest();
   const visible = members.slice(0, MAX_AVATARS);
@@ -45,13 +46,15 @@ export function RoomHeaderBar({
   // Only active members can request chips
   const lowBalance = balance <= 100;
   const hasOpenRequest = !!myOpenChipRequest;
-  const showRequestButton = !!roomActive && isActiveMember && lowBalance && !hasOpenRequest && !!roomId;
+  const showRequestButton =
+    !!roomActive && isActiveMember && lowBalance && !hasOpenRequest && !!roomId;
   const showPendingStatus = !!roomActive && isActiveMember && hasOpenRequest && !!roomId;
 
   // Progress calculation for open request
   const requested = myOpenChipRequest?.requested_amount ?? 0;
   const fulfilled = myOpenChipRequest?.fulfilled_amount ?? 0;
-  const progressPercent = requested > 0 ? Math.min(100, Math.round((fulfilled / requested) * 100)) : 0;
+  const progressPercent =
+    requested > 0 ? Math.min(100, Math.round((fulfilled / requested) * 100)) : 0;
 
   const handleCancel = useCallback(() => {
     if (!roomId || !myOpenChipRequest) return;
@@ -114,7 +117,7 @@ export function RoomHeaderBar({
             )}
           </View>
           <Text className="mt-1 text-xs font-semibold uppercase tracking-wide text-text-muted">
-            Standings
+            Current Players
           </Text>
         </TouchableOpacity>
 
@@ -137,8 +140,8 @@ export function RoomHeaderBar({
           accessibilityLabel="Request chips from the room"
           className="mt-3 flex-row items-center justify-center gap-2 rounded-xl bg-warning py-3"
         >
-          <HandHeart size={18} color={colors.background} weight="fill" />
-          <Text className="text-sm font-bold text-background">Request chips</Text>
+          <HandHeart size={18} color="#FFFFFF" weight="fill" />
+          <Text className="text-sm font-bold text-white">Request chips</Text>
         </TouchableOpacity>
       ) : showPendingStatus ? (
         <View className="mt-3 rounded-xl border border-border bg-surface-light px-4 py-3">
@@ -146,11 +149,11 @@ export function RoomHeaderBar({
           <View className="flex-row items-center justify-between">
             <View className="flex-row items-center gap-2">
               <HandHeart size={18} color={colors.primary} weight="fill" />
-              <Text className="text-sm font-semibold text-white">Your chip request</Text>
+              <Text className="text-sm font-semibold text-text-primary">Your chip request</Text>
             </View>
             <View className="flex-row items-center gap-1.5">
               <Coins size={16} color={colors.chipsIcon} weight="fill" />
-              <Text className="text-sm font-semibold text-white">
+              <Text className="text-sm font-semibold text-text-primary">
                 {fulfilled.toLocaleString('en-US')}
                 <Text className="text-text-secondary"> / {requested.toLocaleString('en-US')}</Text>
               </Text>

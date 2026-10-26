@@ -8,3 +8,10 @@ export function formatBalance(balance: number): string {
 export function balanceColorClass(balance: number): string {
   return balance >= 0 ? 'text-primary' : 'text-error';
 }
+
+/** Net balance color: green for positive, red for negative, muted for zero */
+export function netBalanceColorClass(netBalance: number): string {
+  if (netBalance > 0) return 'text-primary';
+  if (netBalance < 0) return 'text-error';
+  return 'text-text-muted';
+}

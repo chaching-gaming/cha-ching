@@ -12,17 +12,13 @@ import { useLocalSearchParams } from 'expo-router';
 import { useQueryClient } from '@tanstack/react-query';
 import { DownloadSimple, Export, FileCsv } from 'phosphor-react-native';
 
-import { colors } from '@/constants/colors';
+import { useTheme } from '@/providers/theme';
 import { ActionSheet, type ActionSheetOption } from '@/components/ui/action-sheet';
 import { Avatar } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { useAuth } from '@/providers/auth';
-import {
-  getRpcErrorMessage,
-  useRoomDetail,
-  useRoomMembers,
-} from '@/hooks/use-rooms';
+import { getRpcErrorMessage, useRoomDetail, useRoomMembers } from '@/hooks/use-rooms';
 import {
   roomLedgerKey,
   useRoomLedger,
@@ -56,6 +52,7 @@ const TYPE_VARIANTS: Record<LedgerType, BadgeVariant> = {
 };
 
 export default function LedgerScreen() {
+  const { colors } = useTheme();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { session: authSession } = useAuth();
   const queryClient = useQueryClient();
@@ -71,10 +68,7 @@ export default function LedgerScreen() {
   const exportLedger = useExportRoomLedger(id, room?.name);
   const exportBets = useExportRoomBets(id, room?.name);
 
-  const entries = useMemo(
-    () => ledgerQuery.data?.pages.flat() ?? [],
-    [ledgerQuery.data],
-  );
+  const entries = useMemo(() => ledgerQuery.data?.pages.flat() ?? [], [ledgerQuery.data]);
 
   const [refreshing, setRefreshing] = useState(false);
   const onRefresh = useCallback(async () => {
@@ -150,9 +144,7 @@ export default function LedgerScreen() {
           backIconSize={28}
         />
         <View className="flex-1 items-center justify-center px-5">
-          <Text className="text-center text-xl font-semibold text-text-secondary">
-            Admins only
-          </Text>
+          <Text className="text-center text-xl font-semibold text-text-secondary">Admins only</Text>
           <Text className="mt-2 max-w-sm text-center text-base leading-6 text-text-secondary">
             Only room admins can view the full ledger.
           </Text>
@@ -245,7 +237,10 @@ function LedgerRow({ entry }: { entry: LedgerEntryRow }) {
 
       <View className="min-w-0 flex-1">
         <View className="flex-row items-center gap-2">
-          <Text className="min-w-0 shrink text-base font-semibold text-white" numberOfLines={1}>
+          <Text
+            className="min-w-0 shrink text-base font-semibold text-text-primary"
+            numberOfLines={1}
+          >
             {entry.display_name ?? 'Unknown'}
           </Text>
           <Badge

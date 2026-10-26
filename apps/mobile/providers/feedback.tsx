@@ -15,6 +15,7 @@ export type FeedbackEvent =
 
 // Sound sources - audio files in @/assets/audio/ folder
 // See assets/audio/README.md for file specifications
+/* eslint-disable @typescript-eslint/no-require-imports -- Metro asset requires */
 const SOUND_SOURCES: Record<FeedbackEvent, AVPlaybackSource | null> = {
   bet_accepted: require('@/assets/audio/tick.mp3'),
   bet_matched: require('@/assets/audio/jingle.mp3'),
@@ -24,6 +25,7 @@ const SOUND_SOURCES: Record<FeedbackEvent, AVPlaybackSource | null> = {
   chip_received: require('@/assets/audio/coin.mp3'),
   alert: null, // Uses haptics only - device default for push notifications
 };
+/* eslint-enable @typescript-eslint/no-require-imports */
 
 type FeedbackContextType = {
   trigger: (event: FeedbackEvent) => void;

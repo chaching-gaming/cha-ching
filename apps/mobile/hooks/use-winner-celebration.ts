@@ -1,123 +1,237 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 
-import type { ActivityItem, BetWithProfiles } from '@/hooks/use-activity-feed';
+import type { BetWithProfiles } from '@/hooks/use-activity-feed';
 import { useFeedback } from '@/providers/feedback';
+import { subscribeToCelebrations, type CelebrationEvent } from '@/lib/celebration-events';
 
 /**
- * Global set of bet IDs that have been celebrated.
+ * Global map of bet IDs to the outcome that was celebrated/feedback-given.
  * Module-level to persist across component mounts/navigation.
  * This prevents showing the same celebration twice when navigating
- * between bet detail and room pages.
+ * between bet detail and room pages, BUT allows re-celebration if
+ * the outcome changes (e.g., after dispute resolution).
  */
-const globalCelebratedBets = new Set<string>();
+const globalCelebratedBets = new Map<string, string>();
 
-/** Mark a bet as celebrated (called from any page that shows celebration) */
-export function markBetCelebrated(betId: string): void {
-  globalCelebratedBets.add(betId);
+/** Mark a bet as celebrated with a specific outcome */
+export function markBetCelebrated(betId: string, outcome: string): void {
+  globalCelebratedBets.set(betId, outcome.trim().toLowerCase());
 }
 
-/** Check if a bet has already been celebrated */
-export function hasBetBeenCelebrated(betId: string): boolean {
-  return globalCelebratedBets.has(betId);
+/** Check if a bet has already been celebrated for the given outcome */
+export function hasBetBeenCelebrated(betId: string, outcome: string): boolean {
+  const celebratedOutcome = globalCelebratedBets.get(betId);
+  if (!celebratedOutcome) return false;
+  return celebratedOutcome === outcome.trim().toLowerCase();
 }
 
-function didUserWin(bet: BetWithProfiles, userId: string | null): boolean {
-  const outcomeKey = bet.outcome?.trim().toLowerCase() ?? '';
-  if (!userId || !outcomeKey) return false;
-  // Multi-player: current user wins if any of their stakes matched the outcome.
-  return (bet.stakes ?? []).some(
-    (s) => s.user_id === userId && s.pick.trim().toLowerCase() === outcomeKey,
-  );
+/** Clear celebration tracking (useful for testing) */
+export function clearCelebrationTracking(): void {
+  globalCelebratedBets.clear();
 }
 
-function didUserParticipate(bet: BetWithProfiles, userId: string | null): boolean {
-  if (!userId) return false;
-  return (bet.stakes ?? []).some((s) => s.user_id === userId);
+/** Check if user won based on their stakes and the outcome */
+function didUserWin(
+  stakes: { user_id: string; pick: string }[] | undefined,
+  userId: string | null,
+  outcome: string,
+): boolean {
+  if (!userId || !outcome || !stakes) return false;
+  const outcomeKey = outcome.trim().toLowerCase();
+  return stakes.some((s) => s.user_id === userId && s.pick.trim().toLowerCase() === outcomeKey);
+}
+
+/** Check if user participated in the bet */
+function didUserParticipate(
+  stakes: { user_id: string }[] | undefined,
+  userId: string | null,
+): boolean {
+  if (!userId || !stakes) return false;
+  return stakes.some((s) => s.user_id === userId);
 }
 
 /**
- * Detects live bet.status → SETTLED transitions in the activity feed. Fires:
- *   - Overlay + `bet_won` feedback when the current user won.
- *   - `bet_lost` feedback when the user participated but didn't win (no overlay).
- *
- * On first data load we seed the "seen" set so we don't fire for historical
- * settlements. When paginating, we also seed new bets rather than celebrating
- * them. When multiple bets settle in the same tick, a win takes priority
- * over a loss for feedback (one sound per transition).
+ * Hook for room-detail page to handle celebration events.
+ * Listens for notification-triggered celebrations and finds the bet in activityItems.
  */
 export function useWinnerCelebration(
-  items: ActivityItem[],
+  items: { type: string; bet?: BetWithProfiles }[],
   currentUserId: string | null,
-  isLoading: boolean,
-  isFetchingNextPage: boolean = false,
+  _isLoading: boolean = false,
+  _isFetchingNextPage: boolean = false,
 ) {
-  const seenSettled = useRef<Set<string>>(new Set());
-  const initialized = useRef(false);
-  const wasFetchingNextPage = useRef(false);
   const [celebratingBet, setCelebratingBet] = useState<BetWithProfiles | null>(null);
   const { trigger } = useFeedback();
+  const itemsRef = useRef(items);
+  const userIdRef = useRef(currentUserId);
+  itemsRef.current = items;
+  userIdRef.current = currentUserId;
+
+  // Track which bet+outcome we've shown celebration for (local to this component)
+  const shownCelebrationsRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
-    // Wait until the query has actually returned before seeding. Otherwise the empty
-    // first-render `items` marks us initialized and every historical SETTLED bet
-    // arriving on the next render fires as a "new" transition.
-    if (isLoading) return;
+    const handleCelebration = (event: CelebrationEvent) => {
+      if (__DEV__) console.log('[WinCelebration] Received event:', event);
 
-    // Detect if we just finished paginating (transition from fetching to not fetching).
-    // When pagination completes, isFetchingNextPage becomes false and new items arrive
-    // in the same render, so we need to track the previous state.
-    const justFinishedPaginating = wasFetchingNextPage.current && !isFetchingNextPage;
-    wasFetchingNextPage.current = isFetchingNextPage;
+      // Use outcome from event (from notification) - this is the source of truth
+      const effectiveOutcome = event.outcome ?? '';
 
-    // While actively fetching, do nothing - wait for data to arrive
-    if (isFetchingNextPage) return;
-
-    const settledBets: BetWithProfiles[] = items
-      .filter((it): it is Extract<ActivityItem, { type: 'bet' }> => it.type === 'bet')
-      .map((it) => it.bet)
-      .filter((b) => b.status === 'SETTLED');
-
-    // On initial load OR after pagination completes, seed the set without celebrating.
-    // We only want to celebrate real-time settlements, not historical ones.
-    if (!initialized.current || justFinishedPaginating) {
-      for (const bet of settledBets) seenSettled.current.add(bet.id);
-      if (!initialized.current) initialized.current = true;
-      return;
-    }
-
-    const newlySettled: BetWithProfiles[] = [];
-    for (const bet of settledBets) {
-      // Skip if already seen in this session OR already celebrated globally
-      if (seenSettled.current.has(bet.id) || globalCelebratedBets.has(bet.id)) continue;
-      seenSettled.current.add(bet.id);
-      newlySettled.push(bet);
-    }
-    if (newlySettled.length === 0) return;
-
-    // Win takes priority over loss; fall back to a loss if no win was found.
-    let winBet: BetWithProfiles | null = null;
-    let lossBet: BetWithProfiles | null = null;
-    for (const bet of newlySettled) {
-      if (didUserWin(bet, currentUserId)) {
-        winBet = bet;
-        break;
+      if (!effectiveOutcome) {
+        if (__DEV__) console.log('[WinCelebration] No outcome in event:', event.betId);
+        return;
       }
-      if (!lossBet && didUserParticipate(bet, currentUserId)) {
-        lossBet = bet;
+
+      // Check if we already showed this celebration locally (prevents duplicate on same page)
+      const celebrationKey = `${event.betId}:${effectiveOutcome}`;
+      if (shownCelebrationsRef.current.has(celebrationKey)) {
+        if (__DEV__) console.log('[WinCelebration] Already shown locally:', celebrationKey);
+        return;
       }
-    }
 
-    if (winBet) {
-      globalCelebratedBets.add(winBet.id); // Mark globally to prevent duplicate celebrations
-      setCelebratingBet(winBet);
-      trigger('bet_won');
-    } else if (lossBet) {
-      globalCelebratedBets.add(lossBet.id); // Mark globally even for losses
-      trigger('bet_lost');
-    }
-  }, [items, currentUserId, isLoading, isFetchingNextPage, trigger]);
+      // Find the bet in current items (for showing overlay with bet details)
+      const betItem = itemsRef.current.find(
+        (it) => it.type === 'bet' && it.bet?.id === event.betId,
+      );
+      const bet = betItem?.bet;
 
-  const dismissCelebration = () => setCelebratingBet(null);
+      // Determine win/loss
+      let isWin: boolean;
+      let isParticipant: boolean;
+
+      if (event.type === 'pending_result') {
+        // For pending_result, check user's stake against outcome
+        if (!bet) {
+          if (__DEV__)
+            console.log('[WinCelebration] Bet not found for pending_result:', event.betId);
+          return;
+        }
+        isWin = didUserWin(bet.stakes, userIdRef.current, effectiveOutcome);
+        isParticipant = didUserParticipate(bet.stakes, userIdRef.current);
+      } else {
+        // For explicit win/loss events from server, trust the event type
+        isWin = event.type === 'win';
+        isParticipant = true;
+      }
+
+      if (!isParticipant) {
+        if (__DEV__) console.log('[WinCelebration] User not a participant:', event.betId);
+        return;
+      }
+
+      // Mark as shown locally
+      shownCelebrationsRef.current.add(celebrationKey);
+      // Also mark globally (for tracking outcome changes across sessions)
+      markBetCelebrated(event.betId, effectiveOutcome);
+
+      if (isWin) {
+        if (__DEV__)
+          console.log('[WinCelebration] 🎉 Showing WIN celebration for bet:', event.betId);
+        if (bet) setCelebratingBet(bet);
+        trigger('bet_won');
+      } else {
+        if (__DEV__) console.log('[WinCelebration] 😢 Playing LOSS sound for bet:', event.betId);
+        trigger('bet_lost');
+      }
+    };
+
+    const unsubscribe = subscribeToCelebrations(handleCelebration);
+    return unsubscribe;
+  }, [trigger]);
+
+  const dismissCelebration = useCallback(() => setCelebratingBet(null), []);
 
   return { celebratingBet, dismissCelebration };
+}
+
+/**
+ * Hook for bet-detail page to handle celebration events for a specific bet.
+ */
+export function useBetCelebration(
+  bet: BetWithProfiles | null | undefined,
+  currentUserId: string | null,
+) {
+  const [showWinCelebration, setShowWinCelebration] = useState(false);
+  const { trigger } = useFeedback();
+  const betRef = useRef(bet);
+  const userIdRef = useRef(currentUserId);
+  betRef.current = bet;
+  userIdRef.current = currentUserId;
+
+  // Track which bet+outcome we've shown celebration for (local to this component)
+  const shownCelebrationsRef = useRef<Set<string>>(new Set());
+
+  useEffect(() => {
+    const handleCelebration = (event: CelebrationEvent) => {
+      if (__DEV__) console.log('[BetCelebration] Received event:', event);
+
+      // Use outcome from event (from notification) - this is the source of truth
+      const effectiveOutcome = event.outcome ?? '';
+
+      if (!effectiveOutcome) {
+        if (__DEV__) console.log('[BetCelebration] No outcome in event:', event.betId);
+        return;
+      }
+
+      // Check if this event is for the current bet
+      const currentBet = betRef.current;
+      if (!currentBet || currentBet.id !== event.betId) {
+        if (__DEV__)
+          console.log(
+            '[BetCelebration] Event not for current bet:',
+            event.betId,
+            'current:',
+            currentBet?.id,
+          );
+        return;
+      }
+
+      // Check if we already showed this celebration locally (prevents duplicate on same page)
+      const celebrationKey = `${event.betId}:${effectiveOutcome}`;
+      if (shownCelebrationsRef.current.has(celebrationKey)) {
+        if (__DEV__) console.log('[BetCelebration] Already shown locally:', celebrationKey);
+        return;
+      }
+
+      // Determine win/loss
+      let isWin: boolean;
+      let isParticipant: boolean;
+
+      if (event.type === 'pending_result') {
+        // For pending_result, check user's stake against outcome
+        isWin = didUserWin(currentBet.stakes, userIdRef.current, effectiveOutcome);
+        isParticipant = didUserParticipate(currentBet.stakes, userIdRef.current);
+      } else {
+        // For explicit win/loss events from server, trust the event type
+        isWin = event.type === 'win';
+        isParticipant = true;
+      }
+
+      if (!isParticipant) {
+        if (__DEV__) console.log('[BetCelebration] User not a participant:', currentBet.id);
+        return;
+      }
+
+      // Mark as shown locally
+      shownCelebrationsRef.current.add(celebrationKey);
+      // Also mark globally (for tracking outcome changes across sessions)
+      markBetCelebrated(event.betId, effectiveOutcome);
+
+      if (isWin) {
+        if (__DEV__) console.log('[BetCelebration] 🎉 Showing WIN celebration');
+        setShowWinCelebration(true);
+        trigger('bet_won');
+      } else {
+        if (__DEV__) console.log('[BetCelebration] 😢 Playing LOSS sound');
+        trigger('bet_lost');
+      }
+    };
+
+    const unsubscribe = subscribeToCelebrations(handleCelebration);
+    return unsubscribe;
+  }, [trigger]);
+
+  const dismissWinCelebration = useCallback(() => setShowWinCelebration(false), []);
+
+  return { showWinCelebration, dismissWinCelebration };
 }

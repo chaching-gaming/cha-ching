@@ -1,30 +1,31 @@
 import { Text, TouchableOpacity, View } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Coins, Info, Timer } from 'phosphor-react-native';
+import { Coins, Info } from 'phosphor-react-native';
 import { z } from 'zod';
 
-import { colors } from '@/constants/colors';
+import { useTheme } from '@/providers/theme';
 import { KeyboardAwareScrollView } from '@/components/form/keyboard-aware-scroll-view';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { useCreateRoom } from '@/hooks/use-rooms';
 import { useForm } from '@/hooks/use-form';
 import { formatSessionDateShort, formatTodayCalendarDate } from '@/lib/date-format';
 
+const ROOM_NAME_MAX_LENGTH = 25;
+
 const createRoomSchema = z.object({
-  name: z.string().min(1, 'Room name is required'),
+  name: z
+    .string()
+    .min(1, 'Room name is required')
+    .max(ROOM_NAME_MAX_LENGTH, `Room name must be ${ROOM_NAME_MAX_LENGTH} characters or less`),
   startingChips: z
     .string()
     .min(1, 'Starting chips is required')
     .refine((v) => parseInt(v, 10) >= 1, 'Must be at least 1')
     .refine((v) => parseInt(v, 10) <= 100000, 'Max 100,000 chips'),
-  outcomeWindow: z
-    .string()
-    .min(1, 'Outcome window is required')
-    .refine((v) => parseInt(v, 10) >= 10, 'Must be at least 10 seconds')
-    .refine((v) => parseInt(v, 10) <= 300, 'Max 300 seconds (5 minutes)'),
 });
 
 export default function CreateRoomScreen() {
+  const { colors } = useTheme();
   const router = useRouter();
   const createRoom = useCreateRoom();
   const today = formatTodayCalendarDate();
@@ -33,7 +34,6 @@ export default function CreateRoomScreen() {
     defaultValues: {
       name: '',
       startingChips: '1000',
-      outcomeWindow: '30',
     },
     validators: {
       onSubmit: createRoomSchema,
@@ -44,7 +44,7 @@ export default function CreateRoomScreen() {
           p_name: value.name.trim(),
           p_session_date: today,
           p_starting_chips: parseInt(value.startingChips, 10),
-          p_outcome_submission_window_seconds: parseInt(value.outcomeWindow, 10),
+          p_outcome_submission_window_seconds: 30,
         });
         router.replace(`/(tabs)/rooms/invite?id=${room.id}`);
       } catch (err) {
@@ -94,8 +94,14 @@ export default function CreateRoomScreen() {
             {(field) => (
               <field.TextField
                 label="Room name *"
+                labelRight={
+                  <Text className="text-sm text-text-muted">
+                    {field.state.value.length}/{ROOM_NAME_MAX_LENGTH}
+                  </Text>
+                }
                 placeholder="e.g. Sunday Golf"
                 autoCorrect={false}
+                maxLength={ROOM_NAME_MAX_LENGTH}
               />
             )}
           </form.AppField>
@@ -124,22 +130,6 @@ export default function CreateRoomScreen() {
 
           <Text className="-mt-2.5 mb-4 text-sm text-text-secondary">
             Each player gets this many chips when joining the room
-          </Text>
-
-          <form.AppField name="outcomeWindow">
-            {(field) => (
-              <field.TextField
-                label="Outcome submission window"
-                placeholder="30"
-                keyboardType="number-pad"
-                transformValue={(text) => text.replace(/\D/g, '').slice(0, 3)}
-                leftIcon={<Timer size={20} color={colors.textMuted} weight="bold" />}
-              />
-            )}
-          </form.AppField>
-
-          <Text className="-mt-2.5 mb-4 text-sm text-text-secondary">
-            Time in seconds for participants to submit results after bet expires (10-300s)
           </Text>
 
           {/* Admin info */}

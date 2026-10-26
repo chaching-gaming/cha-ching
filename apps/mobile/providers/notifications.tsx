@@ -7,9 +7,11 @@ import { useRouter } from 'expo-router';
 import { useQueryClient } from '@tanstack/react-query';
 
 import { useAuth } from './auth';
+import { useToast } from './toast';
 import { env } from '@/lib/env';
 import { supabase } from '@/lib/supabase';
 import { notificationsKey } from '@/hooks/use-notifications-feed';
+import { emitCelebration } from '@/lib/celebration-events';
 
 // Storage keys matching preferences provider
 const STORAGE_KEY_SOUND = 'pref.sound';
@@ -54,6 +56,10 @@ type NotificationData = {
   room_id?: string;
   bet_id?: string;
   chip_request_id?: string;
+  /** For bet_pending_dispute notifications */
+  preliminary_outcome?: string;
+  /** For bet_won/bet_lost notifications - the final outcome */
+  outcome?: string;
 };
 
 type NotificationContextType = {
@@ -71,6 +77,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
   const router = useRouter();
   const queryClient = useQueryClient();
   const { session } = useAuth();
+  const { show: showToast } = useToast();
   const [expoPushToken, setExpoPushToken] = useState<string | null>(null);
   const [unreadCount, setUnreadCount] = useState(0);
 
@@ -224,7 +231,6 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
         case 'bet_settled':
         case 'bet_won':
         case 'bet_lost':
-        case 'bet_voided':
         case 'bet_disputed':
         case 'bet_expiring':
         case 'bet_accepted':
@@ -235,6 +241,18 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
             router.push(`/(tabs)/rooms/${room_id}`);
           }
           break;
+        case 'bet_voided':
+          // Voided bets are auto-deleted, show info toast and navigate to room
+          if (room_id) {
+            router.push(`/(tabs)/rooms/${room_id}`);
+            showToast({
+              type: 'info',
+              message:
+                'This bet was voided and has been deleted. Voided bets are removed after 5 minutes.',
+            });
+          }
+          break;
+        case 'bet_created':
         case 'chip_request_created':
         case 'chip_donated':
           if (room_id) {
@@ -260,9 +278,38 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     void refreshUnreadCount();
 
     // Handle notification received while app is foregrounded
-    notificationListener.current = Notifications.addNotificationReceivedListener(() => {
+    notificationListener.current = Notifications.addNotificationReceivedListener((notification) => {
       // Refresh badge count when notification arrives
       void refreshUnreadCount();
+
+      // Emit celebration events for win/loss/pending notifications
+      const data = notification.request.content.data as NotificationData;
+      if (data?.bet_id) {
+        if (data.type === 'bet_won') {
+          // Include outcome from notification for correct duplicate checking after dispute resolution
+          emitCelebration({
+            type: 'win',
+            betId: data.bet_id,
+            roomId: data.room_id,
+            outcome: data.outcome,
+          });
+        } else if (data.type === 'bet_lost') {
+          emitCelebration({
+            type: 'loss',
+            betId: data.bet_id,
+            roomId: data.room_id,
+            outcome: data.outcome,
+          });
+        } else if (data.type === 'bet_pending_dispute' && data.preliminary_outcome) {
+          // Outcome submitted - page will check if user won based on preliminary_outcome
+          emitCelebration({
+            type: 'pending_result',
+            betId: data.bet_id,
+            roomId: data.room_id,
+            outcome: data.preliminary_outcome,
+          });
+        }
+      }
     });
 
     // Handle notification tap
@@ -292,8 +339,19 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
   useEffect(() => {
     if (!session?.user.id) return;
 
+    // Clean up any existing notification channels to prevent "cannot add callbacks after subscribe" error
+    // This can happen on rapid navigation or when app resumes from background
+    const baseTopic = `user-notifications:${session.user.id}`;
+    for (const ch of [...supabase.getChannels()]) {
+      if (ch.topic.startsWith(`realtime:${baseTopic}`)) {
+        void supabase.removeChannel(ch);
+      }
+    }
+
+    // Use unique token to ensure fresh channel on each mount
+    const token = `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
     const channel = supabase
-      .channel(`user-notifications:${session.user.id}`)
+      .channel(`${baseTopic}:${token}`)
       .on(
         'postgres_changes',
         {

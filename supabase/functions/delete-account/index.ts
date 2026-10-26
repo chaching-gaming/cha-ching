@@ -66,18 +66,9 @@ Deno.serve(async (req) => {
 
     // 7. Anonymize bets where user is involved (don't delete - preserve room history)
     // Set offered_by/accepted_by/winner to null for deleted user
-    await supabaseAdmin
-      .from('bets')
-      .update({ offered_by: null })
-      .eq('offered_by', userId);
-    await supabaseAdmin
-      .from('bets')
-      .update({ accepted_by: null })
-      .eq('accepted_by', userId);
-    await supabaseAdmin
-      .from('bets')
-      .update({ winner: null })
-      .eq('winner', userId);
+    await supabaseAdmin.from('bets').update({ offered_by: null }).eq('offered_by', userId);
+    await supabaseAdmin.from('bets').update({ accepted_by: null }).eq('accepted_by', userId);
+    await supabaseAdmin.from('bets').update({ winner: null }).eq('winner', userId);
 
     // 8. Delete user's bet stakes
     await supabaseAdmin.from('bet_stakes').delete().eq('user_id', userId);
@@ -92,7 +83,7 @@ Deno.serve(async (req) => {
         {
           status: 500,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        }
+        },
       );
     }
 
@@ -101,7 +92,7 @@ Deno.serve(async (req) => {
       {
         status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      }
+      },
     );
   } catch (error) {
     console.error('Error in delete-account:', error);
@@ -110,7 +101,7 @@ Deno.serve(async (req) => {
       {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      }
+      },
     );
   }
 });

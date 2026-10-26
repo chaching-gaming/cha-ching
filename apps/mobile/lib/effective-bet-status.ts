@@ -59,49 +59,38 @@ export function getEffectiveBetStatus(
 }
 
 /**
- * Check if the outcome window can be determined.
- * Returns true if:
- * - outcome_window_ends_at is explicitly set, OR
- * - The bet is PENDING_RESULT (or effective PENDING_RESULT) and has expires_at,
- *   allowing client-side calculation based on expires_at + window.
+ * Check if a bet is awaiting outcome submissions.
+ * With indefinite outcome windows, this returns true when status is PENDING_RESULT.
+ *
+ * @deprecated Outcome windows are now indefinite. Use bet.status === 'PENDING_RESULT' directly.
  */
 export function hasOutcomeWindowSet(bet: {
   status: string | null | undefined;
   outcome_window_ends_at?: string | null;
   expires_at?: string | null;
 }): boolean {
-  // If outcome_window_ends_at is set, window is known
-  if (bet.outcome_window_ends_at != null) return true;
+  // Outcome windows are now indefinite - a bet in PENDING_RESULT is always awaiting submissions
+  if (bet.status === 'PENDING_RESULT') return true;
 
-  // If bet is PENDING_RESULT but no window set, we can calculate from expires_at
-  if (bet.status === 'PENDING_RESULT' && bet.expires_at != null) {
-    return true;
-  }
-
-  // If bet is expired OPEN/MATCHED (effective PENDING_RESULT), we can calculate from expires_at
-  if (isBetPastExpiry(bet.status, bet.expires_at) && bet.expires_at != null) {
-    return true;
-  }
+  // If bet is expired OPEN/MATCHED (effective PENDING_RESULT)
+  if (isBetPastExpiry(bet.status, bet.expires_at)) return true;
 
   return false;
 }
 
 /**
  * Check if a bet is in the outcome submission window.
- * Returns true if status is PENDING_RESULT and outcome_window_ends_at is in the future.
+ * With indefinite outcome windows, returns true for any PENDING_RESULT bet.
  */
 export function isInOutcomeWindow(
   bet: {
     status: string | null | undefined;
     outcome_window_ends_at?: string | null;
   },
-  now: Date = new Date(),
+  _now: Date = new Date(),
 ): boolean {
-  if (bet.status !== 'PENDING_RESULT') return false;
-  if (!bet.outcome_window_ends_at) return false;
-  const windowEnd = parseApiTimestamp(bet.outcome_window_ends_at);
-  if (!windowEnd) return false;
-  return differenceInSeconds(windowEnd, now) > 0;
+  // Outcome windows are now indefinite - always in window if PENDING_RESULT
+  return bet.status === 'PENDING_RESULT';
 }
 
 /**
@@ -136,14 +125,13 @@ export function isInDisputeWindow(
 
 /**
  * Get the remaining seconds in the outcome window.
- * Returns 0 if not in outcome window or window has expired.
+ * With indefinite outcome windows, returns Infinity for PENDING_RESULT bets.
  *
- * Supports client-side calculation: when outcome_window_ends_at is NULL but
- * the bet is PENDING_RESULT (or expired OPEN/MATCHED), calculates the window
- * based on expires_at + windowSeconds.
+ * Note: Outcome windows are now indefinite. Bets stay in PENDING_RESULT until
+ * all participants submit or an admin resolves/voids the bet.
  *
  * @param bet The bet object
- * @param windowSeconds The outcome submission window duration (default: 30s, from room settings)
+ * @param _windowSeconds Deprecated - no longer used (windows are indefinite)
  * @param now Current time for calculation
  */
 export function getOutcomeWindowRemaining(
@@ -152,38 +140,19 @@ export function getOutcomeWindowRemaining(
     outcome_window_ends_at?: string | null;
     expires_at?: string | null;
   },
-  windowSeconds: number = 30,
+  _windowSeconds: number = 30,
   now: Date = new Date(),
 ): number {
-  // Case 1: outcome_window_ends_at is set - use it directly
-  if (bet.outcome_window_ends_at) {
-    if (bet.status !== 'PENDING_RESULT') return 0;
-    const windowEnd = parseApiTimestamp(bet.outcome_window_ends_at);
-    if (!windowEnd) return 0;
-    const remaining = differenceInSeconds(windowEnd, now);
-    return remaining > 0 ? remaining : 0;
+  // Outcome windows are now indefinite
+
+  // If PENDING_RESULT, window is indefinite
+  if (bet.status === 'PENDING_RESULT') {
+    return Infinity;
   }
 
-  // Case 2: No outcome_window_ends_at but bet is PENDING_RESULT with expires_at
-  // Calculate window from expires_at (server hasn't set it yet, likely pending cron)
-  // Note: Server may process bets up to 10s early due to clock skew tolerance,
-  // so remaining time may be slightly more than windowSeconds initially.
-  if (bet.status === 'PENDING_RESULT' && bet.expires_at) {
-    const expiresAt = parseApiTimestamp(bet.expires_at);
-    if (!expiresAt) return 0;
-    const windowEnd = new Date(expiresAt.getTime() + windowSeconds * 1000);
-    const remaining = differenceInSeconds(windowEnd, now);
-    return remaining > 0 ? remaining : 0;
-  }
-
-  // Case 3: Expired OPEN/MATCHED bet (effective PENDING_RESULT)
-  // Calculate window from expires_at
-  if (isBetPastExpiry(bet.status, bet.expires_at, now) && bet.expires_at) {
-    const expiresAt = parseApiTimestamp(bet.expires_at);
-    if (!expiresAt) return 0;
-    const windowEnd = new Date(expiresAt.getTime() + windowSeconds * 1000);
-    const remaining = differenceInSeconds(windowEnd, now);
-    return remaining > 0 ? remaining : 0;
+  // If expired OPEN/MATCHED bet (effective PENDING_RESULT), window is indefinite
+  if (isBetPastExpiry(bet.status, bet.expires_at, now)) {
+    return Infinity;
   }
 
   return 0;

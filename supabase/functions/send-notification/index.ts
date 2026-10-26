@@ -53,7 +53,7 @@ Deno.serve(async (req) => {
         {
           status: 400,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        }
+        },
       );
     }
 
@@ -72,7 +72,7 @@ Deno.serve(async (req) => {
       // Get user notification settings
       const { data: settings, error: settingsError } = await supabaseAdmin.rpc(
         'get_user_notification_settings',
-        { p_user_id: userId }
+        { p_user_id: userId },
       );
 
       if (settingsError || !settings?.length) {
@@ -189,7 +189,7 @@ Deno.serve(async (req) => {
       {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      }
+      },
     );
   }
 });

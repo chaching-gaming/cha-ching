@@ -13,7 +13,7 @@ import { useRouter } from 'expo-router';
 import { Swipeable } from 'react-native-gesture-handler';
 import { Plus, QrCode, Users } from 'phosphor-react-native';
 
-import { colors } from '@/constants/colors';
+import { useTheme } from '@/providers/theme';
 import { Avatar, EmptyState, ScreenHeader, SkeletonListItem } from '@/components/ui';
 import {
   useRooms,
@@ -35,7 +35,7 @@ function RoomCardContent({ item }: { item: RoomWithMembership }) {
       {/* Row 1: name + balance */}
       <View className="flex-row items-center justify-between">
         <View className="mr-3 flex-1">
-          <Text className="text-lg font-semibold text-white" numberOfLines={1}>
+          <Text className="text-lg font-semibold text-text-primary" numberOfLines={1}>
             {item.room.name}
           </Text>
         </View>
@@ -168,6 +168,7 @@ function RoomsEmptyState() {
 }
 
 export default function RoomsListScreen() {
+  const { colors } = useTheme();
   const router = useRouter();
   const { data: rooms, isLoading, refetch, isRefetching } = useRooms('active');
 

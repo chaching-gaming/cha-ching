@@ -3,7 +3,7 @@ import { Alert, Modal, Pressable, Text, TouchableOpacity, View } from 'react-nat
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Check, Warning, X } from 'phosphor-react-native';
 
-import { colors } from '@/constants/colors';
+import { useTheme } from '@/providers/theme';
 import { Button } from '@/components/ui/button';
 import { useResolveDispute } from '@/hooks/use-resolve-dispute';
 import { getRpcErrorMessage } from '@/hooks/use-rooms';
@@ -28,6 +28,7 @@ export function ResolveDisputeSheet({
   positiveLabel,
   negativeLabel,
 }: Props) {
+  const { colors } = useTheme();
   const safeInsets = useSafeAreaInsets();
   const resolveDispute = useResolveDispute();
   const [selected, setSelected] = useState<string | null>(null);
@@ -122,7 +123,7 @@ export function ResolveDisputeSheet({
               ) : (
                 <Check size={22} color={colors.primary} weight="fill" />
               )}
-              <Text className="text-xl font-bold text-white">
+              <Text className="text-xl font-bold text-text-primary">
                 {isDispute ? 'Resolve dispute' : 'Settle bet'}
               </Text>
             </View>
@@ -136,11 +137,16 @@ export function ResolveDisputeSheet({
           </View>
 
           <Text className="mb-1 text-sm font-medium text-text-secondary">Question</Text>
-          <Text className="mb-4 text-base leading-6 text-white">{bet.question}</Text>
+          <Text className="mb-4 text-base leading-6 text-text-primary">{bet.question}</Text>
 
           <Text className="mb-2 text-sm font-medium text-text-secondary">
             Participants reported ({totalSubmissions})
           </Text>
+          {!isDispute && totalSubmissions === 0 ? (
+            <Text className="mb-3 text-xs text-text-muted">
+              No outcomes submitted yet — you&apos;re force-settling this bet.
+            </Text>
+          ) : null}
           <View className="mb-5 gap-2">
             {options.map((option, idx) => {
               const count = submissionsByOption[option] ?? 0;
@@ -150,7 +156,7 @@ export function ResolveDisputeSheet({
                   key={option}
                   className="flex-row items-center justify-between rounded-xl border border-border bg-surface-light px-3 py-2.5"
                 >
-                  <Text className="text-sm font-semibold text-white" numberOfLines={1}>
+                  <Text className="text-sm font-semibold text-text-primary" numberOfLines={1}>
                     {getDisplayLabel(option)}
                   </Text>
                   <Text className={`text-sm font-bold ${tone}`} numberOfLines={1}>
@@ -176,7 +182,7 @@ export function ResolveDisputeSheet({
                   }`}
                 >
                   <Text
-                    className={`text-base font-semibold ${isSelected ? 'text-primary' : 'text-white'}`}
+                    className={`text-base font-semibold ${isSelected ? 'text-primary' : 'text-text-primary'}`}
                   >
                     {getDisplayLabel(option)}
                   </Text>

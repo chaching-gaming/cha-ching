@@ -1,30 +1,42 @@
 import { useCallback, useMemo, useState } from 'react';
-import { FlatList, RefreshControl, Text, View } from 'react-native';
-import { useLocalSearchParams } from 'expo-router';
+import { FlatList, Pressable, RefreshControl, Text, View } from 'react-native';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useQueryClient } from '@tanstack/react-query';
 import { Crown } from 'phosphor-react-native';
 
-import { colors } from '@/constants/colors';
+import { useTheme, type ThemeColors } from '@/providers/theme';
 import { Avatar, Badge, EmptyState, ScreenHeader, SkeletonListItem } from '@/components/ui';
 import { useAuth } from '@/providers/auth';
 import { useRoomDetail } from '@/hooks/use-rooms';
 import { useRoomMemberBalances, type RoomMemberBalance } from '@/hooks/use-activity-feed';
-import { balanceColorClass, formatBalance } from '@/lib/format-balance';
+import { formatBalance, netBalanceColorClass } from '@/lib/format-balance';
 
 // Podium medal colors from design tokens
-const RANK_BADGE_COLORS: Record<1 | 2 | 3, { bg: string; text: string }> = {
-  1: { bg: colors.medal.gold, text: colors.textPrimary },
-  2: { bg: colors.medal.silver, text: colors.textPrimary },
-  3: { bg: colors.medal.bronze, text: colors.textPrimary },
-};
+function getRankBadgeColors(colors: ThemeColors): Record<1 | 2 | 3, { bg: string; text: string }> {
+  return {
+    1: { bg: colors.medal.gold, text: colors.textPrimary },
+    2: { bg: colors.medal.silver, text: colors.textPrimary },
+    3: { bg: colors.medal.bronze, text: colors.textPrimary },
+  };
+}
 
 export default function StandingsScreen() {
+  const { colors } = useTheme();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { session: authSession } = useAuth();
   const queryClient = useQueryClient();
+  const router = useRouter();
 
   const { data: room, isLoading: roomLoading } = useRoomDetail(id);
   const { data: memberBalances, isLoading: balancesLoading } = useRoomMemberBalances(id);
+
+  const handleMemberPress = useCallback(
+    (userId: string) => {
+      router.push(`/(tabs)/rooms/member/${userId}?roomId=${id}`);
+    },
+    [id, router],
+  );
+
   // Expo Router keeps the main room screen mounted in the stack while this page
   // is on top, so its `useRealtimeActivityFeed` subscription is still active and
   // keeps invalidating `roomMemberBalancesKey` on every chip movement. Our own
@@ -48,7 +60,13 @@ export default function StandingsScreen() {
   if (roomLoading) {
     return (
       <View className="flex-1 bg-background">
-        <ScreenHeader title="Standings" showBack showHome titleClassName="text-xl font-bold text-white" backIconSize={28} />
+        <ScreenHeader
+          title="Standings"
+          showBack
+          showHome
+          titleClassName="text-xl font-bold text-text-primary"
+          backIconSize={28}
+        />
         <View>
           {Array.from({ length: 8 }).map((_, i) => (
             <SkeletonListItem key={i} />
@@ -72,7 +90,7 @@ export default function StandingsScreen() {
         title="Standings"
         subtitle={room.name}
         showBack
-        titleClassName="text-xl font-bold text-white"
+        titleClassName="text-xl font-bold text-text-primary"
         backIconSize={28}
       />
 
@@ -100,6 +118,7 @@ export default function StandingsScreen() {
               rank={index + 4}
               isSelf={!!currentUserId && item.user_id === currentUserId}
               chipLimit={chipLimit}
+              onPress={() => handleMemberPress(item.user_id)}
             />
           )}
           contentContainerClassName="pb-12"
@@ -111,7 +130,12 @@ export default function StandingsScreen() {
             />
           }
           ListHeaderComponent={
-            <Podium members={podium} currentUserId={currentUserId} chipLimit={chipLimit} />
+            <Podium
+              members={podium}
+              currentUserId={currentUserId}
+              chipLimit={chipLimit}
+              onMemberPress={handleMemberPress}
+            />
           }
         />
       )}
@@ -127,10 +151,12 @@ function Podium({
   members,
   currentUserId,
   chipLimit,
+  onMemberPress,
 }: {
   members: RoomMemberBalance[];
   currentUserId: string | null;
   chipLimit: number | null;
+  onMemberPress: (userId: string) => void;
 }) {
   // Position: #2 on the left, #1 in the middle (tallest), #3 on the right.
   // For under-filled rooms we still center #1 and only render columns we have.
@@ -149,6 +175,7 @@ function Podium({
             pedestalHeight={96}
             isSelf={!!currentUserId && second.user_id === currentUserId}
             chipLimit={chipLimit}
+            onPress={() => onMemberPress(second.user_id)}
           />
         ) : (
           <View className="opacity-0">
@@ -165,6 +192,7 @@ function Podium({
             pedestalHeight={128}
             isSelf={!!currentUserId && first.user_id === currentUserId}
             chipLimit={chipLimit}
+            onPress={() => onMemberPress(first.user_id)}
           />
         ) : null}
       </View>
@@ -177,6 +205,7 @@ function Podium({
             pedestalHeight={80}
             isSelf={!!currentUserId && third.user_id === currentUserId}
             chipLimit={chipLimit}
+            onPress={() => onMemberPress(third.user_id)}
           />
         ) : (
           <View className="opacity-0">
@@ -195,6 +224,7 @@ function PodiumColumn({
   pedestalHeight,
   isSelf,
   chipLimit,
+  onPress,
 }: {
   member: RoomMemberBalance;
   rank: 1 | 2 | 3;
@@ -202,15 +232,27 @@ function PodiumColumn({
   pedestalHeight: number;
   isSelf: boolean;
   chipLimit: number | null;
+  onPress: () => void;
 }) {
-  const badge = RANK_BADGE_COLORS[rank];
+  const { colors } = useTheme();
+  const rankBadgeColors = useMemo(() => getRankBadgeColors(colors), [colors]);
+  const badge = rankBadgeColors[rank];
   const belowLimit = chipLimit != null && member.balance <= chipLimit;
+  const isInactive = member.left_at != null;
 
   return (
-    <View className="items-center">
+    <Pressable
+      onPress={onPress}
+      className={`items-center active:opacity-70 ${isInactive ? 'opacity-60' : ''}`}
+    >
       {/* Avatar with rank badge */}
       <View className="relative">
-        <Avatar uri={member.avatar_url} fallback={member.display_name ?? '?'} size={avatarSize} />
+        <Avatar
+          uri={member.avatar_url}
+          fallback={member.display_name ?? '?'}
+          size={avatarSize}
+          inactive={isInactive}
+        />
         <View
           className="absolute -right-1 -top-1 h-6 w-6 items-center justify-center rounded-full border-2 border-background"
           style={{ backgroundColor: badge.bg }}
@@ -221,19 +263,36 @@ function PodiumColumn({
         </View>
       </View>
 
-      {/* Name */}
-      <Text
-        className="mt-2 max-w-full text-center text-sm font-semibold text-white"
-        numberOfLines={1}
-      >
-        {member.display_name ?? 'Unknown'}
-        {isSelf ? <Text className="text-xs text-text-secondary"> (you)</Text> : null}
-      </Text>
+      {/* Name + Left badge */}
+      <View className="mt-2 flex-row items-center gap-1">
+        <Text
+          className="max-w-full text-center text-sm font-semibold text-text-primary"
+          numberOfLines={1}
+        >
+          {member.display_name ?? 'Unknown'}
+          {isSelf ? <Text className="text-xs text-text-secondary"> (you)</Text> : null}
+        </Text>
+        {isInactive ? (
+          <Badge
+            variant="default"
+            label="Left"
+            className="bg-surface-alt px-1.5 py-0.5"
+            labelClassName="text-[9px] font-semibold text-text-muted"
+          />
+        ) : null}
+      </View>
 
-      {/* Balance pill */}
-      <View className="mt-1 rounded-lg bg-surface-light px-2 py-0.5">
-        <Text className={`text-xs font-bold ${balanceColorClass(member.balance)}`}>
-          {formatBalance(member.balance)}
+      {/* Balance with net balance below */}
+      <View className="mt-1 items-center">
+        <View className="rounded-lg bg-surface-light px-2 py-0.5">
+          <Text className="text-xs font-bold text-text-primary">
+            {member.balance.toLocaleString()}
+          </Text>
+        </View>
+        <Text
+          className={`mt-0.5 text-[10px] font-semibold ${netBalanceColorClass(member.net_balance)}`}
+        >
+          ({formatBalance(member.net_balance)})
         </Text>
       </View>
 
@@ -253,7 +312,7 @@ function PodiumColumn({
       >
         <Text className="text-5xl font-black text-text-muted opacity-30">{rank}</Text>
       </View>
-    </View>
+    </Pressable>
   );
 }
 
@@ -280,34 +339,61 @@ function StandingsRow({
   rank,
   isSelf,
   chipLimit,
+  onPress,
 }: {
   member: RoomMemberBalance;
   rank: number;
   isSelf: boolean;
   chipLimit: number | null;
+  onPress: () => void;
 }) {
   const belowLimit = chipLimit != null && member.balance <= chipLimit;
+  const isInactive = member.left_at != null;
+
   return (
-    <View className="flex-row items-center border-b border-border/40 px-5 py-4">
+    <Pressable
+      onPress={onPress}
+      className={`flex-row items-center border-b border-border/40 px-5 py-4 active:bg-surface/50 ${isInactive ? 'opacity-60' : ''}`}
+    >
       <Text className="w-8 text-base font-bold text-text-muted">{rank}</Text>
-      <Avatar uri={member.avatar_url} fallback={member.display_name ?? '?'} size="md" />
-      <View className="ml-3 min-w-0 flex-1 flex-row items-center gap-2">
-        <Text className="min-w-0 shrink text-base text-white" numberOfLines={1}>
-          {member.display_name ?? 'Unknown'}
-          {isSelf ? <Text className="text-sm text-text-secondary"> (you)</Text> : null}
-        </Text>
-        {belowLimit ? (
-          <Badge
-            variant="error"
-            label="At limit"
-            className="px-2 py-0.5"
-            labelClassName="text-[10px] font-bold tracking-wide"
-          />
-        ) : null}
+      <Avatar
+        uri={member.avatar_url}
+        fallback={member.display_name ?? '?'}
+        size="md"
+        inactive={isInactive}
+      />
+      <View className="ml-3 min-w-0 flex-1">
+        <View className="flex-row items-center gap-2">
+          <Text className="min-w-0 shrink text-base text-text-primary" numberOfLines={1}>
+            {member.display_name ?? 'Unknown'}
+            {isSelf ? <Text className="text-sm text-text-secondary"> (you)</Text> : null}
+          </Text>
+          {isInactive ? (
+            <Badge
+              variant="default"
+              label="Left"
+              className="bg-surface-alt px-2 py-0.5"
+              labelClassName="text-[10px] font-semibold text-text-muted"
+            />
+          ) : null}
+          {belowLimit ? (
+            <Badge
+              variant="error"
+              label="At limit"
+              className="px-2 py-0.5"
+              labelClassName="text-[10px] font-bold tracking-wide"
+            />
+          ) : null}
+        </View>
       </View>
-      <Text className={`text-base font-bold ${balanceColorClass(member.balance)}`}>
-        {formatBalance(member.balance)}
-      </Text>
-    </View>
+      <View className="items-end">
+        <Text className="text-base font-bold text-text-primary">
+          {member.balance.toLocaleString()}
+        </Text>
+        <Text className={`text-xs font-semibold ${netBalanceColorClass(member.net_balance)}`}>
+          ({formatBalance(member.net_balance)})
+        </Text>
+      </View>
+    </Pressable>
   );
 }

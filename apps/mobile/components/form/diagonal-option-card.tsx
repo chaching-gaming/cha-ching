@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
-import { colors } from '@/constants/colors';
+import { useTheme } from '@/providers/theme';
 
 type DiagonalOptionCardProps = {
   icon: ReactNode;
@@ -28,11 +28,12 @@ export function DiagonalOptionCard({
   disabled = false,
   isActive,
 }: DiagonalOptionCardProps) {
+  const { colors } = useTheme();
   const positiveSelected = isActive && selectedPick === positiveLabel;
   const negativeSelected = isActive && selectedPick === negativeLabel;
 
   const borderColor = isActive ? colors.primary : colors.border;
-  const bgColor = isActive ? 'rgba(46, 175, 125, 0.1)' : colors.surface;
+  const bgColor = isActive ? 'rgba(77, 138, 138, 0.1)' : colors.surface;
 
   return (
     <View
@@ -51,7 +52,7 @@ export function DiagonalOptionCard({
       {/* Top section: Icon and label */}
       <View className="items-center px-3 pb-2 pt-4">
         {icon}
-        <Text className="mt-2 text-center text-sm font-bold text-white" numberOfLines={2}>
+        <Text className="mt-2 text-center text-sm font-bold text-text-primary" numberOfLines={2}>
           {label}
         </Text>
         {sublabel ? (
@@ -68,7 +69,7 @@ export function DiagonalOptionCard({
             flex: 1,
             paddingVertical: 10,
             borderRadius: 10,
-            backgroundColor: positiveSelected ? colors.primary : 'rgba(255,255,255,0.08)',
+            backgroundColor: positiveSelected ? colors.primary : colors.background,
             alignItems: 'center',
             justifyContent: 'center',
           }}
@@ -77,7 +78,7 @@ export function DiagonalOptionCard({
             style={{
               fontSize: 13,
               fontWeight: '700',
-              color: positiveSelected ? colors.background : colors.textSecondary,
+              color: positiveSelected ? '#FFFFFF' : colors.textSecondary,
             }}
           >
             {positiveLabel}
@@ -91,7 +92,7 @@ export function DiagonalOptionCard({
             flex: 1,
             paddingVertical: 10,
             borderRadius: 10,
-            backgroundColor: negativeSelected ? colors.error : 'rgba(255,255,255,0.08)',
+            backgroundColor: negativeSelected ? colors.error : colors.background,
             alignItems: 'center',
             justifyContent: 'center',
           }}

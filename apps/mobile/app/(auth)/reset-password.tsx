@@ -72,7 +72,7 @@ export default function ResetPasswordScreen() {
       contentContainerClassName="flex-grow justify-center px-5 py-8"
     >
       <View className="mb-8">
-        <Text className="text-3xl font-bold text-white">Reset Password</Text>
+        <Text className="text-3xl font-bold text-text-primary">Reset Password</Text>
         <Text className="mt-2 text-base text-text-secondary">Enter your new password below.</Text>
       </View>
 

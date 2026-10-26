@@ -24,40 +24,54 @@ import {
 } from 'phosphor-react-native';
 import { useQueryClient } from '@tanstack/react-query';
 
-import { colors } from '@/constants/colors';
+import { useTheme } from '@/providers/theme';
 import { Avatar } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ScreenHeader } from '@/components/ui/screen-header';
-import { LockedInCelebration } from '@/components/activity/locked-in-celebration';
 import { ResolveDisputeSheet } from '@/components/activity/resolve-dispute-sheet';
 import { SubmitOutcomeSheet } from '@/components/activity/submit-outcome-sheet';
 import { VoidBetSheet } from '@/components/activity/void-bet-sheet';
-import { WinnerCelebration } from '@/components/activity/winner-celebration';
+import { SplashCelebration } from '@/components/activity/splash-celebration';
 import { useFeedback } from '@/providers/feedback';
 import { useServerTimeTick } from '@/providers/time';
-import { betDetailKey, roomBalanceKey, useBetDetail, type BetStakeWithProfile } from '@/hooks/use-activity-feed';
-import { useRoomDetail, useRoomMembers, getRpcErrorMessage } from '@/hooks/use-rooms';
+import {
+  betDetailKey,
+  roomBalanceKey,
+  useBetDetail,
+  type BetStakeWithProfile,
+} from '@/hooks/use-activity-feed';
+import {
+  useRoomDetail,
+  useRoomMembersWithHistory,
+  getRpcErrorMessage,
+  createMembershipStatusMap,
+  isMemberInactive,
+  getMembershipStatusLabel,
+  type RoomMemberStatus,
+} from '@/hooks/use-rooms';
 import { useJoinBet } from '@/hooks/use-join-bet';
 import { useProcessExpiredBet } from '@/hooks/use-process-expired-bet';
 import { useQuestionTemplates } from '@/hooks/use-question-templates';
 import { useAuth } from '@/providers/auth';
-import { formatBetCountdown, formatRelativeActivityTime, parseApiTimestamp } from '@/lib/date-format';
+import {
+  formatBetCountdown,
+  formatRelativeActivityTime,
+  parseApiTimestamp,
+} from '@/lib/date-format';
 import {
   getEffectiveBetStatus,
-  getOutcomeWindowRemaining,
   getDisputeWindowRemaining,
   isInDisputeWindow,
-  hasOutcomeWindowSet,
   hasDisputeWindowSet,
-  isBetPastExpiry,
 } from '@/lib/effective-bet-status';
 import { useRaiseDispute } from '@/hooks/use-raise-dispute';
+import { useProcessDisputeWindow } from '@/hooks/use-process-settlement-windows';
 import {
-  useProcessOutcomeWindow,
-  useProcessDisputeWindow,
-} from '@/hooks/use-process-settlement-windows';
-import { markBetCelebrated, hasBetBeenCelebrated } from '@/hooks/use-winner-celebration';
+  useBetCelebration,
+  markBetCelebrated,
+  hasBetBeenCelebrated,
+} from '@/hooks/use-winner-celebration';
 import { supabase } from '@/lib/supabase';
 
 function getBetStatusPill(status: string | null | undefined): {
@@ -90,20 +104,8 @@ function formatStakeChips(stake: number): string {
   return `${stake.toLocaleString('en-US')} chips`;
 }
 
-function getSettlementMethodLabel(method: string | null | undefined): string {
-  switch (method) {
-    case 'CONSENSUS':
-      return 'consensus';
-    case 'MAJORITY_VOTE':
-      return 'majority vote';
-    case 'ATTESTOR':
-      return 'attestor decision';
-    default:
-      return method?.toLowerCase().replace(/_/g, ' ') ?? '';
-  }
-}
-
 export default function BetDetailScreen() {
+  const { colors } = useTheme();
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const safeInsets = useSafeAreaInsets();
@@ -113,17 +115,18 @@ export default function BetDetailScreen() {
 
   const { data: bet, isLoading } = useBetDetail(id ?? '');
   const { data: room } = useRoomDetail(bet?.room_id ?? '');
-  const { data: members } = useRoomMembers(bet?.room_id ?? '');
+  const { data: members } = useRoomMembersWithHistory(bet?.room_id ?? '');
   const { data: templates } = useQuestionTemplates('golf');
+
+  // Create membership status lookup for showing left/removed indicators
+  const membershipStatusMap = useMemo(() => createMembershipStatusMap(members), [members]);
   const joinBet = useJoinBet();
   const processExpiredBet = useProcessExpiredBet();
   const raiseDispute = useRaiseDispute();
-  const processOutcomeWindow = useProcessOutcomeWindow();
   const processDisputeWindow = useProcessDisputeWindow();
 
   // Track if we've already triggered processing for this bet
   const processedBetRef = useRef<string | null>(null);
-  const outcomeProcessedRef = useRef<string | null>(null);
   const disputeProcessedRef = useRef<string | null>(null);
 
   // Get template for contextual labels (Hit/Miss, Make/Miss, etc.)
@@ -149,14 +152,17 @@ export default function BetDetailScreen() {
   const [disputeSheetOpen, setDisputeSheetOpen] = useState(false);
   const [voidSheetOpen, setVoidSheetOpen] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
-  const [showWinCelebration, setShowWinCelebration] = useState(false);
   const [showLockedInCelebration, setShowLockedInCelebration] = useState(false);
+  const [showJoinSplash, setShowJoinSplash] = useState(false);
   const { trigger } = useFeedback();
 
   const dbStatus = bet?.status ?? '';
   const prevStatusRef = useRef<string | null>(null);
 
-  // Detect status transitions and trigger celebrations
+  // Win/loss celebration triggered by notifications
+  const { showWinCelebration, dismissWinCelebration } = useBetCelebration(bet, currentUserId);
+
+  // Detect OPEN → MATCHED transition for "locked in" celebration
   useEffect(() => {
     if (!bet || isLoading) return;
 
@@ -174,28 +180,6 @@ export default function BetDetailScreen() {
       setShowLockedInCelebration(true);
       trigger('bet_matched');
     }
-
-    // → SETTLED: Win/loss celebration (only if not already celebrated elsewhere)
-    if (prevStatus !== 'SETTLED' && dbStatus === 'SETTLED' && !hasBetBeenCelebrated(bet.id)) {
-      const userWon =
-        currentUserId &&
-        bet.outcome &&
-        (bet.stakes ?? []).some(
-          (s) =>
-            s.user_id === currentUserId &&
-            s.pick.trim().toLowerCase() === bet.outcome!.trim().toLowerCase(),
-        );
-
-      // Mark as celebrated globally to prevent duplicate celebrations
-      markBetCelebrated(bet.id);
-
-      if (userWon) {
-        setShowWinCelebration(true);
-        trigger('bet_won');
-      } else if (userParticipated) {
-        trigger('bet_lost');
-      }
-    }
   }, [bet, dbStatus, isLoading, currentUserId, trigger]);
 
   // Auto-process expired bets immediately (eliminates 0-60s cron lag)
@@ -208,8 +192,8 @@ export default function BetDetailScreen() {
     if (!bet.expires_at) return;
 
     // Client-side expiry check using server-synced time
-    const expiresAt = new Date(bet.expires_at);
-    if (expiresAt > serverNow) return;
+    const expiresAt = parseApiTimestamp(bet.expires_at);
+    if (!expiresAt || expiresAt > serverNow) return;
 
     // Don't call RPC again if we're already waiting for retry
     if (processedBetRef.current === bet.id) return;
@@ -244,48 +228,8 @@ export default function BetDetailScreen() {
     })();
   }, [bet, dbStatus, isLoading, processExpiredBet, queryClient, serverNow]);
 
-
-  // Auto-process outcome window when it expires (eliminates cron delay)
-  useEffect(() => {
-    if (dbStatus !== 'PENDING_RESULT' || !bet?.id || !bet?.room_id) return;
-    if (processOutcomeWindow.isPending) return; // Already processing
-    if (outcomeProcessedRef.current === bet.id) return; // Already processed this bet
-
-    // CRITICAL: Only process if outcome_window_ends_at is set and expired
-    // If NULL, the server hasn't set it yet - let the cron handle it
-    if (!bet.outcome_window_ends_at) return;
-
-    const remaining = getOutcomeWindowRemaining(bet, room?.outcome_submission_window_seconds ?? 30, serverNow);
-    if (remaining > 0) return; // Window still open
-
-    const betId = bet.id;
-    const roomId = bet.room_id;
-
-    outcomeProcessedRef.current = betId;
-
-    (async () => {
-      try {
-        const result = await processOutcomeWindow.mutateAsync({ p_bet_id: betId, roomId });
-
-        // Check if RPC actually processed the bet
-        if (result.status === 'PENDING_RESULT') {
-          // Server hasn't processed yet (clock skew) - schedule retry
-          setTimeout(() => {
-            outcomeProcessedRef.current = null;
-            queryClient.invalidateQueries({ queryKey: betDetailKey(betId) });
-          }, 2000);
-        } else {
-          // Successfully processed - force immediate refetch
-          await Promise.all([
-            queryClient.refetchQueries({ queryKey: betDetailKey(betId) }),
-            queryClient.refetchQueries({ queryKey: roomBalanceKey(roomId) }),
-          ]);
-        }
-      } catch {
-        outcomeProcessedRef.current = null;
-      }
-    })();
-  }, [dbStatus, bet?.id, bet?.room_id, bet?.outcome_window_ends_at, serverNow, processOutcomeWindow, queryClient, room?.outcome_submission_window_seconds]);
+  // Note: Client-side outcome window processing removed - windows are now indefinite.
+  // Settlement happens when all participants submit (via process_all_submissions on server).
 
   // Auto-process dispute window when it expires (eliminates cron delay)
   useEffect(() => {
@@ -328,7 +272,15 @@ export default function BetDetailScreen() {
         disputeProcessedRef.current = null;
       }
     })();
-  }, [dbStatus, bet?.id, bet?.room_id, bet?.dispute_window_ends_at, serverNow, processDisputeWindow, queryClient]);
+  }, [
+    dbStatus,
+    bet?.id,
+    bet?.room_id,
+    bet?.dispute_window_ends_at,
+    serverNow,
+    processDisputeWindow,
+    queryClient,
+  ]);
 
   // Realtime subscription for bet updates
   useEffect(() => {
@@ -336,10 +288,18 @@ export default function BetDetailScreen() {
 
     const roomId = bet.room_id;
 
+    // Clean up any existing bet-detail channels for this bet to prevent subscription errors
+    const baseTopic = `bet-detail:${id}`;
+    for (const ch of [...supabase.getChannels()]) {
+      if (ch.topic.startsWith(`realtime:${baseTopic}`)) {
+        void supabase.removeChannel(ch);
+      }
+    }
+
     // Unique token prevents reusing an already-subscribed channel on re-mount
     const token = `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
     const channel = supabase
-      .channel(`bet-detail:${id}:${token}`)
+      .channel(`${baseTopic}:${token}`)
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'bets', filter: `id=eq.${id}` },
@@ -404,6 +364,12 @@ export default function BetDetailScreen() {
   const subjectName = bet?.subject_profile?.display_name ?? null;
   const offererName = bet?.offered_by_profile?.display_name ?? 'Someone';
 
+  // Membership status for offerer and subject
+  const offererStatus = bet?.offered_by ? membershipStatusMap.get(bet.offered_by) : undefined;
+  const subjectStatus = bet?.subject_user_id
+    ? membershipStatusMap.get(bet.subject_user_id)
+    : undefined;
+
   // Show countdown for OPEN and MATCHED bets that haven't expired yet
   // (MATCHED means someone joined but not all members, so still waiting for expiry)
   const countdown =
@@ -433,24 +399,11 @@ export default function BetDetailScreen() {
     () => bet?.outcome_submissions ?? [],
     [bet?.outcome_submissions],
   );
-  const submittedCount = outcomeSubmissions.length;
-  const totalParticipants = stakes.length;
   const mySubmission = useMemo(
     () =>
       currentUserId ? (outcomeSubmissions.find((s) => s.user_id === currentUserId) ?? null) : null,
     [outcomeSubmissions, currentUserId],
   );
-
-  // Participants who haven't submitted yet
-  const pendingParticipants = useMemo(() => {
-    const submittedUserIds = new Set(outcomeSubmissions.map((s) => s.user_id));
-    return stakes
-      .filter((s) => !submittedUserIds.has(s.user_id))
-      .map((s) => ({
-        user_id: s.user_id,
-        display_name: s.user?.display_name ?? 'Unknown',
-      }));
-  }, [stakes, outcomeSubmissions]);
 
   // Group submissions by option for attestor view
   const submissionsByOption = useMemo(() => {
@@ -470,8 +423,15 @@ export default function BetDetailScreen() {
   }, [stakes]);
   const bothSidesStaked = distinctPicksStaked >= 2;
 
-  // Current user's role
-  const currentMember = members?.find((m) => m.user_id === currentUserId);
+  const flatStakes = useMemo(
+    () => options.flatMap((option) => stakesByPick[option] ?? []),
+    [options, stakesByPick],
+  );
+
+  // Current user's role (only if still active member)
+  const currentMember = members?.find(
+    (m) => m.user_id === currentUserId && m.membershipStatus === 'active',
+  );
   const currentUserRole = currentMember?.role ?? null;
   const isAttestorOrAdmin = currentUserRole === 'ATTESTOR' || currentUserRole === 'ADMIN';
   const isActive = room?.is_active ?? false;
@@ -486,23 +446,14 @@ export default function BetDetailScreen() {
     !alreadyStaked &&
     effectiveStatus !== 'EXPIRED';
 
-  // Can submit outcome? Use effectiveStatus for immediate client-side detection
-  // Check if window has expired (using client-side calculation if outcome_window_ends_at not set)
+  // Can submit outcome? Outcome windows are now indefinite - can always submit while PENDING_RESULT
   const isParticipant = !!myStake;
-  const outcomeWindowSeconds = room?.outcome_submission_window_seconds ?? 30;
-  const outcomeWindowExpired =
-    !!bet && hasOutcomeWindowSet(bet) && getOutcomeWindowRemaining(bet, outcomeWindowSeconds) <= 0;
   const canSubmitOutcome =
-    isActive &&
-    isParticipant &&
-    !mySubmission &&
-    effectiveStatus === 'PENDING_RESULT' &&
-    !outcomeWindowExpired;
+    isActive && isParticipant && !mySubmission && effectiveStatus === 'PENDING_RESULT';
 
-  // Can resolve? Only DISPUTED bets need manual resolution by attestor/admin
-  // PENDING_RESULT and PENDING_DISPUTE are handled automatically by timed windows
-  const allSubmitted = totalParticipants > 0 && submittedCount === totalParticipants;
-  const canResolve = isAttestorOrAdmin && dbStatus === 'DISPUTED';
+  const canResolve =
+    (isAttestorOrAdmin && dbStatus === 'DISPUTED') ||
+    (currentUserRole === 'ADMIN' && dbStatus === 'PENDING_RESULT');
 
   // Can void?
   const canVoid = currentUserRole === 'ADMIN' && dbStatus !== 'VOID';
@@ -541,6 +492,7 @@ export default function BetDetailScreen() {
                   p_pick: option,
                   roomId: bet.room_id!,
                 });
+                setShowJoinSplash(true);
               } catch (err) {
                 Alert.alert('Could not join bet', getRpcErrorMessage(err, 'Please try again.'));
               }
@@ -622,15 +574,35 @@ export default function BetDetailScreen() {
           </View>
 
           {/* Question */}
-          <Text className="mt-3 text-lg font-bold leading-6 text-white">{bet.question}</Text>
+          <Text className="mt-3 text-lg font-bold leading-6 text-text-primary">{bet.question}</Text>
 
-          <Text className="mt-1 text-sm text-text-secondary">
-            {subjectName
-              ? subjectName === offererName
-                ? `${offererName}'s offer`
-                : `${offererName} · about ${subjectName}`
-              : `${offererName}'s offer`}
-          </Text>
+          {/* Offerer/Subject with membership status badges */}
+          <View className="mt-1 flex-row flex-wrap items-center gap-1">
+            <Text className="text-sm text-text-secondary">{offererName}</Text>
+            {isMemberInactive(offererStatus) && (
+              <Badge
+                variant="default"
+                label={getMembershipStatusLabel(offererStatus) ?? ''}
+                className="bg-surface-alt px-2 py-0.5"
+                labelClassName="text-[10px] font-semibold text-text-muted"
+              />
+            )}
+            {subjectName && subjectName !== offererName ? (
+              <>
+                <Text className="text-sm text-text-secondary">· about {subjectName}</Text>
+                {isMemberInactive(subjectStatus) && (
+                  <Badge
+                    variant="default"
+                    label={getMembershipStatusLabel(subjectStatus) ?? ''}
+                    className="bg-surface-alt px-2 py-0.5"
+                    labelClassName="text-[10px] font-semibold text-text-muted"
+                  />
+                )}
+              </>
+            ) : (
+              <Text className="text-sm text-text-secondary">&apos;s offer</Text>
+            )}
+          </View>
 
           {/* Countdown for OPEN/MATCHED bets */}
           {countdown && (
@@ -648,7 +620,9 @@ export default function BetDetailScreen() {
             <View className="flex-row items-center gap-2">
               <Coins size={18} color={colors.chipsIcon} weight="fill" />
               <Text className="text-sm text-text-secondary">Entry</Text>
-              <Text className="font-bold text-white">{bet.stake.toLocaleString('en-US')}</Text>
+              <Text className="font-bold text-text-primary">
+                {bet.stake.toLocaleString('en-US')}
+              </Text>
             </View>
             <View className="flex-row items-center gap-2">
               <Trophy size={18} color={colors.primary} weight="fill" />
@@ -682,12 +656,6 @@ export default function BetDetailScreen() {
               <Trophy size={16} color={colors.primary} weight="fill" />
               <Text className="text-sm font-medium text-primary">
                 Result: {getDisplayLabel(bet.outcome)}
-                {bet.settlement_method && (
-                  <Text className="text-text-muted">
-                    {' '}
-                    · via {getSettlementMethodLabel(bet.settlement_method)}
-                  </Text>
-                )}
               </Text>
             </View>
           )}
@@ -729,47 +697,8 @@ export default function BetDetailScreen() {
           </View>
         )}
 
-        {/* PENDING_RESULT - Submission Progress */}
-        {dbStatus === 'PENDING_RESULT' && (
-          <View className="mx-4 mt-3 rounded-xl bg-surface px-4 py-3">
-            {/* Header row */}
-            <View className="flex-row items-center justify-between">
-              <View className="flex-row items-center gap-2">
-                <Text className="text-sm text-text-secondary">Submissions</Text>
-                <Text className="font-bold text-primary">
-                  {submittedCount}/{totalParticipants}
-                </Text>
-              </View>
-              {mySubmission ? (
-                <View className="flex-row items-center gap-1">
-                  <Check size={14} color={colors.primary} weight="bold" />
-                  <Text className="text-sm text-primary">
-                    {getDisplayLabel(mySubmission.selected_option)}
-                  </Text>
-                </View>
-              ) : isParticipant ? (
-                <Text className="text-sm text-warning">Submit your outcome</Text>
-              ) : null}
-            </View>
-
-            {/* Outcome window countdown - only show once bet has actually expired */}
-            {hasBetExpired && hasOutcomeWindowSet(bet) && getOutcomeWindowRemaining(bet, outcomeWindowSeconds) > 0 && (
-              <View className="mt-2 flex-row items-center gap-2">
-                <Timer size={16} color={colors.warning} weight="bold" />
-                <Text className="text-sm font-bold text-warning">
-                  {getOutcomeWindowRemaining(bet, outcomeWindowSeconds)}s to submit
-                </Text>
-              </View>
-            )}
-
-            {/* Show who's waiting */}
-            {pendingParticipants.length > 0 && (
-              <Text className="mt-2 text-xs text-text-muted">
-                Waiting for {pendingParticipants.map((p) => p.display_name).join(', ')}
-              </Text>
-            )}
-          </View>
-        )}
+        {/* Note: PENDING_RESULT submission count UI removed - with first-submission flow,
+            PENDING_RESULT is brief (until first submission), then moves to PENDING_DISPUTE. */}
 
         {/* PENDING_DISPUTE - Preliminary Result Confirmation */}
         {dbStatus === 'PENDING_DISPUTE' && (
@@ -778,11 +707,12 @@ export default function BetDetailScreen() {
               <Trophy size={20} color={colors.primary} weight="fill" />
               <View className="flex-1">
                 <Text className="text-base font-bold text-primary">
-                  Result: {bet.preliminary_outcome ? getDisplayLabel(bet.preliminary_outcome) : 'TBD'}
+                  Result:{' '}
+                  {bet.preliminary_outcome ? getDisplayLabel(bet.preliminary_outcome) : 'TBD'}
                 </Text>
-                {hasDisputeWindowSet(bet) && getDisputeWindowRemaining(bet) > 0 && (
+                {hasDisputeWindowSet(bet) && getDisputeWindowRemaining(bet, serverNow) > 0 && (
                   <Text className="mt-1 text-sm text-text-secondary">
-                    {getDisputeWindowRemaining(bet)}s to dispute
+                    {getDisputeWindowRemaining(bet, serverNow)}s to dispute
                   </Text>
                 )}
               </View>
@@ -795,18 +725,16 @@ export default function BetDetailScreen() {
           </View>
         )}
 
-        {/* PARTICIPANTS - Side by Side */}
+        {/* PARTICIPANTS - Zone 1: Side-by-side summary */}
         <View className={`mx-4 mt-4 flex-row gap-3 ${dimmed ? 'opacity-60' : ''}`}>
           {options.map((option, idx) => {
             const optionStakes = stakesByPick[option] ?? [];
             const isWinner =
               !!bet.outcome && option.trim().toLowerCase() === bet.outcome.trim().toLowerCase();
             const isLosingOption = dbStatus === 'SETTLED' && !!bet.outcome && !isWinner;
-            // Check if current user is on this side and lost
             const userOnThisSide = optionStakes.some((s) => s.user_id === currentUserId);
             const userLostHere = isLosingOption && userOnThisSide;
-            const submissions = submissionsByOption[option] ?? [];
-            const voteCount = submissions.length;
+            const voteCount = (submissionsByOption[option] ?? []).length;
             const isLeft = idx === 0;
             const canTapToJoin = canJoin && !joinBet.isPending;
 
@@ -819,7 +747,6 @@ export default function BetDetailScreen() {
                 }
               : {};
 
-            // Card styling: winner = green, user lost here = red tint, other losing = muted
             const cardStyle = isWinner
               ? 'border-primary bg-primary/5'
               : userLostHere
@@ -837,25 +764,22 @@ export default function BetDetailScreen() {
                 className={`flex-1 rounded-2xl border bg-surface p-3 ${cardStyle}`}
               >
                 {/* Option Header */}
-                <View className="mb-3 items-center">
-                  <View className="flex-row items-center gap-1.5">
-                    {userLostHere && <X size={16} color={colors.error} weight="bold" />}
-                    <Text
-                      className={`text-base font-bold uppercase ${
-                        isWinner
-                          ? 'text-primary'
-                          : userLostHere
-                            ? 'text-error/80'
-                            : isLosingOption
-                              ? 'text-text-muted'
-                              : isLeft
-                                ? 'text-primary'
-                                : 'text-error'
-                      }`}
-                    >
-                      {getDisplayLabel(option)}
-                    </Text>
-                  </View>
+                <View className="items-center">
+                  <Text
+                    className={`text-base font-bold uppercase ${
+                      isWinner
+                        ? 'text-primary'
+                        : userLostHere
+                          ? 'text-error/80'
+                          : isLosingOption
+                            ? 'text-text-muted'
+                            : isLeft
+                              ? 'text-primary'
+                              : 'text-error'
+                    }`}
+                  >
+                    {getDisplayLabel(option)}
+                  </Text>
                   {isWinner && (
                     <View className="mt-1 flex-row items-center gap-1">
                       <Trophy size={12} color={colors.primary} weight="fill" />
@@ -869,76 +793,17 @@ export default function BetDetailScreen() {
                   )}
                 </View>
 
-                {/* Participants List */}
-                {optionStakes.length > 0 ? (
-                  <View className="gap-2">
-                    {optionStakes.map((stake) => {
-                      const submission = getUserSubmission(stake.user_id);
-                      const isCurrentUser = stake.user_id === currentUserId;
-                      const thisUserLost = isLosingOption && isCurrentUser;
+                {/* Avatar stack summary */}
+                <SummaryAvatars stakes={optionStakes} membershipStatusMap={membershipStatusMap} />
 
-                      return (
-                        <View key={stake.id} className="items-center">
-                          <Avatar
-                            uri={stake.user?.avatar_url}
-                            fallback={stake.user?.display_name ?? '?'}
-                            size="md"
-                          />
-                          <Text
-                            className={`mt-1 text-center text-xs font-medium ${
-                              thisUserLost
-                                ? 'text-error/80'
-                                : isCurrentUser
-                                  ? 'text-primary'
-                                  : 'text-white'
-                            }`}
-                            numberOfLines={1}
-                          >
-                            {stake.user?.display_name ?? 'Unknown'}
-                            {thisUserLost ? ' (you) · lost' : isCurrentUser ? ' (you)' : ''}
-                          </Text>
-                          {/* Payout for winners */}
-                          {isWinner && dbStatus === 'SETTLED' && (
-                            <Text className="text-xs font-bold text-primary">
-                              +{perWinnerPayout.toLocaleString('en-US')}
-                            </Text>
-                          )}
-                          {/* Loss amount for losers */}
-                          {thisUserLost && (
-                            <Text className="text-xs font-bold text-error/80">
-                              -{bet.stake.toLocaleString('en-US')}
-                            </Text>
-                          )}
-                          {/* Submission status for all participants */}
-                          {dbStatus === 'PENDING_RESULT' && (
-                            <View className="mt-0.5 flex-row items-center gap-1">
-                              {submission ? (
-                                <Check size={12} color={colors.primary} weight="bold" />
-                              ) : (
-                                <Clock size={12} color={colors.textMuted} weight="regular" />
-                              )}
-                              <Text
-                                className={`text-xs ${submission ? 'text-primary' : 'text-text-muted'}`}
-                              >
-                                {submission ? 'Submitted' : 'Pending'}
-                              </Text>
-                            </View>
-                          )}
-                          {/* Detailed submission view for attestors only */}
-                          {isAttestorOrAdmin && dbStatus === 'PENDING_RESULT' && submission && (
-                            <Text className="text-xs text-text-muted">
-                              → {getDisplayLabel(submission.selected_option)}
-                            </Text>
-                          )}
-                        </View>
-                      );
-                    })}
-                  </View>
-                ) : (
-                  <View className="items-center py-4">
-                    <Text className="text-xs text-text-muted">No backers yet</Text>
-                  </View>
-                )}
+                {/* Backer count */}
+                <Text className="mt-2 text-center text-xs text-text-secondary">
+                  {optionStakes.length === 0
+                    ? 'No backers yet'
+                    : optionStakes.length === 1
+                      ? '1 backer'
+                      : `${optionStakes.length} backers`}
+                </Text>
 
                 {/* Tap to join hint */}
                 {canTapToJoin && (
@@ -952,6 +817,111 @@ export default function BetDetailScreen() {
             );
           })}
         </View>
+
+        {/* PARTICIPANTS - Zone 2: Full list */}
+        {flatStakes.length > 0 && (
+          <View className={`mx-4 mt-4 ${dimmed ? 'opacity-60' : ''}`}>
+            <Text className="mb-2 text-xs font-semibold uppercase tracking-widest text-text-muted">
+              Participants
+            </Text>
+            <View className="overflow-hidden rounded-2xl border border-border bg-surface">
+              {flatStakes.map((stake, idx) => {
+                const submission = getUserSubmission(stake.user_id);
+                const isCurrentUser = stake.user_id === currentUserId;
+                const isWinnerPick =
+                  dbStatus === 'SETTLED' &&
+                  !!bet.outcome &&
+                  stake.pick.trim().toLowerCase() === bet.outcome.trim().toLowerCase();
+                const isLoserPick = dbStatus === 'SETTLED' && !!bet.outcome && !isWinnerPick;
+                const isLeft = options[0]?.trim().toLowerCase() === stake.pick.trim().toLowerCase();
+                const stakeMemberStatus = membershipStatusMap.get(stake.user_id);
+                const isInactiveMember = isMemberInactive(stakeMemberStatus);
+
+                return (
+                  <View
+                    key={stake.id}
+                    className={`flex-row items-center gap-3 px-4 py-3 ${
+                      idx < flatStakes.length - 1 ? 'border-b border-border/50' : ''
+                    } ${isInactiveMember ? 'opacity-60' : ''}`}
+                  >
+                    <Avatar
+                      uri={stake.user?.avatar_url}
+                      fallback={stake.user?.display_name ?? '?'}
+                      size="md"
+                      inactive={isInactiveMember}
+                    />
+                    <View className="min-w-0 flex-1">
+                      <View className="flex-row items-center gap-1.5">
+                        <Text
+                          className={`text-sm font-medium ${isCurrentUser ? 'text-primary' : 'text-text-primary'}`}
+                          numberOfLines={1}
+                        >
+                          {stake.user?.display_name ?? 'Unknown'}
+                          {isCurrentUser ? ' (you)' : ''}
+                        </Text>
+                        {isInactiveMember && (
+                          <Badge
+                            variant="default"
+                            label={getMembershipStatusLabel(stakeMemberStatus) ?? ''}
+                            className="bg-surface-alt px-2 py-0.5"
+                            labelClassName="text-[10px] font-semibold text-text-muted"
+                          />
+                        )}
+                      </View>
+                      {dbStatus === 'PENDING_RESULT' && (
+                        <View className="mt-0.5 flex-row items-center gap-1">
+                          {submission ? (
+                            <Check size={12} color={colors.primary} weight="bold" />
+                          ) : (
+                            <Clock size={12} color={colors.textMuted} weight="regular" />
+                          )}
+                          <Text
+                            className={`text-xs ${submission ? 'text-primary' : 'text-text-muted'}`}
+                          >
+                            {submission ? 'Submitted' : 'Pending'}
+                          </Text>
+                        </View>
+                      )}
+                      {isAttestorOrAdmin && dbStatus === 'PENDING_RESULT' && submission && (
+                        <Text className="text-xs text-text-muted">
+                          → {getDisplayLabel(submission.selected_option)}
+                        </Text>
+                      )}
+                    </View>
+
+                    {/* Side label */}
+                    <Text
+                      className={`text-xs font-bold ${
+                        isWinnerPick
+                          ? 'text-primary'
+                          : isLoserPick
+                            ? 'text-text-muted'
+                            : isLeft
+                              ? 'text-primary'
+                              : 'text-error'
+                      }`}
+                    >
+                      {getDisplayLabel(stake.pick)}
+                    </Text>
+
+                    {/* Payout for winners */}
+                    {isWinnerPick && dbStatus === 'SETTLED' && (
+                      <Text className="text-xs font-bold text-primary">
+                        +{perWinnerPayout.toLocaleString('en-US')}
+                      </Text>
+                    )}
+                    {/* Loss for current user */}
+                    {isLoserPick && isCurrentUser && dbStatus === 'SETTLED' && (
+                      <Text className="text-xs font-bold text-error">
+                        -{bet.stake.toLocaleString('en-US')}
+                      </Text>
+                    )}
+                  </View>
+                );
+              })}
+            </View>
+          </View>
+        )}
 
         {/* Status hint for OPEN bets */}
         {dbStatus === 'OPEN' && isParticipant && (
@@ -1001,7 +971,10 @@ export default function BetDetailScreen() {
                           roomId: bet.room_id!,
                         });
                       } catch (err) {
-                        Alert.alert('Could not raise dispute', getRpcErrorMessage(err, 'Please try again.'));
+                        Alert.alert(
+                          'Could not raise dispute',
+                          getRpcErrorMessage(err, 'Please try again.'),
+                        );
                       }
                     },
                   },
@@ -1021,9 +994,7 @@ export default function BetDetailScreen() {
           <TouchableOpacity
             onPress={() => setDisputeSheetOpen(true)}
             activeOpacity={0.8}
-            className={`flex-row items-center justify-center gap-2 rounded-xl py-4 ${
-              dbStatus === 'DISPUTED' ? 'bg-warning' : 'bg-primary'
-            }`}
+            className="flex-row items-center justify-center gap-2 rounded-xl bg-warning py-4"
           >
             {dbStatus === 'DISPUTED' ? (
               <Gavel size={20} color="#fff" weight="bold" />
@@ -1031,7 +1002,7 @@ export default function BetDetailScreen() {
               <Check size={20} color="#fff" weight="bold" />
             )}
             <Text className="text-base font-bold text-white">
-              {dbStatus === 'DISPUTED' ? 'Resolve Dispute' : 'Finalize Result'}
+              {dbStatus === 'DISPUTED' ? 'Resolve Dispute' : 'Force Resolve'}
             </Text>
           </TouchableOpacity>
         ) : canVoid ? (
@@ -1079,17 +1050,24 @@ export default function BetDetailScreen() {
       )}
 
       {/* Locked-in celebration - shows on OPEN → MATCHED transition */}
-      <LockedInCelebration
-        bet={showLockedInCelebration ? bet : null}
-        currentUserId={currentUserId}
-        onDismiss={() => setShowLockedInCelebration(false)}
+      <SplashCelebration
+        visible={showLockedInCelebration}
+        action="bet_accepted"
+        onDone={() => setShowLockedInCelebration(false)}
       />
 
-      {/* Winner celebration - shows on live SETTLED transition */}
-      <WinnerCelebration
-        bet={showWinCelebration ? bet : null}
-        currentUserId={currentUserId}
-        onDismiss={() => setShowWinCelebration(false)}
+      {/* Winner celebration - triggered by notification */}
+      <SplashCelebration
+        visible={showWinCelebration}
+        action="you_won"
+        onDone={dismissWinCelebration}
+      />
+
+      {/* Join bet celebration - shows when user joins a bet from this screen */}
+      <SplashCelebration
+        visible={showJoinSplash}
+        action="bet_accepted"
+        onDone={() => setShowJoinSplash(false)}
       />
     </View>
   );
@@ -1106,4 +1084,49 @@ function groupStakesByPick(
     if (key) out[key].push(stake);
   }
   return out;
+}
+
+function SummaryAvatars({
+  stakes,
+  membershipStatusMap,
+}: {
+  stakes: BetStakeWithProfile[];
+  membershipStatusMap?: Map<string, RoomMemberStatus>;
+}) {
+  const shown = stakes.slice(0, 5);
+  const overflow = stakes.length - shown.length;
+  if (stakes.length === 0) {
+    return (
+      <View className="mt-2 h-8 items-center justify-center">
+        <Text className="text-xs text-text-muted">—</Text>
+      </View>
+    );
+  }
+  return (
+    <View className="mt-2 flex-row justify-center">
+      {shown.map((stake, idx) => {
+        const status = membershipStatusMap?.get(stake.user_id);
+        const isInactive = isMemberInactive(status);
+        return (
+          <View
+            key={stake.id}
+            className={`rounded-full border-2 border-surface ${idx > 0 ? '-ml-2' : ''}`}
+            style={{ zIndex: shown.length - idx }}
+          >
+            <Avatar
+              uri={stake.user?.avatar_url}
+              fallback={stake.user?.display_name ?? '?'}
+              size="sm"
+              inactive={isInactive}
+            />
+          </View>
+        );
+      })}
+      {overflow > 0 ? (
+        <View className="-ml-2 h-8 w-8 items-center justify-center rounded-full border-2 border-surface bg-surface-light">
+          <Text className="text-[10px] font-semibold text-text-secondary">+{overflow}</Text>
+        </View>
+      ) : null}
+    </View>
+  );
 }

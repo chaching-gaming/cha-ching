@@ -11,12 +11,13 @@ import {
   View,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { CaretRight, SignOut, Trash } from 'phosphor-react-native';
+import { CaretRight, Moon, SignOut, Sun, Trash } from 'phosphor-react-native';
 import * as ImagePicker from 'expo-image-picker';
 
 import { useProfile, useUpdateProfile } from '@/hooks/use-profile';
 import { useAuth } from '@/providers/auth';
 import { usePreferences } from '@/providers/preferences';
+import { useTheme, type ThemePreference } from '@/providers/theme';
 import {
   useRooms,
   useJoinRoom,
@@ -29,7 +30,6 @@ import { supabase } from '@/lib/supabase';
 import { Avatar, Button } from '@/components/ui';
 import { Badge } from '@/components/ui/badge';
 import { ScreenHeader } from '@/components/ui/screen-header';
-import { colors } from '@/constants/colors';
 
 type RoleBadge = { variant: 'admin' | 'player' | 'attestor'; label: string };
 
@@ -60,6 +60,48 @@ function SectionLabel({ children }: { children: string }) {
   );
 }
 
+function ThemeSelector({
+  value,
+  onChange,
+}: {
+  value: ThemePreference;
+  onChange: (value: ThemePreference) => void;
+}) {
+  const { colors } = useTheme();
+  const options: { key: ThemePreference; icon: typeof Sun }[] = [
+    { key: 'light', icon: Sun },
+    { key: 'dark', icon: Moon },
+  ];
+
+  return (
+    <View className="flex-row gap-2 px-4 py-3">
+      {options.map((option) => {
+        const Icon = option.icon;
+        const isActive = value === option.key;
+        return (
+          <TouchableOpacity
+            key={option.key}
+            onPress={() => onChange(option.key)}
+            activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityState={{ selected: isActive }}
+            accessibilityLabel={`${option.key} theme`}
+            className={`flex-1 items-center justify-center rounded-xl py-3 ${
+              isActive ? 'bg-primary' : 'bg-surface-light'
+            }`}
+          >
+            <Icon
+              size={24}
+              color={isActive ? '#FFFFFF' : colors.textMuted}
+              weight={isActive ? 'fill' : 'regular'}
+            />
+          </TouchableOpacity>
+        );
+      })}
+    </View>
+  );
+}
+
 function SettingsCardRow({
   label,
   subtitle,
@@ -76,7 +118,7 @@ function SettingsCardRow({
       className={`flex-row items-center justify-between px-4 py-4 ${isLast ? '' : 'border-b border-border'}`}
     >
       <View className="min-w-0 flex-1 pr-3">
-        <Text className="text-base font-semibold text-white">{label}</Text>
+        <Text className="text-base font-semibold text-text-primary">{label}</Text>
         {subtitle ? (
           <Text className="mt-0.5 text-sm text-text-secondary" numberOfLines={1}>
             {subtitle}
@@ -101,6 +143,7 @@ function RoomRow({
   onRejoin?: () => void;
   isRejoining?: boolean;
 }) {
+  const { colors } = useTheme();
   const badge = ROLE_BADGES[item.role ?? ''];
   const statusText = getMembershipStatusText(item.membershipStatus);
   const canRejoin = item.room.is_active && item.membershipStatus !== 'active';
@@ -112,12 +155,10 @@ function RoomRow({
       className={`flex-row items-center gap-3 px-4 py-4 ${isLast ? '' : 'border-b border-border'}`}
     >
       <View className="min-w-0 flex-1">
-        <Text className="text-base font-semibold text-white" numberOfLines={1}>
+        <Text className="text-base font-semibold text-text-primary" numberOfLines={1}>
           {item.room.name}
         </Text>
-        {statusText ? (
-          <Text className="mt-0.5 text-xs text-text-muted">{statusText}</Text>
-        ) : null}
+        {statusText ? <Text className="mt-0.5 text-xs text-text-muted">{statusText}</Text> : null}
       </View>
       {canRejoin && onRejoin ? (
         <TouchableOpacity
@@ -179,7 +220,7 @@ export default function ProfileScreen() {
         setRejoiningRoomId(null);
       }
     },
-    [joinRoom, router]
+    [joinRoom, router],
   );
 
   const handleRefresh = useCallback(async () => {
@@ -200,6 +241,8 @@ export default function ProfileScreen() {
     setNotificationsEnabled,
     isHydrated,
   } = usePreferences();
+
+  const { themePreference, setThemePreference, isHydrated: themeHydrated, colors } = useTheme();
 
   function startEditing() {
     setDisplayName(profile?.display_name ?? '');
@@ -255,7 +298,7 @@ export default function ProfileScreen() {
           style: 'destructive',
           onPress: confirmDeleteAccount,
         },
-      ]
+      ],
     );
   }
 
@@ -275,7 +318,7 @@ export default function ProfileScreen() {
             Authorization: `Bearer ${session.access_token}`,
             'Content-Type': 'application/json',
           },
-        }
+        },
       );
 
       const data = await response.json();
@@ -337,7 +380,7 @@ export default function ProfileScreen() {
           {isEditing ? (
             <View className="mt-4 w-full items-center gap-3">
               <TextInput
-                className="min-h-[48px] w-full rounded-xl border border-border bg-surface-light px-4 py-3.5 text-center text-base text-white"
+                className="min-h-[48px] w-full rounded-xl border border-border bg-surface-light px-4 py-3.5 text-center text-base text-text-primary"
                 value={displayName}
                 onChangeText={setDisplayName}
                 placeholder="Display Name"
@@ -357,7 +400,7 @@ export default function ProfileScreen() {
           ) : (
             <>
               <TouchableOpacity onPress={startEditing} className="mt-3" activeOpacity={0.7}>
-                <Text className="text-2xl font-bold text-white">{displayedName}</Text>
+                <Text className="text-2xl font-bold text-text-primary">{displayedName}</Text>
               </TouchableOpacity>
               {email ? <Text className="mt-1 text-sm text-text-secondary">{email}</Text> : null}
             </>
@@ -376,7 +419,7 @@ export default function ProfileScreen() {
                   onValueChange={setSoundEnabled}
                   disabled={!isHydrated}
                   trackColor={{ true: colors.primary, false: colors.border }}
-                  thumbColor="#ffffff"
+                  thumbColor="#FFFFFF"
                   ios_backgroundColor={colors.border}
                 />
               }
@@ -389,7 +432,7 @@ export default function ProfileScreen() {
                   onValueChange={setHapticsEnabled}
                   disabled={!isHydrated}
                   trackColor={{ true: colors.primary, false: colors.border }}
-                  thumbColor="#ffffff"
+                  thumbColor="#FFFFFF"
                   ios_backgroundColor={colors.border}
                 />
               }
@@ -402,12 +445,14 @@ export default function ProfileScreen() {
                   onValueChange={setNotificationsEnabled}
                   disabled={!isHydrated}
                   trackColor={{ true: colors.primary, false: colors.border }}
-                  thumbColor="#ffffff"
+                  thumbColor="#FFFFFF"
                   ios_backgroundColor={colors.border}
                 />
               }
-              isLast
             />
+            {themeHydrated ? (
+              <ThemeSelector value={themePreference} onChange={setThemePreference} />
+            ) : null}
           </View>
         </View>
 

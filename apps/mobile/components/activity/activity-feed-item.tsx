@@ -14,7 +14,7 @@ import {
   X,
 } from 'phosphor-react-native';
 
-import { colors } from '@/constants/colors';
+import { useTheme } from '@/providers/theme';
 import { Avatar } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { DonateChipsSheet } from '@/components/activity/donate-chips-sheet';
@@ -33,18 +33,18 @@ import type {
   BetWithProfiles,
   ChipRequestWithProfile,
 } from '@/hooks/use-activity-feed';
-import { formatBetCountdown, formatRelativeActivityTime, parseApiTimestamp } from '@/lib/date-format';
+import {
+  formatBetCountdown,
+  formatRelativeActivityTime,
+  parseApiTimestamp,
+} from '@/lib/date-format';
+import { isMemberInactive, type RoomMemberStatus } from '@/hooks/use-rooms';
 import {
   getEffectiveBetStatus,
-  getOutcomeWindowRemaining,
   getDisputeWindowRemaining,
-  hasOutcomeWindowSet,
   hasDisputeWindowSet,
 } from '@/lib/effective-bet-status';
-import {
-  useProcessOutcomeWindow,
-  useProcessDisputeWindow,
-} from '@/hooks/use-process-settlement-windows';
+import { useProcessDisputeWindow } from '@/hooks/use-process-settlement-windows';
 import { useServerTimeTick } from '@/providers/time';
 
 function formatStakeChips(stake: number): string {
@@ -89,7 +89,7 @@ function BetActivityCard({
   onSelectPick,
   onJoinSuccess,
   onNavigate,
-  outcomeSubmissionWindowSeconds = 30,
+  membershipStatusMap,
 }: {
   bet: BetWithProfiles;
   timestamp: string;
@@ -102,18 +102,17 @@ function BetActivityCard({
   onSelectPick?: (pick: string) => void;
   onJoinSuccess?: () => void;
   onNavigate?: () => void;
-  outcomeSubmissionWindowSeconds?: number;
+  membershipStatusMap?: Map<string, RoomMemberStatus>;
 }) {
+  const { colors } = useTheme();
   const serverNow = useServerTimeTick();
   const [submitSheetOpen, setSubmitSheetOpen] = useState(false);
   const [disputeSheetOpen, setDisputeSheetOpen] = useState(false);
   const [voidSheetOpen, setVoidSheetOpen] = useState(false);
   const dbStatus = bet.status ?? '';
   const processExpiredBet = useProcessExpiredBet();
-  const processOutcomeWindow = useProcessOutcomeWindow();
   const processDisputeWindow = useProcessDisputeWindow();
   const processedRef = useRef<string | null>(null);
-  const outcomeProcessedRef = useRef<string | null>(null);
   const disputeProcessedRef = useRef<string | null>(null);
 
   // Auto-process expired bets immediately (eliminates 0-60s cron lag)
@@ -126,8 +125,8 @@ function BetActivityCard({
     if (!bet.expires_at) return;
 
     // Client-side expiry check using server-synced time
-    const expiresAt = new Date(bet.expires_at);
-    if (expiresAt > serverNow) return;
+    const expiresAt = parseApiTimestamp(bet.expires_at);
+    if (!expiresAt || expiresAt > serverNow) return;
 
     // Don't call RPC again if we're already waiting for retry
     if (processedRef.current === bet.id) return;
@@ -150,34 +149,12 @@ function BetActivityCard({
         onError: () => {
           processedRef.current = null;
         },
-      }
+      },
     );
   }, [bet.id, bet.expires_at, dbStatus, roomId, processExpiredBet, serverNow]);
 
-  // Auto-process outcome window when it expires (eliminates cron delay)
-  useEffect(() => {
-    if (!roomId) return;
-    if (processOutcomeWindow.isPending) return;
-    if (dbStatus !== 'PENDING_RESULT') return;
-    if (outcomeProcessedRef.current === bet.id) return;
-
-    // CRITICAL: Only process if outcome_window_ends_at is set and expired
-    // If NULL, the server hasn't set it yet - let the cron handle it
-    if (!bet.outcome_window_ends_at) return;
-
-    const remaining = getOutcomeWindowRemaining(bet, outcomeSubmissionWindowSeconds, serverNow);
-    if (remaining > 0) return; // Window still open
-
-    outcomeProcessedRef.current = bet.id;
-    processOutcomeWindow.mutate(
-      { p_bet_id: bet.id, roomId },
-      {
-        onError: () => {
-          outcomeProcessedRef.current = null;
-        },
-      },
-    );
-  }, [bet.id, bet.outcome_window_ends_at, dbStatus, roomId, processOutcomeWindow.isPending, serverNow, outcomeSubmissionWindowSeconds]);
+  // Note: Client-side outcome window processing removed - windows are now indefinite.
+  // Settlement happens when all participants submit (via process_all_submissions on server).
 
   // Auto-process dispute window when it expires (eliminates cron delay)
   useEffect(() => {
@@ -207,7 +184,14 @@ function BetActivityCard({
         },
       },
     );
-  }, [bet.id, bet.dispute_window_ends_at, dbStatus, roomId, processDisputeWindow.isPending, serverNow]);
+  }, [
+    bet.id,
+    bet.dispute_window_ends_at,
+    dbStatus,
+    roomId,
+    processDisputeWindow.isPending,
+    serverNow,
+  ]);
 
   // Get template for contextual labels
   const { data: templates } = useQuestionTemplates('golf');
@@ -224,14 +208,10 @@ function BetActivityCard({
       if (lower === 'no') return betTemplate.negative_label;
       return rawOption;
     },
-    [betTemplate]
+    [betTemplate],
   );
 
-
-  const effectiveStatus = useMemo(
-    () => getEffectiveBetStatus(bet, serverNow),
-    [bet, serverNow],
-  );
+  const effectiveStatus = useMemo(() => getEffectiveBetStatus(bet, serverNow), [bet, serverNow]);
 
   const options = useMemo(() => {
     const raw = Array.isArray(bet.options) ? (bet.options as unknown[]) : [];
@@ -264,12 +244,11 @@ function BetActivityCard({
       ? formatBetCountdown(bet.expires_at, serverNow)
       : null;
 
-  // Outcome window countdown for PENDING_RESULT status (or expired MATCHED that is effectively PENDING_RESULT)
-  // Only show once bet has actually expired (not when processed early by server)
-  const outcomeWindowRemaining = effectiveStatus === 'PENDING_RESULT' && hasBetExpired ? getOutcomeWindowRemaining(bet, outcomeSubmissionWindowSeconds) : 0;
+  // Note: Outcome windows are now indefinite - bets stay in PENDING_RESULT until all submit or admin resolves
 
   // Dispute window countdown for PENDING_DISPUTE status
-  const disputeWindowRemaining = dbStatus === 'PENDING_DISPUTE' ? getDisputeWindowRemaining(bet) : 0;
+  const disputeWindowRemaining =
+    dbStatus === 'PENDING_DISPUTE' ? getDisputeWindowRemaining(bet, serverNow) : 0;
 
   // Winners = stakes whose pick matches bet.outcome. Per-winner payout is the
   // pool split evenly (integer division; remainder truncated server-side too).
@@ -297,12 +276,11 @@ function BetActivityCard({
   const bothSidesStaked = distinctPicksStaked >= 2;
 
   // Show submission status only when bet is PENDING_RESULT (after expiry)
-  const showSubmissionStatus = effectiveStatus === 'PENDING_RESULT';
+  // Note: Submission count UI removed - with first-submission flow, PENDING_RESULT
+  // is brief (until first submission), then moves to PENDING_DISPUTE.
 
   // Show "waiting" message when bet is OPEN with both sides staked
   const showWaitingForClose = dbStatus === 'OPEN' && bothSidesStaked;
-  const totalParticipants = stakes.length;
-  const submittedCount = bet.outcome_submissions.length;
   const mySubmission = useMemo(
     () =>
       currentUserId
@@ -313,25 +291,18 @@ function BetActivityCard({
 
   const isParticipant = !!currentUserId && stakes.some((s) => s.user_id === currentUserId);
 
-  // Only allow outcome submission when PENDING_RESULT (after expiry) - use effectiveStatus for immediate detection
-  // Check if window has expired (using client-side calculation if outcome_window_ends_at not set)
-  const outcomeWindowExpired =
-    hasOutcomeWindowSet(bet) && getOutcomeWindowRemaining(bet, outcomeSubmissionWindowSeconds) <= 0;
+  // Outcome windows are now indefinite - can always submit while PENDING_RESULT
   const canSubmitOutcome =
     !!roomActive &&
     !!roomId &&
     isParticipant &&
     !mySubmission &&
-    effectiveStatus === 'PENDING_RESULT' &&
-    !outcomeWindowExpired;
+    effectiveStatus === 'PENDING_RESULT';
 
-  // Allow resolve only for DISPUTED bets (attestor/admin manual resolution)
-  // PENDING_RESULT and PENDING_DISPUTE are handled automatically by timed windows
-  const allSubmitted = totalParticipants > 0 && submittedCount === totalParticipants;
   const canResolve =
     !!roomId &&
-    (currentUserRole === 'ATTESTOR' || currentUserRole === 'ADMIN') &&
-    dbStatus === 'DISPUTED';
+    (((currentUserRole === 'ATTESTOR' || currentUserRole === 'ADMIN') && dbStatus === 'DISPUTED') ||
+      (currentUserRole === 'ADMIN' && dbStatus === 'PENDING_RESULT'));
 
   const canVoid = !!roomId && currentUserRole === 'ADMIN' && dbStatus !== 'VOID';
 
@@ -361,7 +332,7 @@ function BetActivityCard({
         />
       </View>
 
-      <Text className="text-base font-bold leading-5 text-white" numberOfLines={2}>
+      <Text className="text-base font-bold leading-5 text-text-primary" numberOfLines={2}>
         {bet.question}
       </Text>
     </>
@@ -392,22 +363,8 @@ function BetActivityCard({
           onSelectPick={onSelectPick}
           subjectUserId={bet.subject_user_id}
           subjectPositiveOption={bet.subject_positive_option}
+          membershipStatusMap={membershipStatusMap}
         />
-      ) : null}
-
-      {showSubmissionStatus ? (
-        <View className="mt-2 flex-row items-center gap-3 rounded-xl border border-border bg-surface-light px-3 py-2">
-          <View className="min-w-0 flex-1">
-            <Text className="text-sm font-semibold text-white">
-              {submittedCount}/{totalParticipants} submitted
-            </Text>
-            {mySubmission ? (
-              <Text className="mt-0.5 text-xs font-medium text-primary" numberOfLines={1}>
-                ✓ You reported &ldquo;{getDisplayLabel(mySubmission.selected_option)}&rdquo;
-              </Text>
-            ) : null}
-          </View>
-        </View>
       ) : null}
 
       {dbStatus === 'PENDING_DISPUTE' && bet.preliminary_outcome ? (
@@ -417,9 +374,9 @@ function BetActivityCard({
             <Text className="text-sm font-semibold text-primary">
               Result: {getDisplayLabel(bet.preliminary_outcome)}
             </Text>
-            {hasDisputeWindowSet(bet) && getDisputeWindowRemaining(bet) > 0 ? (
+            {hasDisputeWindowSet(bet) && getDisputeWindowRemaining(bet, serverNow) > 0 ? (
               <Text className="mt-0.5 text-xs text-text-secondary">
-                {getDisputeWindowRemaining(bet)}s to dispute
+                {getDisputeWindowRemaining(bet, serverNow)}s to dispute
               </Text>
             ) : null}
           </View>
@@ -449,13 +406,7 @@ function BetActivityCard({
         {effectiveStatus === 'PENDING_RESULT' && hasBetExpired ? (
           <>
             <Timer size={14} color={colors.primary} weight="bold" />
-            <Text className="text-sm font-semibold text-primary">
-              {!hasOutcomeWindowSet(bet)
-                ? 'Waiting...'
-                : outcomeWindowRemaining > 0
-                  ? `${outcomeWindowRemaining}s to submit`
-                  : 'Processing...'}
-            </Text>
+            <Text className="text-sm font-semibold text-primary">Awaiting submissions</Text>
           </>
         ) : null}
         {dbStatus === 'PENDING_DISPUTE' ? (
@@ -475,20 +426,11 @@ function BetActivityCard({
             // User won - show their winnings prominently
             <>
               <Trophy size={14} color={colors.primary} weight="fill" />
-              <Text className="text-sm font-semibold text-primary">
-                You won +{perWinnerPayout}
-              </Text>
+              <Text className="text-sm font-semibold text-primary">You won +{perWinnerPayout}</Text>
             </>
           ) : currentUserLost ? (
             // User lost - show their loss clearly
-            <>
-              <Text className="text-sm font-medium text-error">
-                You lost {bet.stake}
-              </Text>
-              <Text className="text-sm text-text-muted">
-                · {getDisplayLabel(bet.outcome)} won
-              </Text>
-            </>
+            <Text className="text-sm font-medium text-error">You lost {bet.stake}</Text>
           ) : (
             // User didn't participate - show outcome neutrally
             <>
@@ -514,6 +456,7 @@ function BetActivityCard({
         <Text className="text-xs text-text-muted">· {formatRelativeActivityTime(timestamp)}</Text>
       </View>
 
+      {/* Action buttons - only one primary action at a time (matches bet details page) */}
       {canJoin ? (
         <SwipeToConfirmButton
           bet={bet}
@@ -521,68 +464,38 @@ function BetActivityCard({
           displayLabel={selectedPick ? getDisplayLabel(selectedPick) : null}
           onSuccess={onJoinSuccess}
         />
-      ) : null}
-
-      {canSubmitOutcome ? (
+      ) : canSubmitOutcome ? (
         <TouchableOpacity
           onPress={() => setSubmitSheetOpen(true)}
           activeOpacity={0.8}
           className="mt-3 flex-row items-center justify-center gap-2 rounded-xl bg-primary py-3"
         >
-          <Check size={18} color={colors.textPrimary} weight="bold" />
+          <Check size={18} color="#fff" weight="bold" />
           <Text className="text-sm font-bold text-white">Submit outcome</Text>
         </TouchableOpacity>
-      ) : null}
-
-      {canSubmitOutcome && roomId ? (
-        <SubmitOutcomeSheet
-          visible={submitSheetOpen}
-          onClose={() => setSubmitSheetOpen(false)}
-          bet={bet}
-          roomId={roomId}
-          positiveLabel={betTemplate?.positive_label}
-          negativeLabel={betTemplate?.negative_label}
-        />
-      ) : null}
-
-      {canResolve ? (
+      ) : canResolve ? (
         <View className="mt-3">
           <TouchableOpacity
             onPress={() => setDisputeSheetOpen(true)}
             activeOpacity={0.8}
-            className={`flex-row items-center justify-center gap-2 rounded-xl py-3 ${
-              dbStatus === 'DISPUTED' ? 'bg-warning' : 'bg-primary'
-            }`}
+            className="flex-row items-center justify-center gap-2 rounded-xl bg-warning py-3"
           >
             {dbStatus === 'DISPUTED' ? (
-              <Warning size={18} color={colors.textPrimary} weight="bold" />
+              <Warning size={18} color="#FFFFFF" weight="bold" />
             ) : (
-              <Check size={18} color={colors.textPrimary} weight="bold" />
+              <Check size={18} color="#FFFFFF" weight="bold" />
             )}
             <Text className="text-sm font-bold text-white">
-              {dbStatus === 'DISPUTED' ? 'Resolve dispute' : 'Resolve'}
+              {dbStatus === 'DISPUTED' ? 'Resolve dispute' : 'Force Resolve'}
             </Text>
           </TouchableOpacity>
           <Text className="mt-1.5 text-center text-[11px] text-text-muted">
             {dbStatus === 'DISPUTED'
               ? 'Conflicting outcomes submitted'
-              : 'All participants submitted'}
+              : 'Awaiting outcome · admin override'}
           </Text>
         </View>
-      ) : null}
-
-      {canResolve && roomId ? (
-        <ResolveDisputeSheet
-          visible={disputeSheetOpen}
-          onClose={() => setDisputeSheetOpen(false)}
-          bet={bet}
-          roomId={roomId}
-          positiveLabel={betTemplate?.positive_label}
-          negativeLabel={betTemplate?.negative_label}
-        />
-      ) : null}
-
-      {canVoid ? (
+      ) : canVoid ? (
         <TouchableOpacity
           onPress={() => setVoidSheetOpen(true)}
           activeOpacity={0.8}
@@ -594,7 +507,30 @@ function BetActivityCard({
         </TouchableOpacity>
       ) : null}
 
-      {canVoid && roomId ? (
+      {/* Sheets - rendered separately so they work regardless of which button triggered them */}
+      {roomId ? (
+        <SubmitOutcomeSheet
+          visible={submitSheetOpen}
+          onClose={() => setSubmitSheetOpen(false)}
+          bet={bet}
+          roomId={roomId}
+          positiveLabel={betTemplate?.positive_label}
+          negativeLabel={betTemplate?.negative_label}
+        />
+      ) : null}
+
+      {roomId ? (
+        <ResolveDisputeSheet
+          visible={disputeSheetOpen}
+          onClose={() => setDisputeSheetOpen(false)}
+          bet={bet}
+          roomId={roomId}
+          positiveLabel={betTemplate?.positive_label}
+          negativeLabel={betTemplate?.negative_label}
+        />
+      ) : null}
+
+      {roomId ? (
         <VoidBetSheet
           visible={voidSheetOpen}
           onClose={() => setVoidSheetOpen(false)}
@@ -607,6 +543,7 @@ function BetActivityCard({
 }
 
 function VoidFooter({ voidLog }: { voidLog: BetVoidLogWithProfile | null }) {
+  const { colors } = useTheme();
   // Non-admin clients get void_logs = [] from RLS, so voidLog is null — we show
   // the generic message. Admins see the actor + (optional) reason.
   const voidedByName = voidLog?.voided_by_profile?.display_name?.trim();
@@ -653,6 +590,7 @@ function PoolTally({
   onSelectPick,
   subjectUserId,
   subjectPositiveOption,
+  membershipStatusMap,
 }: {
   options: string[];
   stakesByPick: Record<string, BetStakeWithProfile[]>;
@@ -665,6 +603,7 @@ function PoolTally({
   onSelectPick?: (pick: string) => void;
   subjectUserId?: string | null;
   subjectPositiveOption?: string | null;
+  membershipStatusMap?: Map<string, RoomMemberStatus>;
 }) {
   if (options.length === 0) return null;
 
@@ -700,6 +639,7 @@ function PoolTally({
             isSelected={isSelected}
             isDisabled={isDisabled}
             onPress={canJoin && !isDisabled ? onSelectPick : undefined}
+            membershipStatusMap={membershipStatusMap}
           />
         );
       })}
@@ -720,6 +660,7 @@ function PoolSide({
   isSelected,
   isDisabled,
   onPress,
+  membershipStatusMap,
 }: {
   option: string;
   label: string;
@@ -733,7 +674,9 @@ function PoolSide({
   isSelected?: boolean;
   isDisabled?: boolean;
   onPress?: (option: string) => void;
+  membershipStatusMap?: Map<string, RoomMemberStatus>;
 }) {
+  const { colors } = useTheme();
   const handlePress = useCallback(() => {
     onPress?.(option);
   }, [onPress, option]);
@@ -792,14 +735,20 @@ function PoolSide({
         ) : isDisabled ? (
           <Lock size={14} color={colors.textMuted} weight="bold" />
         ) : isSelected ? (
-          <Check size={14} color={tone === 'primary' ? colors.primary : colors.error} weight="bold" />
+          <Check
+            size={14}
+            color={tone === 'primary' ? colors.primary : colors.error}
+            weight="bold"
+          />
         ) : null}
       </View>
       <Text className="mt-1 text-xs text-text-secondary">
         {count === 0 ? 'no backers' : count === 1 ? '1 backer' : `${count} backers`}
         {youLost ? ' · you lost' : youOnThisSide ? ' · you' : ''}
       </Text>
-      {count > 0 ? <StakeAvatars stakes={stakes} /> : null}
+      {count > 0 ? (
+        <StakeAvatars stakes={stakes} membershipStatusMap={membershipStatusMap} />
+      ) : null}
       {canJoin && !isDisabled && !isSelected ? (
         <Text className={`mt-2 text-center text-[10px] font-bold uppercase ${labelClass}`}>
           Tap to select
@@ -827,24 +776,35 @@ function PoolSide({
   );
 }
 
-function StakeAvatars({ stakes }: { stakes: BetStakeWithProfile[] }) {
+function StakeAvatars({
+  stakes,
+  membershipStatusMap,
+}: {
+  stakes: BetStakeWithProfile[];
+  membershipStatusMap?: Map<string, RoomMemberStatus>;
+}) {
   const shown = stakes.slice(0, 3);
   const overflow = stakes.length - shown.length;
   return (
     <View className="mt-2 flex-row items-center">
-      {shown.map((stake, idx) => (
-        <View
-          key={stake.id}
-          className={`rounded-full border-2 border-surface ${idx > 0 ? '-ml-2' : ''}`}
-          style={{ zIndex: 10 - idx }}
-        >
-          <Avatar
-            uri={stake.user?.avatar_url}
-            fallback={stake.user?.display_name ?? '?'}
-            size="sm"
-          />
-        </View>
-      ))}
+      {shown.map((stake, idx) => {
+        const status = membershipStatusMap?.get(stake.user_id);
+        const isInactive = isMemberInactive(status);
+        return (
+          <View
+            key={stake.id}
+            className={`rounded-full border-2 border-surface ${idx > 0 ? '-ml-2' : ''}`}
+            style={{ zIndex: 10 - idx }}
+          >
+            <Avatar
+              uri={stake.user?.avatar_url}
+              fallback={stake.user?.display_name ?? '?'}
+              size="sm"
+              inactive={isInactive}
+            />
+          </View>
+        );
+      })}
       {overflow > 0 ? (
         <View className="-ml-2 h-8 w-8 items-center justify-center rounded-full border-2 border-surface bg-surface-light">
           <Text className="text-[10px] font-semibold text-text-secondary">+{overflow}</Text>
@@ -866,8 +826,10 @@ interface ActivityFeedItemProps {
   roomId?: string;
   /** Current user's balance — forwarded to the donate sheet for validation. */
   currentUserBalance?: number;
-  /** Room's outcome submission window in seconds — for countdown calculation. */
-  outcomeSubmissionWindowSeconds?: number;
+  /** Membership status lookup for showing left/removed indicators */
+  membershipStatusMap?: Map<string, RoomMemberStatus>;
+  /** Callback fired after successfully joining a bet */
+  onJoinSuccess?: () => void;
 }
 
 export function ActivityFeedItem({
@@ -877,7 +839,8 @@ export function ActivityFeedItem({
   roomActive,
   roomId,
   currentUserBalance,
-  outcomeSubmissionWindowSeconds,
+  membershipStatusMap,
+  onJoinSuccess,
 }: ActivityFeedItemProps) {
   if (item.type === 'bet') {
     return (
@@ -887,7 +850,8 @@ export function ActivityFeedItem({
         currentUserRole={currentUserRole}
         roomActive={roomActive}
         roomId={roomId}
-        outcomeSubmissionWindowSeconds={outcomeSubmissionWindowSeconds}
+        membershipStatusMap={membershipStatusMap}
+        onJoinSuccess={onJoinSuccess}
       />
     );
   }
@@ -910,16 +874,19 @@ function BetActivityFeedItem({
   currentUserRole,
   roomActive,
   roomId,
-  outcomeSubmissionWindowSeconds,
+  membershipStatusMap,
+  onJoinSuccess: onJoinSuccessExternal,
 }: {
   item: Extract<ActivityItem, { type: 'bet' }>;
   currentUserId?: string | null;
   currentUserRole?: 'PLAYER' | 'ATTESTOR' | 'ADMIN' | string | null;
   roomActive?: boolean;
   roomId?: string;
-  outcomeSubmissionWindowSeconds?: number;
+  membershipStatusMap?: Map<string, RoomMemberStatus>;
+  onJoinSuccess?: () => void;
 }) {
   const router = useRouter();
+  const serverNow = useServerTimeTick();
   const [selectedPick, setSelectedPick] = useState<string | null>(null);
 
   const stakes = item.bet.stakes ?? [];
@@ -930,7 +897,7 @@ function BetActivityFeedItem({
     !!currentUserId &&
     (item.bet.status === 'OPEN' || item.bet.status === 'MATCHED') &&
     !alreadyStaked &&
-    getEffectiveBetStatus(item.bet) !== 'EXPIRED';
+    getEffectiveBetStatus(item.bet, serverNow) !== 'EXPIRED';
 
   const handleBetPress = useCallback(() => {
     router.push(`/(tabs)/rooms/bet/${item.bet.id}`);
@@ -942,7 +909,8 @@ function BetActivityFeedItem({
 
   const handleJoinSuccess = useCallback(() => {
     setSelectedPick(null);
-  }, []);
+    onJoinSuccessExternal?.();
+  }, [onJoinSuccessExternal]);
 
   // When user can join, we use a View wrapper to prevent accidental navigation
   // The card content has a separate tap area for navigation (header)
@@ -960,7 +928,7 @@ function BetActivityFeedItem({
         onSelectPick={handleSelectPick}
         onJoinSuccess={handleJoinSuccess}
         onNavigate={handleBetPress}
-        outcomeSubmissionWindowSeconds={outcomeSubmissionWindowSeconds}
+        membershipStatusMap={membershipStatusMap}
       />
     );
   }
@@ -974,7 +942,7 @@ function BetActivityFeedItem({
         currentUserRole={currentUserRole}
         roomActive={roomActive}
         roomId={roomId}
-        outcomeSubmissionWindowSeconds={outcomeSubmissionWindowSeconds}
+        membershipStatusMap={membershipStatusMap}
       />
     </TouchableOpacity>
   );
@@ -995,6 +963,7 @@ function ChipRequestActivityCard({
   roomId?: string;
   currentUserBalance?: number;
 }) {
+  const { colors } = useTheme();
   const [donateOpen, setDonateOpen] = useState(false);
   const cancelRequest = useCancelChipRequest();
 
@@ -1061,7 +1030,7 @@ function ChipRequestActivityCard({
             size="md"
           />
           <View className="min-w-0 flex-1">
-            <Text className="text-base font-semibold text-white" numberOfLines={1}>
+            <Text className="text-base font-semibold text-text-primary" numberOfLines={1}>
               {requesterName}
             </Text>
             <View className="mt-0.5 flex-row items-center gap-1">
@@ -1090,7 +1059,7 @@ function ChipRequestActivityCard({
         <View className="mb-1.5 flex-row items-center justify-between">
           <View className="flex-row items-center gap-1.5">
             <Coins size={18} color={colors.chipsIcon} weight="fill" />
-            <Text className="text-sm font-semibold text-white">
+            <Text className="text-sm font-semibold text-text-primary">
               {fulfilled.toLocaleString('en-US')}{' '}
               <Text className="text-text-secondary">of {requested.toLocaleString('en-US')}</Text>
             </Text>
@@ -1122,7 +1091,7 @@ function ChipRequestActivityCard({
           accessibilityLabel={`Donate chips to ${requesterName}`}
           className="mt-3 flex-row items-center justify-center gap-2 rounded-xl bg-primary py-3"
         >
-          <HandCoins size={18} color={colors.textPrimary} weight="bold" />
+          <HandCoins size={18} color="#FFFFFF" weight="bold" />
           <Text className="text-sm font-bold text-white">Donate chips</Text>
         </TouchableOpacity>
       ) : null}

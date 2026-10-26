@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
 import {
   Handshake,
@@ -13,7 +14,7 @@ import {
   type IconProps,
 } from 'phosphor-react-native';
 
-import { colors } from '@/constants/colors';
+import { useTheme, type ThemeColors } from '@/providers/theme';
 import { formatRelativeActivityTime } from '@/lib/date-format';
 import type { NotificationRow, NotificationType } from '@/hooks/use-notifications-feed';
 
@@ -31,19 +32,21 @@ const NOTIFICATION_ICONS: Record<NotificationType, React.ComponentType<IconProps
   bet_accepted: UserPlus,
 };
 
-const ICON_COLORS: Record<NotificationType, string> = {
-  bet_created: colors.primary,
-  bet_matched: colors.primary,
-  bet_settled: colors.primary,
-  bet_won: '#22C55E', // green for wins
-  bet_lost: '#EF4444', // red for losses
-  bet_voided: colors.textMuted,
-  bet_disputed: colors.warning,
-  bet_expiring: colors.warning,
-  chip_request_created: colors.chipsIcon,
-  chip_donated: colors.chipsIcon,
-  bet_accepted: colors.primary,
-};
+function getIconColors(colors: ThemeColors): Record<NotificationType, string> {
+  return {
+    bet_created: colors.primary,
+    bet_matched: colors.primary,
+    bet_settled: colors.primary,
+    bet_won: colors.success,
+    bet_lost: colors.error,
+    bet_voided: colors.textMuted,
+    bet_disputed: colors.warning,
+    bet_expiring: colors.warning,
+    chip_request_created: colors.chipsIcon,
+    chip_donated: colors.chipsIcon,
+    bet_accepted: colors.primary,
+  };
+}
 
 interface NotificationItemProps {
   notification: NotificationRow;
@@ -51,9 +54,15 @@ interface NotificationItemProps {
   isLast?: boolean;
 }
 
-export function NotificationItem({ notification, onPress, isLast: _isLast }: NotificationItemProps) {
+export function NotificationItem({
+  notification,
+  onPress,
+  isLast: _isLast,
+}: NotificationItemProps) {
+  const { colors } = useTheme();
+  const iconColors = useMemo(() => getIconColors(colors), [colors]);
   const Icon = NOTIFICATION_ICONS[notification.type];
-  const iconColor = ICON_COLORS[notification.type];
+  const iconColor = iconColors[notification.type];
   const isUnread = notification.read_at === null;
 
   return (
@@ -65,9 +74,7 @@ export function NotificationItem({ notification, onPress, isLast: _isLast }: Not
       }`}
     >
       {/* Unread indicator dot */}
-      {isUnread && (
-        <View className="absolute right-3 top-3 h-2.5 w-2.5 rounded-full bg-primary" />
-      )}
+      {isUnread && <View className="absolute right-3 top-3 h-2.5 w-2.5 rounded-full bg-primary" />}
 
       {/* Icon */}
       <View className="h-12 w-12 items-center justify-center rounded-full bg-surface-light">
@@ -77,7 +84,7 @@ export function NotificationItem({ notification, onPress, isLast: _isLast }: Not
       {/* Content */}
       <View className="min-w-0 flex-1 pr-4">
         <Text
-          className={`text-base ${isUnread ? 'font-bold' : 'font-semibold'} text-white`}
+          className={`text-base ${isUnread ? 'font-bold' : 'font-semibold'} text-text-primary`}
           numberOfLines={1}
         >
           {notification.title}
@@ -92,4 +99,3 @@ export function NotificationItem({ notification, onPress, isLast: _isLast }: Not
     </TouchableOpacity>
   );
 }
-

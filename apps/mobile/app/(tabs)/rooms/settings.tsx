@@ -1,17 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
-import {
-  ActivityIndicator,
-  Alert,
-  Keyboard,
-  Modal,
-  Platform,
-  ScrollView,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  TouchableWithoutFeedback,
-  View,
-} from 'react-native';
+import { ActivityIndicator, Alert, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as Clipboard from 'expo-clipboard';
 import {
@@ -19,6 +7,8 @@ import {
   Copy,
   Crown,
   Gavel,
+  Handshake,
+  Info,
   Plus,
   Receipt,
   SignOut,
@@ -26,7 +16,7 @@ import {
   User,
 } from 'phosphor-react-native';
 
-import { colors } from '@/constants/colors';
+import { useTheme } from '@/providers/theme';
 import { ActionSheet, type ActionSheetOption } from '@/components/ui/action-sheet';
 import { Badge } from '@/components/ui/badge';
 import { ScreenHeader } from '@/components/ui/screen-header';
@@ -40,8 +30,6 @@ import {
   useRoomDetail,
   useRoomMembersWithHistory,
   useUpdateMemberRole,
-  useUpdateRoomSettings,
-  type RoomMemberWithStatus,
 } from '@/hooks/use-rooms';
 
 type MemberRole = 'PLAYER' | 'ATTESTOR' | 'ADMIN';
@@ -73,14 +61,15 @@ function SettingsRow({
   rightIcon?: React.ReactNode;
   onPress?: () => void;
 }) {
+  const { colors } = useTheme();
   const trailing =
     rightIcon ?? (onPress ? <CaretRight size={18} color={colors.textMuted} weight="bold" /> : null);
   const content = (
     <View className="flex-row items-center justify-between border-b border-border px-4 py-4">
-      <Text className="text-base font-semibold text-white">{label}</Text>
-      <View className="flex-row items-center gap-2">
+      <Text className="shrink-0 text-base font-semibold text-text-primary">{label}</Text>
+      <View className="ml-3 min-w-0 shrink flex-row items-center gap-2">
         <Text
-          className={`text-base font-semibold ${valueClassName ?? 'text-text-secondary'}`}
+          className={`min-w-0 shrink text-base font-semibold ${valueClassName ?? 'text-text-secondary'}`}
           numberOfLines={1}
         >
           {value}
@@ -114,6 +103,7 @@ function AdminActionRow({
   destructive?: boolean;
   onPress?: () => void;
 }) {
+  const { colors } = useTheme();
   const tintBg =
     tint === 'primary' ? 'bg-primary/15' : tint === 'warning' ? 'bg-warning/15' : 'bg-error/15';
   const disabled = comingSoon || !onPress;
@@ -128,7 +118,7 @@ function AdminActionRow({
       <View className={`h-10 w-10 items-center justify-center rounded-full ${tintBg}`}>{icon}</View>
       <View className="min-w-0 flex-1">
         <Text
-          className={`text-base font-bold ${destructive ? 'text-error' : 'text-white'}`}
+          className={`text-base font-bold ${destructive ? 'text-error' : 'text-text-primary'}`}
           numberOfLines={1}
         >
           {label}
@@ -152,6 +142,7 @@ function AdminActionRow({
 }
 
 export default function RoomSettingsScreen() {
+  const { colors } = useTheme();
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { session: authSession } = useAuth();
@@ -167,7 +158,6 @@ export default function RoomSettingsScreen() {
   const updateMemberRole = useUpdateMemberRole();
   const removeMember = useRemoveMember();
   const leaveRoom = useLeaveRoom();
-  const updateRoomSettings = useUpdateRoomSettings();
 
   const currentMember = members?.find((m) => m.user_id === authSession?.user.id);
   const isCurrentUserActiveMember = currentMember?.membershipStatus === 'active';
@@ -175,8 +165,6 @@ export default function RoomSettingsScreen() {
   const isActive = room?.is_active ?? false;
 
   const [roleSheetTarget, setRoleSheetTarget] = useState<RoleSheetTarget | null>(null);
-  const [outcomeTimeoutModalVisible, setOutcomeTimeoutModalVisible] = useState(false);
-  const [outcomeTimeoutInput, setOutcomeTimeoutInput] = useState('');
 
   const handleCopyInviteCode = useCallback(async () => {
     if (!room?.invite_code) return;
@@ -308,64 +296,12 @@ export default function RoomSettingsScreen() {
     );
   }, [id, leaveRoom, router]);
 
-  const handleChangeOutcomeTimeout = useCallback(() => {
-    const currentValue = room?.outcome_submission_window_seconds ?? 30;
-
-    if (Platform.OS === 'ios') {
-      // iOS supports Alert.prompt
-      Alert.prompt(
-        'Outcome Timeout',
-        'Enter the time (in seconds) participants have to submit their outcome after a bet expires. (10-300)',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          {
-            text: 'Save',
-            onPress: async (value: string | undefined) => {
-              const seconds = parseInt(value ?? '', 10);
-              if (isNaN(seconds) || seconds < 10 || seconds > 300) {
-                Alert.alert('Invalid value', 'Please enter a number between 10 and 300.');
-                return;
-              }
-              try {
-                await updateRoomSettings.mutateAsync({
-                  p_room_id: id,
-                  p_outcome_submission_window_seconds: seconds,
-                });
-                Alert.alert('Saved', 'Outcome timeout updated successfully.');
-              } catch (err) {
-                Alert.alert('Error', getRpcErrorMessage(err));
-              }
-            },
-          },
-        ],
-        'plain-text',
-        String(currentValue),
-        'number-pad',
-      );
-    } else {
-      // Android: use custom modal
-      setOutcomeTimeoutInput(String(currentValue));
-      setOutcomeTimeoutModalVisible(true);
-    }
-  }, [id, room, updateRoomSettings]);
-
-  const handleSaveOutcomeTimeout = useCallback(async () => {
-    const seconds = parseInt(outcomeTimeoutInput, 10);
-    if (isNaN(seconds) || seconds < 10 || seconds > 300) {
-      Alert.alert('Invalid value', 'Please enter a number between 10 and 300.');
-      return;
-    }
-    try {
-      await updateRoomSettings.mutateAsync({
-        p_room_id: id,
-        p_outcome_submission_window_seconds: seconds,
-      });
-      setOutcomeTimeoutModalVisible(false);
-      Alert.alert('Saved', 'Outcome timeout updated successfully.');
-    } catch (err) {
-      Alert.alert('Error', getRpcErrorMessage(err));
-    }
-  }, [id, outcomeTimeoutInput, updateRoomSettings]);
+  const handleMemberPress = useCallback(
+    (userId: string) => {
+      router.push(`/(tabs)/rooms/member/${userId}?roomId=${id}`);
+    },
+    [id, router],
+  );
 
   if (roomLoading) {
     return (
@@ -384,24 +320,37 @@ export default function RoomSettingsScreen() {
   }
 
   const startingChipsValue = (room.starting_chips ?? 1000).toLocaleString('en-US');
-  const outcomeTimeoutValue = `${room.outcome_submission_window_seconds ?? 30}s`;
 
   return (
     <View className="flex-1 bg-background">
-      <ScreenHeader title="Room Settings" showBack showHome titleClassName="text-xl font-bold text-white" />
+      <ScreenHeader
+        title="Room Settings"
+        showBack
+        showHome
+        titleClassName="text-xl font-bold text-text-primary"
+      />
 
       <ScrollView contentContainerClassName="pb-12">
+        {/* Closed room retention notice */}
+        {!isActive && (
+          <View className="mx-5 mt-4 flex-row items-start gap-3 rounded-xl bg-surface-alt px-4 py-3">
+            <Info size={20} color={colors.textMuted} weight="fill" />
+            <View className="flex-1">
+              <Text className="text-sm font-semibold text-text-primary">Session ended</Text>
+              <Text className="mt-0.5 text-xs leading-4 text-text-muted">
+                Closed rooms are kept up to a limit of 10 per admin. Oldest rooms are automatically
+                deleted when this limit is exceeded.
+              </Text>
+            </View>
+          </View>
+        )}
+
         {/* Room settings */}
         <View className="px-5">
           <SectionLabel>Room settings</SectionLabel>
           <View className="overflow-hidden rounded-2xl border border-border bg-surface">
             <SettingsRow label="Room Name" value={room.name} />
             <SettingsRow label="Starting Chips" value={startingChipsValue} />
-            <SettingsRow
-              label="Outcome Timeout"
-              value={outcomeTimeoutValue}
-              onPress={isAdmin && isActive ? handleChangeOutcomeTimeout : undefined}
-            />
             {/* Only show invite code for active members */}
             {isCurrentUserActiveMember ? (
               <SettingsRow
@@ -425,6 +374,13 @@ export default function RoomSettingsScreen() {
               label="Standings"
               subtitle="Chip leaderboard"
               onPress={() => router.push(`/(tabs)/rooms/standings?id=${id}`)}
+            />
+            <AdminActionRow
+              icon={<Handshake size={20} color={colors.primary} weight="bold" />}
+              tint="primary"
+              label="Settlements"
+              subtitle="Net balances & settlement status"
+              onPress={() => router.push(`/(tabs)/rooms/settlements?id=${id}`)}
             />
           </View>
         </View>
@@ -459,6 +415,7 @@ export default function RoomSettingsScreen() {
                 membershipStatus={member.membershipStatus}
                 onChangeRole={handleChangeRoleRequest}
                 onRemoveMember={handleRemoveMemberRequest}
+                onMemberPress={handleMemberPress}
               />
             ))}
             {isActive && isCurrentUserActiveMember ? (
@@ -493,6 +450,7 @@ export default function RoomSettingsScreen() {
                   membershipStatus={member.membershipStatus}
                   onChangeRole={handleChangeRoleRequest}
                   onRemoveMember={handleRemoveMemberRequest}
+                  onMemberPress={handleMemberPress}
                 />
               ))}
             </View>
@@ -541,49 +499,6 @@ export default function RoomSettingsScreen() {
         options={roleOptions}
         selectedKey={roleSheetTarget?.currentRole}
       />
-
-      {/* Android-only: Custom modal for outcome timeout input */}
-      <Modal
-        visible={outcomeTimeoutModalVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setOutcomeTimeoutModalVisible(false)}
-      >
-        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-          <View className="flex-1 items-center justify-center bg-black/60 px-6">
-            <View className="w-full max-w-sm rounded-2xl bg-surface p-5">
-              <Text className="text-lg font-bold text-white">Outcome Timeout</Text>
-              <Text className="mt-2 text-sm text-text-secondary">
-                Enter the time (in seconds) participants have to submit their outcome after a bet
-                expires. (10-300)
-              </Text>
-              <TextInput
-                className="mt-4 rounded-xl border border-border bg-background px-4 py-3 text-base text-white"
-                value={outcomeTimeoutInput}
-                onChangeText={setOutcomeTimeoutInput}
-                keyboardType="number-pad"
-                placeholder="30"
-                placeholderTextColor={colors.textMuted}
-                autoFocus
-              />
-              <View className="mt-4 flex-row justify-end gap-3">
-                <TouchableOpacity
-                  onPress={() => setOutcomeTimeoutModalVisible(false)}
-                  className="rounded-xl px-4 py-2.5"
-                >
-                  <Text className="text-base font-semibold text-text-secondary">Cancel</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  onPress={handleSaveOutcomeTimeout}
-                  className="rounded-xl bg-primary px-4 py-2.5"
-                >
-                  <Text className="text-base font-semibold text-white">Save</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </View>
-        </TouchableWithoutFeedback>
-      </Modal>
     </View>
   );
 }

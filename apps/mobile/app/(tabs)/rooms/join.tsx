@@ -4,7 +4,7 @@ import { useRouter } from 'expo-router';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { Users } from 'phosphor-react-native';
 
-import { colors } from '@/constants/colors';
+import { useTheme } from '@/providers/theme';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { KeyboardAwareScrollView } from '@/components/form/keyboard-aware-scroll-view';
@@ -12,6 +12,7 @@ import { ScreenHeader } from '@/components/ui/screen-header';
 import { supabase } from '@/lib/supabase';
 import { useJoinRoom, getRpcErrorMessage } from '@/hooks/use-rooms';
 import { WarningCircle } from 'phosphor-react-native';
+import { SplashCelebration } from '@/components/activity/splash-celebration';
 
 const CODE_LENGTH = 6;
 
@@ -24,6 +25,7 @@ type RoomPreview = {
 } | null;
 
 function CornerBrackets() {
+  const { colors } = useTheme();
   const size = 28;
   const thickness = 3;
   const c = colors.primary;
@@ -83,6 +85,7 @@ function CornerBrackets() {
 }
 
 function RoomPreviewCard({ preview }: { preview: RoomPreview }) {
+  const { colors } = useTheme();
   if (!preview) return null;
 
   return (
@@ -94,7 +97,7 @@ function RoomPreviewCard({ preview }: { preview: RoomPreview }) {
           </Text>
         </View>
         <View className="min-w-0 flex-1">
-          <Text className="text-base font-semibold text-white" numberOfLines={1}>
+          <Text className="text-base font-semibold text-text-primary" numberOfLines={1}>
             {preview.name}
           </Text>
           <View className="mt-0.5 flex-row items-center gap-1">
@@ -110,10 +113,11 @@ function RoomPreviewCard({ preview }: { preview: RoomPreview }) {
 }
 
 function InvalidCodeCard() {
+  const { colors } = useTheme();
   return (
     <View className="mb-4 items-center rounded-2xl border border-border bg-surface px-4 py-5">
       <WarningCircle size={36} color={colors.warning} weight="fill" />
-      <Text className="mt-2 text-base font-semibold text-white">No room found</Text>
+      <Text className="mt-2 text-base font-semibold text-text-primary">No room found</Text>
       <Text className="mt-1 text-center text-sm text-text-muted">
         This code doesn&apos;t match any active room.{'\n'}Double-check with whoever invited you.
       </Text>
@@ -122,6 +126,7 @@ function InvalidCodeCard() {
 }
 
 export default function JoinRoomScreen() {
+  const { colors } = useTheme();
   const router = useRouter();
   const joinRoom = useJoinRoom();
   const [activeTab, setActiveTab] = useState<Tab>('code');
@@ -133,6 +138,8 @@ export default function JoinRoomScreen() {
   const [roomPreview, setRoomPreview] = useState<RoomPreview>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
   const [previewNotFound, setPreviewNotFound] = useState(false);
+  const [showSplash, setShowSplash] = useState(false);
+  const [joinedRoomId, setJoinedRoomId] = useState<string | null>(null);
 
   const fullCode = code.join('');
   const isComplete = fullCode.length === CODE_LENGTH && code.every((c) => c !== '');
@@ -236,9 +243,18 @@ export default function JoinRoomScreen() {
 
     try {
       const room = await joinRoom.mutateAsync({ p_invite_code: codeToUse });
-      router.replace(`./${room.id}`);
+      // Show splash celebration before navigating
+      setJoinedRoomId(room.id);
+      setShowSplash(true);
     } catch (err) {
       setError(getRpcErrorMessage(err, 'Failed to join room'));
+    }
+  }
+
+  function handleSplashDismiss() {
+    setShowSplash(false);
+    if (joinedRoomId) {
+      router.replace(`./${joinedRoomId}`);
     }
   }
 
@@ -323,7 +339,7 @@ export default function JoinRoomScreen() {
                   onKeyPress={({ nativeEvent }) => handleKeyPress(nativeEvent.key, index)}
                   autoCapitalize="characters"
                   autoCorrect={false}
-                  className={`h-14 w-12 rounded-xl border text-center text-xl font-bold text-white ${
+                  className={`h-14 w-12 rounded-xl border text-center text-xl font-bold text-text-primary ${
                     char ? 'border-primary bg-primary/10' : 'border-border bg-surface'
                   }`}
                   selectionColor={colors.primary}
@@ -421,6 +437,7 @@ export default function JoinRoomScreen() {
           </>
         )}
       </KeyboardAwareScrollView>
+      <SplashCelebration visible={showSplash} action="round_started" onDone={handleSplashDismiss} />
     </View>
   );
 }

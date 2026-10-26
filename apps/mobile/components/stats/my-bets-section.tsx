@@ -1,18 +1,19 @@
 import { useCallback, useMemo } from 'react';
 import { FlatList, RefreshControl, Text, View } from 'react-native';
 import { useQueryClient } from '@tanstack/react-query';
-import {
-  Trophy,
-  TrendDown,
-  Clock,
-  Prohibit,
-  ListDashes,
-} from 'phosphor-react-native';
+import { Trophy, TrendDown, Clock, Prohibit, ListDashes } from 'phosphor-react-native';
 
-import { colors } from '@/constants/colors';
+import { useTheme } from '@/providers/theme';
 import { EmptyState } from '@/components/ui';
 import { StatCard } from './stat-card';
-import { useMyBets, myBetsKey, calculateMyBetsStats, type MyBet } from '@/hooks/use-my-bets';
+import {
+  useMyBets,
+  useMyBetsAggregateStats,
+  myBetsKey,
+  myBetsStatsKey,
+  type MyBet,
+} from '@/hooks/use-my-bets';
+// Note: calculateMyBetsStats is no longer used - we now use backend aggregate stats
 import { balanceColorClass, formatBalance } from '@/lib/format-balance';
 
 interface MyBetsSectionProps {
@@ -20,22 +21,36 @@ interface MyBetsSectionProps {
 }
 
 export function MyBetsSection({ roomId }: MyBetsSectionProps) {
+  const { colors } = useTheme();
   const queryClient = useQueryClient();
-  const {
-    data,
-    isLoading,
-    isFetching,
-    fetchNextPage,
-    hasNextPage,
-    isFetchingNextPage,
-    refetch,
-  } = useMyBets(roomId);
+  const { data, isLoading, isFetching, fetchNextPage, hasNextPage, isFetchingNextPage, refetch } =
+    useMyBets(roomId);
+
+  // Use backend aggregate stats for accurate totals across all bets
+  const { data: aggregateStats, isLoading: statsLoading } = useMyBetsAggregateStats(roomId);
 
   const allBets = useMemo(() => data?.pages.flatMap((page) => page) ?? [], [data]);
-  const stats = useMemo(() => calculateMyBetsStats(allBets), [allBets]);
+
+  // Calculate win rate from aggregate stats
+  const stats = useMemo(() => {
+    if (!aggregateStats) return null;
+    const totalSettled = aggregateStats.wins + aggregateStats.losses;
+    const winRate =
+      totalSettled > 0 ? Math.round((aggregateStats.wins / totalSettled) * 100) : null;
+    return {
+      totalBets: aggregateStats.total_bets,
+      wins: aggregateStats.wins,
+      losses: aggregateStats.losses,
+      winRate,
+      netChips: aggregateStats.net_chips,
+    };
+  }, [aggregateStats]);
 
   const handleRefresh = useCallback(async () => {
-    await queryClient.invalidateQueries({ queryKey: myBetsKey(roomId ?? null) });
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: myBetsKey(roomId ?? null) }),
+      queryClient.invalidateQueries({ queryKey: myBetsStatsKey(roomId ?? null) }),
+    ]);
     await refetch();
   }, [queryClient, refetch, roomId]);
 
@@ -45,7 +60,7 @@ export function MyBetsSection({ roomId }: MyBetsSectionProps) {
     }
   }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
-  if (isLoading && allBets.length === 0) {
+  if ((isLoading || statsLoading) && allBets.length === 0) {
     return (
       <View className="flex-1 items-center justify-center px-5">
         <Text className="text-base text-text-muted">Loading your bets...</Text>
@@ -53,7 +68,7 @@ export function MyBetsSection({ roomId }: MyBetsSectionProps) {
     );
   }
 
-  if (!isLoading && allBets.length === 0) {
+  if (!isLoading && !statsLoading && allBets.length === 0) {
     return (
       <EmptyState
         icon={ListDashes}
@@ -67,9 +82,7 @@ export function MyBetsSection({ roomId }: MyBetsSectionProps) {
     <FlatList
       data={allBets}
       keyExtractor={(item) => item.bet_id}
-      renderItem={({ item, index }) => (
-        <BetRow bet={item} isLast={index === allBets.length - 1} />
-      )}
+      renderItem={({ item, index }) => <BetRow bet={item} isLast={index === allBets.length - 1} />}
       contentContainerClassName="pb-12"
       ListHeaderComponent={<StatsHeader stats={stats} />}
       refreshControl={
@@ -92,27 +105,39 @@ export function MyBetsSection({ roomId }: MyBetsSectionProps) {
   );
 }
 
-function StatsHeader({ stats }: { stats: ReturnType<typeof calculateMyBetsStats> }) {
+type StatsData = {
+  totalBets: number;
+  wins: number;
+  losses: number;
+  winRate: number | null;
+  netChips: number;
+} | null;
+
+function StatsHeader({ stats }: { stats: StatsData }) {
   return (
     <View className="px-5 pb-4">
       <Text className="mb-2 mt-3 px-1 text-xs font-semibold uppercase tracking-widest text-text-muted">
         Summary
       </Text>
       <View className="flex-row gap-3">
-        <StatCard label="Total bets" value={String(stats.totalBets)} />
-        <StatCard label="Win rate" value={stats.winRate != null ? `${stats.winRate}%` : '—'} tone="primary" />
+        <StatCard label="Total bets" value={String(stats?.totalBets ?? 0)} />
+        <StatCard
+          label="Win rate"
+          value={stats?.winRate != null ? `${stats.winRate}%` : '—'}
+          tone="primary"
+        />
       </View>
       <View className="mt-3 flex-row gap-3">
-        <StatCard label="Wins" value={String(stats.wins)} tone="primary" />
-        <StatCard label="Losses" value={String(stats.losses)} tone="error" />
+        <StatCard label="Wins" value={String(stats?.wins ?? 0)} tone="primary" />
+        <StatCard label="Losses" value={String(stats?.losses ?? 0)} tone="error" />
       </View>
       <View className="mt-3">
         <View className="rounded-2xl border border-border bg-surface px-4 py-3">
           <Text className="text-xs font-semibold uppercase tracking-widest text-text-muted">
             Net chips
           </Text>
-          <Text className={`mt-1 text-3xl font-bold ${balanceColorClass(stats.netChips)}`}>
-            {formatBalance(stats.netChips)}
+          <Text className={`mt-1 text-3xl font-bold ${balanceColorClass(stats?.netChips ?? 0)}`}>
+            {formatBalance(stats?.netChips ?? 0)}
           </Text>
         </View>
       </View>
@@ -124,6 +149,7 @@ function StatsHeader({ stats }: { stats: ReturnType<typeof calculateMyBetsStats>
 }
 
 function BetRow({ bet, isLast }: { bet: MyBet; isLast: boolean }) {
+  const { colors } = useTheme();
   const StatusIcon = useMemo(() => {
     if (bet.status === 'SETTLED') {
       return bet.won ? Trophy : TrendDown;
@@ -136,7 +162,7 @@ function BetRow({ bet, isLast }: { bet: MyBet; isLast: boolean }) {
 
   const iconColor = useMemo(() => {
     if (bet.status === 'SETTLED') {
-      return bet.won ? '#22C55E' : '#EF4444';
+      return bet.won ? colors.success : colors.error;
     }
     if (bet.status === 'VOID') {
       return colors.textMuted;
@@ -167,7 +193,7 @@ function BetRow({ bet, isLast }: { bet: MyBet; isLast: boolean }) {
           <StatusIcon size={20} color={iconColor} weight="fill" />
         </View>
         <View className="min-w-0 flex-1">
-          <Text className="text-base font-semibold text-white" numberOfLines={2}>
+          <Text className="text-base font-semibold text-text-primary" numberOfLines={2}>
             {bet.question}
           </Text>
           <Text className="mt-1 text-sm text-text-secondary" numberOfLines={1}>
@@ -182,21 +208,21 @@ function BetRow({ bet, isLast }: { bet: MyBet; isLast: boolean }) {
           {/* My pick */}
           <View>
             <Text className="text-xs text-text-muted">Your pick</Text>
-            <Text className="mt-0.5 text-sm font-medium text-white">{bet.my_pick}</Text>
+            <Text className="mt-0.5 text-sm font-medium text-text-primary">{bet.my_pick}</Text>
           </View>
 
           {/* Outcome (if settled) */}
           {bet.outcome ? (
             <View>
               <Text className="text-xs text-text-muted">Outcome</Text>
-              <Text className="mt-0.5 text-sm font-medium text-white">{bet.outcome}</Text>
+              <Text className="mt-0.5 text-sm font-medium text-text-primary">{bet.outcome}</Text>
             </View>
           ) : null}
 
           {/* Stake */}
           <View>
             <Text className="text-xs text-text-muted">Stake</Text>
-            <Text className="mt-0.5 text-sm font-medium text-white">{bet.stake}</Text>
+            <Text className="mt-0.5 text-sm font-medium text-text-primary">{bet.stake}</Text>
           </View>
         </View>
 

@@ -3,7 +3,12 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import type { Database } from '@cha-ching/types';
 
-import { betDetailKey, roomActivityKey, roomBalanceKey, roomBetsKey } from '@/hooks/use-activity-feed';
+import {
+  betDetailKey,
+  roomActivityKey,
+  roomBalanceKey,
+  roomBetsKey,
+} from '@/hooks/use-activity-feed';
 
 type Bet = Database['public']['Tables']['bets']['Row'];
 
@@ -16,8 +21,7 @@ export function useProcessExpiredBet() {
 
   return useMutation({
     mutationFn: async (params: { betId: string; roomId: string }) => {
-      // Type assertion needed until `pnpm db:gen-types` is run after migration
-      const { data, error } = await (supabase.rpc as Function)('process_expired_bet', {
+      const { data, error } = await supabase.rpc('process_expired_bet', {
         p_bet_id: params.betId,
       });
       if (error) throw error;

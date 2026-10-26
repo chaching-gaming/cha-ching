@@ -8,6 +8,7 @@ import { signInWithGoogle, signInWithApple } from '@/lib/oauth';
 import { KeyboardAwareScrollView } from '@/components/form/keyboard-aware-scroll-view';
 import { useForm } from '@/hooks/use-form';
 import { useToast } from '@/providers/toast';
+import { useTheme } from '@/providers/theme';
 
 const signInSchema = z.object({
   email: z.string().min(1, 'Email is required').email('Invalid email address'),
@@ -15,6 +16,7 @@ const signInSchema = z.object({
 });
 
 export default function SignInScreen() {
+  const { colors } = useTheme();
   const [oauthLoading, setOauthLoading] = useState(false);
   const toast = useToast();
 
@@ -70,7 +72,7 @@ export default function SignInScreen() {
           className="mb-4 h-24 w-24"
           resizeMode="contain"
         />
-        <Text className="text-3xl font-bold text-white">Cha-Ching</Text>
+        <Text className="text-3xl font-bold text-text-primary">Cha-Ching</Text>
         <Text className="mt-2 text-base text-text-secondary">Social Prop Bets with Friends</Text>
       </View>
 
@@ -135,8 +137,8 @@ export default function SignInScreen() {
           disabled={oauthLoading}
           activeOpacity={0.7}
         >
-          <FontAwesome name="apple" size={18} color="#fff" />
-          <Text className="text-base font-medium text-white">Apple</Text>
+          <FontAwesome name="apple" size={18} color={colors.textPrimary} />
+          <Text className="text-base font-medium text-text-primary">Apple</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -145,8 +147,8 @@ export default function SignInScreen() {
           disabled={oauthLoading}
           activeOpacity={0.7}
         >
-          <FontAwesome name="google" size={18} color="#fff" />
-          <Text className="text-base font-medium text-white">Google</Text>
+          <FontAwesome name="google" size={18} color={colors.textPrimary} />
+          <Text className="text-base font-medium text-text-primary">Google</Text>
         </TouchableOpacity>
       </View>
 

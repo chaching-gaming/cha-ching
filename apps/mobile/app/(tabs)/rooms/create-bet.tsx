@@ -19,7 +19,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ArrowLeft, ArrowRight, Coins, PencilSimple, X } from 'phosphor-react-native';
 import { z } from 'zod';
 
-import { colors } from '@/constants/colors';
+import { useTheme } from '@/providers/theme';
 import { useAuth } from '@/providers/auth';
 import { Avatar } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -46,6 +46,7 @@ import {
   templateRequiresPlayer,
   type ExpiryUnit,
 } from '@/lib/bet-create-ui';
+import { SplashCelebration } from '@/components/activity/splash-celebration';
 
 const BINARY_OPTIONS = ['Yes', 'No'] as const;
 
@@ -114,6 +115,7 @@ function memberDisplayName(m: RoomMemberWithProfile): string {
 }
 
 export default function CreateBetScreen() {
+  const { colors } = useTheme();
   const { id: roomId } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const safeInsets = useSafeAreaInsets();
@@ -133,6 +135,7 @@ export default function CreateBetScreen() {
   const [step, setStep] = useState(1);
   const [keyboardVisible, setKeyboardVisible] = useState(false);
   const [reviewOpen, setReviewOpen] = useState(false);
+  const [showSplash, setShowSplash] = useState(false);
 
   // Track keyboard visibility for iOS sticky footer
   useEffect(() => {
@@ -209,8 +212,8 @@ export default function CreateBetScreen() {
         });
         setReviewOpen(false);
         setReviewPayload(null);
-        // Always navigate to room detail page after creating bet
-        router.replace(`/(tabs)/rooms/${roomId}`);
+        // Show splash celebration before navigating
+        setShowSplash(true);
       } catch (err) {
         formApi.setErrorMap({
           onSubmit: { fields: {}, form: getRpcErrorMessage(err) },
@@ -261,17 +264,21 @@ export default function CreateBetScreen() {
       }
     }
 
-    // Prevent betting against yourself (only when picking the negative option)
-    if (values.memberId && values.memberId === currentUserId) {
+    // Prevent betting against yourself when picking against subject_positive_option
+    // For templates: subject must pick the option matching subject_positive_option
+    // For write-in: no restriction (backend auto-allows when creator is subject)
+    if (values.memberId && values.memberId === currentUserId && values.templateId) {
       const tpl = templates?.find((t) => t.id === values.templateId);
-      const isNegativePick = tpl
-        ? values.offeredPick === tpl.negative_label
-        : values.writeInOpen && values.offeredPick === 'No';
-      if (isNegativePick) {
-        form.setErrorMap({
-          onSubmit: { fields: {}, form: "You can't bet against yourself on this question" },
-        });
-        return;
+      if (tpl?.subject_positive_option) {
+        // Map subject_positive_option (Yes/No) to the allowed display label
+        const allowedPick =
+          tpl.subject_positive_option === 'Yes' ? tpl.positive_label : tpl.negative_label;
+        if (values.offeredPick !== allowedPick) {
+          form.setErrorMap({
+            onSubmit: { fields: {}, form: "You can't bet against yourself on this question" },
+          });
+          return;
+        }
       }
     }
 
@@ -333,6 +340,11 @@ export default function CreateBetScreen() {
     form.setErrorMap({});
   }, [form]);
 
+  const handleSplashDismiss = useCallback(() => {
+    setShowSplash(false);
+    router.replace(`/(tabs)/rooms/${roomId}`);
+  }, [router, roomId]);
+
   const reviewTemplate = useMemo(
     () => templates?.find((t) => t.id === reviewPayload?.templateId) ?? null,
     [templates, reviewPayload?.templateId],
@@ -380,7 +392,7 @@ export default function CreateBetScreen() {
         right={
           <View className="flex-row items-center gap-1.5 rounded-full bg-primary/20 px-3 py-1.5">
             <Coins size={16} color={colors.chipsIcon} weight="fill" />
-            <Text className="text-base font-bold text-white" numberOfLines={1}>
+            <Text className="text-base font-bold text-text-primary" numberOfLines={1}>
               {balance ?? 0}
             </Text>
           </View>
@@ -436,16 +448,29 @@ export default function CreateBetScreen() {
                 {/* Players (required for templates with {player}, optional for custom) */}
                 <View className="mb-4">
                   <form.Subscribe
-                    selector={(state) => [state.values.memberId, state.values.templateId, state.values.offeredPick, state.values.writeInOpen] as const}
+                    selector={(state) =>
+                      [
+                        state.values.memberId,
+                        state.values.templateId,
+                        state.values.offeredPick,
+                        state.values.writeInOpen,
+                      ] as const
+                    }
                   >
                     {([memberId, templateId, offeredPick, writeInOpen]) => {
                       const tpl = templates?.find((t) => t.id === templateId);
                       const isPlayerRequired = tpl && templateRequiresPlayer(tpl.question_text);
-                      // Show warning only when user selects themselves AND picks the negative option
-                      const isNegativePick = tpl
-                        ? offeredPick === tpl.negative_label
-                        : writeInOpen && offeredPick === 'No';
-                      const showSelfBetWarning = memberId === currentUserId && isNegativePick;
+                      // Show warning when user bets against themselves (picks opposite of subject_positive_option)
+                      // For templates with subject_positive_option: warn if pick doesn't match allowed option
+                      // For write-in: no restriction
+                      let showSelfBetWarning = false;
+                      if (memberId === currentUserId && tpl?.subject_positive_option) {
+                        const allowedPick =
+                          tpl.subject_positive_option === 'Yes'
+                            ? tpl.positive_label
+                            : tpl.negative_label;
+                        showSelfBetWarning = offeredPick !== allowedPick;
+                      }
                       return (
                         <>
                           <Text className="mb-2 text-sm font-medium text-text-secondary">
@@ -510,7 +535,7 @@ export default function CreateBetScreen() {
                           {showSelfBetWarning && (
                             <View className="mt-2 rounded-xl bg-warning/15 px-3 py-2">
                               <Text className="text-sm text-warning">
-                                You can't bet against yourself on this question
+                                You can&apos;t bet against yourself on this question
                               </Text>
                             </View>
                           )}
@@ -593,7 +618,7 @@ export default function CreateBetScreen() {
                                   inputClassName="min-h-[60px]"
                                   onFocus={() => {
                                     setTimeout(() => {
-                                      scrollViewRef.current?.scrollToEnd({ animated: true });
+                                      scrollViewRef.current?.scrollToEnd(true);
                                     }, 300);
                                   }}
                                   autoFocus
@@ -668,16 +693,29 @@ export default function CreateBetScreen() {
                 {/* Players (required for templates with {player}, optional for custom) */}
                 <View className="mb-4">
                   <form.Subscribe
-                    selector={(state) => [state.values.memberId, state.values.templateId, state.values.offeredPick, state.values.writeInOpen] as const}
+                    selector={(state) =>
+                      [
+                        state.values.memberId,
+                        state.values.templateId,
+                        state.values.offeredPick,
+                        state.values.writeInOpen,
+                      ] as const
+                    }
                   >
                     {([memberId, templateId, offeredPick, writeInOpen]) => {
                       const tpl = templates?.find((t) => t.id === templateId);
                       const isPlayerRequired = tpl && templateRequiresPlayer(tpl.question_text);
-                      // Show warning only when user selects themselves AND picks the negative option
-                      const isNegativePick = tpl
-                        ? offeredPick === tpl.negative_label
-                        : writeInOpen && offeredPick === 'No';
-                      const showSelfBetWarning = memberId === currentUserId && isNegativePick;
+                      // Show warning when user bets against themselves (picks opposite of subject_positive_option)
+                      // For templates with subject_positive_option: warn if pick doesn't match allowed option
+                      // For write-in: no restriction
+                      let showSelfBetWarning = false;
+                      if (memberId === currentUserId && tpl?.subject_positive_option) {
+                        const allowedPick =
+                          tpl.subject_positive_option === 'Yes'
+                            ? tpl.positive_label
+                            : tpl.negative_label;
+                        showSelfBetWarning = offeredPick !== allowedPick;
+                      }
                       return (
                         <>
                           <Text className="mb-2 text-sm font-medium text-text-secondary">
@@ -742,7 +780,7 @@ export default function CreateBetScreen() {
                           {showSelfBetWarning && (
                             <View className="mt-2 rounded-xl bg-warning/15 px-3 py-2">
                               <Text className="text-sm text-warning">
-                                You can't bet against yourself on this question
+                                You can&apos;t bet against yourself on this question
                               </Text>
                             </View>
                           )}
@@ -825,7 +863,7 @@ export default function CreateBetScreen() {
                                   inputClassName="min-h-[60px]"
                                   onFocus={() => {
                                     setTimeout(() => {
-                                      scrollViewRef.current?.scrollToEnd({ animated: true });
+                                      scrollViewRef.current?.scrollToEnd(true);
                                     }, 300);
                                   }}
                                   autoFocus
@@ -902,7 +940,7 @@ export default function CreateBetScreen() {
 
                     return (
                       <>
-                        <Text className="text-base font-semibold text-white">
+                        <Text className="text-base font-semibold text-text-primary">
                           {tpl?.short_label ?? 'Custom Question'}
                           {member ? ` · ${memberDisplayName(member)}` : ''}
                         </Text>
@@ -1022,7 +1060,7 @@ export default function CreateBetScreen() {
                             keyboardType="number-pad"
                             editable={sessionActive}
                             selectTextOnFocus
-                            className="min-w-[80px] flex-1 rounded-xl border border-border bg-surface px-4 text-lg font-bold text-white"
+                            className="min-w-[80px] flex-1 rounded-xl border border-border bg-surface px-4 text-lg font-bold text-text-primary"
                             style={[
                               {
                                 height: 48,
@@ -1051,7 +1089,7 @@ export default function CreateBetScreen() {
                             >
                               <Text
                                 className={`text-sm font-semibold ${
-                                  customExpiryUnit === 'min' ? 'text-background' : 'text-text-secondary'
+                                  customExpiryUnit === 'min' ? 'text-white' : 'text-text-secondary'
                                 }`}
                               >
                                 min
@@ -1067,7 +1105,7 @@ export default function CreateBetScreen() {
                             >
                               <Text
                                 className={`text-sm font-semibold ${
-                                  customExpiryUnit === 'hr' ? 'text-background' : 'text-text-secondary'
+                                  customExpiryUnit === 'hr' ? 'text-white' : 'text-text-secondary'
                                 }`}
                               >
                                 hr
@@ -1119,7 +1157,7 @@ export default function CreateBetScreen() {
                     onPress={(e) => e.stopPropagation()}
                   >
                     <View className="mb-4 flex-row items-center justify-between">
-                      <Text className="text-xl font-bold text-white">Review bet</Text>
+                      <Text className="text-xl font-bold text-text-primary">Review bet</Text>
                       <TouchableOpacity
                         onPress={closeReview}
                         disabled={isSubmitting}
@@ -1146,7 +1184,7 @@ export default function CreateBetScreen() {
                         />
                         <View className="flex-1">
                           <Text className="text-sm font-medium text-text-secondary">Player</Text>
-                          <Text className="text-lg font-semibold text-white">
+                          <Text className="text-lg font-semibold text-text-primary">
                             {reviewPayload?.memberDisplayName}
                           </Text>
                         </View>
@@ -1155,7 +1193,7 @@ export default function CreateBetScreen() {
 
                     <View className="mb-4 rounded-2xl border border-border bg-surface px-4 py-3">
                       <Text className="text-sm font-medium text-text-secondary">Question</Text>
-                      <Text className="mt-1 text-base leading-6 text-white">
+                      <Text className="mt-1 text-base leading-6 text-text-primary">
                         {reviewPayload?.finalQuestion}
                       </Text>
                     </View>
@@ -1163,7 +1201,7 @@ export default function CreateBetScreen() {
                     {reviewPayload?.templateId && reviewTemplate ? (
                       <View className="mb-3 flex-row justify-between border-b border-border py-2">
                         <Text className="text-sm text-text-secondary">Template</Text>
-                        <Text className="text-sm font-semibold text-white">
+                        <Text className="text-sm font-semibold text-text-primary">
                           {reviewTemplate.short_label}
                         </Text>
                       </View>
@@ -1178,14 +1216,14 @@ export default function CreateBetScreen() {
 
                     <View className="mb-3 flex-row justify-between border-b border-border py-2">
                       <Text className="text-sm text-text-secondary">Stake</Text>
-                      <Text className="text-sm font-semibold text-white">
+                      <Text className="text-sm font-semibold text-text-primary">
                         {reviewPayload?.stake ?? 0} chips
                       </Text>
                     </View>
 
                     <View className="mb-6 flex-row justify-between border-b border-border py-2">
                       <Text className="text-sm text-text-secondary">Expires in</Text>
-                      <Text className="text-sm font-semibold text-white">
+                      <Text className="text-sm font-semibold text-text-primary">
                         {reviewPayload?.isCustomExpiry
                           ? formatCustomExpiryLabel(
                               parseInt(reviewPayload.customExpiryMinutes, 10),
@@ -1205,6 +1243,7 @@ export default function CreateBetScreen() {
           </GestureHandlerRootView>
         </Modal>
       </form.AppForm>
+      <SplashCelebration visible={showSplash} action="wager_placed" onDone={handleSplashDismiss} />
     </View>
   );
 }

@@ -29,7 +29,7 @@ export type ExpoPushResponse = {
  * Returns array of tickets for tracking delivery status.
  */
 export async function sendExpoPushNotifications(
-  messages: ExpoPushMessage[]
+  messages: ExpoPushMessage[],
 ): Promise<ExpoPushTicket[]> {
   if (messages.length === 0) {
     return [];
@@ -47,7 +47,7 @@ export async function sendExpoPushNotifications(
     const response = await fetch(EXPO_PUSH_URL, {
       method: 'POST',
       headers: {
-        'Accept': 'application/json',
+        Accept: 'application/json',
         'Accept-Encoding': 'gzip, deflate',
         'Content-Type': 'application/json',
       },
@@ -71,10 +71,7 @@ export async function sendExpoPushNotifications(
  * These tokens should be removed from the database.
  */
 export function isDeviceNotRegistered(ticket: ExpoPushTicket): boolean {
-  return (
-    ticket.status === 'error' &&
-    ticket.details?.error === 'DeviceNotRegistered'
-  );
+  return ticket.status === 'error' && ticket.details?.error === 'DeviceNotRegistered';
 }
 
 /**

@@ -47,6 +47,7 @@ export function TimeProvider({ children }: { children: React.ReactNode }) {
     try {
       const t1 = Date.now();
       // Cast to any to support new RPC before types are regenerated
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data, error } = await (supabase.rpc as any)('get_server_time');
       const t2 = Date.now();
 
@@ -132,10 +133,7 @@ export function TimeProvider({ children }: { children: React.ReactNode }) {
     return new Date(Date.now() + offset);
   }, [offset]);
 
-  const value = useMemo(
-    () => ({ getServerTime, offset, synced }),
-    [getServerTime, offset, synced],
-  );
+  const value = useMemo(() => ({ getServerTime, offset, synced }), [getServerTime, offset, synced]);
 
   return <TimeContext.Provider value={value}>{children}</TimeContext.Provider>;
 }

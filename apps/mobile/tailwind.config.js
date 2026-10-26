@@ -2,38 +2,44 @@
 module.exports = {
   content: ['./app/**/*.{ts,tsx}', './components/**/*.{ts,tsx}', './providers/**/*.{ts,tsx}'],
   presets: [require('nativewind/preset')],
+  darkMode: 'class',
   theme: {
     extend: {
       colors: {
-        // Green/Teal palette (darker)
-        background: '#011E22',
-        surface: '#02353C',
-        'surface-light': '#054550',
-        border: '#086568',
+        // Theme-aware colors (CSS variables - auto-switch with .dark class)
+        background: 'rgb(var(--color-background) / <alpha-value>)',
+        surface: 'rgb(var(--color-surface) / <alpha-value>)',
+        'surface-light': 'rgb(var(--color-surface-light) / <alpha-value>)',
+        'surface-alt': 'rgb(var(--color-surface-alt) / <alpha-value>)',
+        border: 'rgb(var(--color-border) / <alpha-value>)',
+        'text-primary': 'rgb(var(--color-text-primary) / <alpha-value>)',
+        'text-secondary': 'rgb(var(--color-text-secondary) / <alpha-value>)',
+        'text-muted': 'rgb(var(--color-text-muted) / <alpha-value>)',
+        success: 'rgb(var(--color-success) / <alpha-value>)',
+        error: 'rgb(var(--color-error) / <alpha-value>)',
+        warning: 'rgb(var(--color-warning) / <alpha-value>)',
+
+        // Primary colors (theme-aware)
         primary: {
-          DEFAULT: '#2EAF7D',
-          dark: '#238F66',
-          light: '#3FD0C9',
+          DEFAULT: 'rgb(var(--color-primary) / <alpha-value>)',
+          dark: 'rgb(var(--color-primary-dark) / <alpha-value>)',
+          light: 'rgb(var(--color-primary-light) / <alpha-value>)',
         },
-        secondary: '#3FD0C9',
-        accent: '#C1F6ED',
-        success: '#449342',
-        error: '#EF4444',
-        warning: '#F59E0B',
-        'text-primary': '#FFFFFF',
-        'text-secondary': '#A8D5D0',
-        'text-muted': '#6B9E99',
-        // Medal colors for standings
-        'medal-gold': '#F59E0B',
-        'medal-silver': '#A8D5D0',
-        'medal-bronze': '#B97F4C',
-        // Confetti colors for celebrations
-        'confetti-1': '#C1F6ED',
-        'confetti-2': '#2EAF7D',
-        'confetti-3': '#3FD0C9',
-        'confetti-4': '#449342',
-        'confetti-5': '#F59E0B',
-        'confetti-6': '#EF476F',
+        secondary: 'rgb(var(--color-secondary) / <alpha-value>)',
+        accent: 'rgb(var(--color-accent) / <alpha-value>)',
+
+        // Medal colors for standings (theme-aware)
+        'medal-gold': 'rgb(var(--color-medal-gold) / <alpha-value>)',
+        'medal-silver': 'rgb(var(--color-medal-silver) / <alpha-value>)',
+        'medal-bronze': 'rgb(var(--color-medal-bronze) / <alpha-value>)',
+
+        // Confetti colors for celebrations (theme-aware)
+        'confetti-1': 'rgb(var(--color-confetti-1) / <alpha-value>)',
+        'confetti-2': 'rgb(var(--color-confetti-2) / <alpha-value>)',
+        'confetti-3': 'rgb(var(--color-confetti-3) / <alpha-value>)',
+        'confetti-4': 'rgb(var(--color-confetti-4) / <alpha-value>)',
+        'confetti-5': 'rgb(var(--color-confetti-5) / <alpha-value>)',
+        'confetti-6': 'rgb(var(--color-confetti-6) / <alpha-value>)',
       },
       fontFamily: {
         mono: ['SpaceMono'],

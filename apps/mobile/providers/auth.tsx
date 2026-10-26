@@ -38,7 +38,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       // Then get the session (will include recovery session if set above)
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
       setSession(session);
       setIsLoading(false);
 

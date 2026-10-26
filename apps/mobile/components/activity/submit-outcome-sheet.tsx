@@ -3,7 +3,7 @@ import { Alert, Modal, Pressable, Text, TouchableOpacity, View } from 'react-nat
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Check, X } from 'phosphor-react-native';
 
-import { colors } from '@/constants/colors';
+import { useTheme } from '@/providers/theme';
 import { Button } from '@/components/ui/button';
 import { useSubmitOutcome } from '@/hooks/use-submit-outcome';
 import { getRpcErrorMessage } from '@/hooks/use-rooms';
@@ -28,6 +28,7 @@ export function SubmitOutcomeSheet({
   positiveLabel,
   negativeLabel,
 }: Props) {
+  const { colors } = useTheme();
   const safeInsets = useSafeAreaInsets();
   const submitOutcome = useSubmitOutcome();
   const [selected, setSelected] = useState<string | null>(null);
@@ -96,7 +97,7 @@ export function SubmitOutcomeSheet({
           onPress={(e) => e.stopPropagation()}
         >
           <View className="mb-4 flex-row items-center justify-between">
-            <Text className="text-xl font-bold text-white">Submit outcome</Text>
+            <Text className="text-xl font-bold text-text-primary">Submit outcome</Text>
             <TouchableOpacity
               onPress={handleClose}
               disabled={submitOutcome.isPending}
@@ -107,7 +108,7 @@ export function SubmitOutcomeSheet({
           </View>
 
           <Text className="mb-1 text-sm font-medium text-text-secondary">Question</Text>
-          <Text className="mb-5 text-base leading-6 text-white">{bet.question}</Text>
+          <Text className="mb-5 text-base leading-6 text-text-primary">{bet.question}</Text>
 
           <Text className="mb-2 text-sm font-medium text-text-secondary">What happened?</Text>
           <View className="mb-5 gap-2">
@@ -124,7 +125,7 @@ export function SubmitOutcomeSheet({
                   }`}
                 >
                   <Text
-                    className={`text-base font-semibold ${isSelected ? 'text-primary' : 'text-white'}`}
+                    className={`text-base font-semibold ${isSelected ? 'text-primary' : 'text-text-primary'}`}
                   >
                     {getDisplayLabel(option)}
                   </Text>

@@ -1,7 +1,7 @@
 import { Image, Text, TouchableOpacity, View } from 'react-native';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 
-import { colors } from '@/constants/colors';
+import { useTheme } from '@/providers/theme';
 
 const sizes = {
   sm: { container: 'h-8 w-8', text: 'text-sm', icon: 14 },
@@ -19,6 +19,8 @@ interface AvatarProps {
   onPress?: () => void;
   showEditBadge?: boolean;
   className?: string;
+  /** When true, avatar appears greyed/faded (for left/removed members) */
+  inactive?: boolean;
 }
 
 export function Avatar({
@@ -28,14 +30,20 @@ export function Avatar({
   onPress,
   showEditBadge = false,
   className = '',
+  inactive = false,
 }: AvatarProps) {
+  const { colors } = useTheme();
   const s = sizes[size];
   const initial = fallback?.charAt(0).toUpperCase() ?? '?';
 
+  // Apply grayscale and reduced opacity for inactive (left/removed) members
+  const inactiveStyle = inactive ? 'opacity-50' : '';
+  const imageStyle = inactive ? { opacity: 0.5 } : {};
+
   const content = (
-    <View className={`relative ${className}`}>
+    <View className={`relative ${className} ${inactiveStyle}`}>
       {uri ? (
-        <Image source={{ uri }} className={`${s.container} rounded-full`} />
+        <Image source={{ uri }} className={`${s.container} rounded-full`} style={imageStyle} />
       ) : (
         <View
           className={`${s.container} items-center justify-center rounded-full bg-surface-light`}
@@ -45,7 +53,7 @@ export function Avatar({
       )}
       {showEditBadge && (
         <View className="absolute bottom-0 right-0 h-5 w-5 items-center justify-center rounded-full border-2 border-background bg-primary">
-          <FontAwesome name="pencil" size={10} color={colors.textPrimary} />
+          <FontAwesome name="pencil" size={10} color="#FFFFFF" />
         </View>
       )}
     </View>

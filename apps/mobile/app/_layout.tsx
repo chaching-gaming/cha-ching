@@ -2,8 +2,9 @@ import 'react-native-gesture-handler';
 import '../global.css';
 
 import FontAwesome from '@expo/vector-icons/FontAwesome';
-import { DarkTheme, ThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
+import { LilitaOne_400Regular } from '@expo-google-fonts/lilita-one';
+import { Fredoka_600SemiBold } from '@expo-google-fonts/fredoka';
 import { Stack, useRouter, useSegments, type Href } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
@@ -11,9 +12,9 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import 'react-native-reanimated';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 
-import { colors } from '@/constants/colors';
 import { Providers } from '@/providers';
 import { useAuth } from '@/providers/auth';
+import { useTheme } from '@/providers/theme';
 import { LoadingScreen } from '@/components/ui';
 import * as Sentry from '@sentry/react-native';
 import { env } from '@/lib/env';
@@ -49,17 +50,19 @@ void SplashScreen.preventAutoHideAsync().catch(() => {
   /* Dev / fast refresh: splash may already be hidden or not registered */
 });
 
-const appTheme = {
-  ...DarkTheme,
-  colors: {
-    ...DarkTheme.colors,
-    background: colors.background,
-    card: colors.surface,
-    text: colors.textPrimary,
-    border: colors.border,
-    primary: colors.primary,
-  },
-};
+function SplashScreenController({ fontsReady }: { fontsReady: boolean }) {
+  const { isHydrated } = useTheme();
+
+  useEffect(() => {
+    if (fontsReady && isHydrated) {
+      void SplashScreen.hideAsync().catch(() => {
+        /* Dev / fast refresh: no native splash registered for this VC */
+      });
+    }
+  }, [fontsReady, isHydrated]);
+
+  return null;
+}
 
 function AuthGate({ children }: { children: React.ReactNode }) {
   const { session, isLoading, isPasswordRecovery, clearPasswordRecovery } = useAuth();
@@ -70,7 +73,7 @@ function AuthGate({ children }: { children: React.ReactNode }) {
     if (isLoading) return;
 
     const inAuthGroup = segments[0] === '(auth)';
-    const currentScreen = segments[1] as string | undefined;
+    const currentScreen = (segments as readonly string[])[1] as string | undefined;
     const onResetPassword =
       currentScreen === 'reset-password' || currentScreen === 'forgot-password';
 
@@ -110,15 +113,9 @@ export default Sentry.wrap(function RootLayout() {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
     ...FontAwesome.font,
+    LilitaOne_400Regular,
+    Fredoka_600SemiBold,
   });
-
-  useEffect(() => {
-    if (loaded || fontError) {
-      void SplashScreen.hideAsync().catch(() => {
-        /* Dev / fast refresh: no native splash registered for this VC */
-      });
-    }
-  }, [loaded, fontError]);
 
   if (!loaded && !fontError) {
     return null;
@@ -127,17 +124,16 @@ export default Sentry.wrap(function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <Providers>
-        <ThemeProvider value={appTheme}>
-          <BottomSheetModalProvider>
-            <AuthGate>
-              <Stack screenOptions={{ headerShown: false }}>
-                <Stack.Screen name="index" />
-                <Stack.Screen name="(tabs)" />
-                <Stack.Screen name="(auth)" />
-              </Stack>
-            </AuthGate>
-          </BottomSheetModalProvider>
-        </ThemeProvider>
+        <SplashScreenController fontsReady={loaded || !!fontError} />
+        <BottomSheetModalProvider>
+          <AuthGate>
+            <Stack screenOptions={{ headerShown: false }}>
+              <Stack.Screen name="index" />
+              <Stack.Screen name="(tabs)" />
+              <Stack.Screen name="(auth)" />
+            </Stack>
+          </AuthGate>
+        </BottomSheetModalProvider>
       </Providers>
     </GestureHandlerRootView>
   );

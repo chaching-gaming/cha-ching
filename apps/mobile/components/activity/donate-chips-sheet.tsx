@@ -10,7 +10,7 @@ import {
 } from '@gorhom/bottom-sheet';
 import { Coins, HandCoins, X } from 'phosphor-react-native';
 
-import { colors } from '@/constants/colors';
+import { useTheme } from '@/providers/theme';
 import { Avatar } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { useDonateChips } from '@/hooks/use-chip-requests';
@@ -26,6 +26,7 @@ type Props = {
 };
 
 export function DonateChipsSheet({ visible, onClose, chipRequest, roomId, donorBalance }: Props) {
+  const { colors } = useTheme();
   const safeInsets = useSafeAreaInsets();
   const sheetRef = useRef<BottomSheetModal>(null);
   const donateChips = useDonateChips();
@@ -136,7 +137,7 @@ export function DonateChipsSheet({ visible, onClose, chipRequest, roomId, donorB
         <View className="mb-4 flex-row items-center justify-between">
           <View className="flex-row items-center gap-2">
             <HandCoins size={22} color={colors.primary} weight="fill" />
-            <Text className="text-xl font-bold text-white">Donate chips</Text>
+            <Text className="text-xl font-bold text-text-primary">Donate chips</Text>
           </View>
           <TouchableOpacity
             onPress={handleClose}
@@ -154,7 +155,7 @@ export function DonateChipsSheet({ visible, onClose, chipRequest, roomId, donorB
             size="md"
           />
           <View className="min-w-0 flex-1">
-            <Text className="text-base font-semibold text-white" numberOfLines={1}>
+            <Text className="text-base font-semibold text-text-primary" numberOfLines={1}>
               {requesterName}
             </Text>
             <Text className="text-sm text-text-secondary">
@@ -190,7 +191,9 @@ export function DonateChipsSheet({ visible, onClose, chipRequest, roomId, donorB
         <View className="mb-5 flex-row items-center justify-between">
           <Text className="text-sm text-text-secondary">
             Your balance after:{' '}
-            <Text className={`font-semibold ${balanceAfter < 0 ? 'text-error' : 'text-white'}`}>
+            <Text
+              className={`font-semibold ${balanceAfter < 0 ? 'text-error' : 'text-text-primary'}`}
+            >
               {balanceAfter.toLocaleString('en-US')}
             </Text>
           </Text>

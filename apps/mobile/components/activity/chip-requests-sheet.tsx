@@ -9,7 +9,7 @@ import {
 } from '@gorhom/bottom-sheet';
 import { Coins, HandCoins, HandHeart, X } from 'phosphor-react-native';
 
-import { colors } from '@/constants/colors';
+import { useTheme } from '@/providers/theme';
 import { Avatar } from '@/components/ui/avatar';
 import { DonateChipsSheet } from '@/components/activity/donate-chips-sheet';
 import type { ChipRequestWithProfile } from '@/hooks/use-activity-feed';
@@ -36,6 +36,7 @@ export function ChipRequestsSheet({
   currentUserBalance,
   isActiveMember = true,
 }: Props) {
+  const { colors } = useTheme();
   const safeInsets = useSafeAreaInsets();
   const sheetRef = useRef<BottomSheetModal>(null);
   const [selectedRequest, setSelectedRequest] = useState<ChipRequestWithProfile | null>(null);
@@ -98,7 +99,7 @@ export function ChipRequestsSheet({
           <View className="mb-4 flex-row items-center justify-between">
             <View className="flex-row items-center gap-2">
               <HandHeart size={22} color={colors.primary} weight="fill" />
-              <Text className="text-xl font-bold text-white">Chip Requests</Text>
+              <Text className="text-xl font-bold text-text-primary">Chip Requests</Text>
             </View>
             <TouchableOpacity
               onPress={onClose}
@@ -192,6 +193,7 @@ function ChipRequestRow({
   onDonate: () => void;
   dimmed?: boolean;
 }) {
+  const { colors } = useTheme();
   const requesterName = chipRequest.requested_by_profile?.display_name ?? 'Someone';
   const requested = chipRequest.requested_amount;
   const fulfilled = chipRequest.fulfilled_amount;
@@ -240,11 +242,9 @@ function ChipRequestRow({
         />
         <View className="min-w-0 flex-1">
           <View className="flex-row items-center">
-            <Text className="text-base font-semibold text-white" numberOfLines={1}>
+            <Text className="text-base font-semibold text-text-primary" numberOfLines={1}>
               {requesterName}
-              {isRequester ? (
-                <Text className="text-text-secondary"> (you)</Text>
-              ) : null}
+              {isRequester ? <Text className="text-text-secondary"> (you)</Text> : null}
             </Text>
             {statusBadge}
           </View>
@@ -260,7 +260,7 @@ function ChipRequestRow({
         <View className="mb-1.5 flex-row items-center justify-between">
           <View className="flex-row items-center gap-1.5">
             <Coins size={16} color={colors.chipsIcon} weight="fill" />
-            <Text className="text-sm font-semibold text-white">
+            <Text className="text-sm font-semibold text-text-primary">
               {fulfilled.toLocaleString('en-US')}{' '}
               <Text className="text-text-secondary">/ {requested.toLocaleString('en-US')}</Text>
             </Text>
@@ -283,7 +283,7 @@ function ChipRequestRow({
           activeOpacity={0.8}
           className="mt-3 flex-row items-center justify-center gap-2 rounded-lg bg-primary py-2.5"
         >
-          <HandCoins size={16} color={colors.textPrimary} weight="bold" />
+          <HandCoins size={16} color="#FFFFFF" weight="bold" />
           <Text className="text-sm font-bold text-white">Donate</Text>
         </TouchableOpacity>
       ) : null}

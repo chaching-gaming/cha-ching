@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useRef, useCallback } from 'react';
+import { AppState, type AppStateStatus } from 'react-native';
+import NetInfo, { type NetInfoState } from '@react-native-community/netinfo';
 import {
   useQuery,
   useInfiniteQuery,
@@ -7,6 +9,7 @@ import {
 } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import type { Database } from '@cha-ching/types';
+import type { RealtimeChannel } from '@supabase/supabase-js';
 import { useAuth } from '@/providers/auth';
 import { roomDetailKey, roomMembersKey } from './use-rooms';
 
@@ -59,6 +62,8 @@ export const roomBalanceKey = (roomId: string) => ['rooms', roomId, 'balance'] a
 export const roomMemberBalancesKey = (roomId: string) =>
   ['rooms', roomId, 'member-balances'] as const;
 
+export type SettlementStatus = 'PENDING' | 'SETTLED' | 'DISPUTED';
+
 export type RoomMemberBalance = {
   user_id: string;
   display_name: string | null;
@@ -66,6 +71,9 @@ export type RoomMemberBalance = {
   balance: number;
   wins: number;
   losses: number;
+  net_balance: number;
+  settlement_status: SettlementStatus | null;
+  left_at: string | null;
 };
 
 export function useRoomBets(roomId: string) {
@@ -253,6 +261,8 @@ export function useRoomActivityFeedPaginated(roomId: string) {
 type RealtimeActivityFeedOptions = {
   /** Called when the current user is removed from the room */
   onCurrentUserRemoved?: () => void;
+  /** Called when another member leaves or is removed from the room */
+  onMemberLeft?: (userId: string, leftReason: 'VOLUNTARY' | 'REMOVED') => void;
 };
 
 /**
@@ -285,6 +295,10 @@ export function useRealtimeActivityFeed(roomId: string, options?: RealtimeActivi
   const { session } = useAuth();
   const currentUserId = session?.user.id;
 
+  // Store options in a ref to prevent re-subscriptions when callbacks change
+  const optionsRef = useRef(options);
+  optionsRef.current = options;
+
   // Create a stable debounced invalidator to batch rapid realtime events
   const invalidatorRef = useRef<ReturnType<typeof createDebouncedInvalidator> | null>(null);
   if (!invalidatorRef.current) {
@@ -292,124 +306,165 @@ export function useRealtimeActivityFeed(roomId: string, options?: RealtimeActivi
   }
   const invalidate = invalidatorRef.current;
 
-  useEffect(() => {
+  // Track active channels for cleanup and reconnection
+  const channelsRef = useRef<RealtimeChannel[]>([]);
+  const isSubscribedRef = useRef(false);
+  const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Function to create and subscribe to all channels
+  const setupSubscriptions = useCallback(() => {
     if (!roomId) return;
 
-    // Drop any legacy single-topic channel from older app versions / hot reload.
-    // `RealtimeClient.channel()` returns the *existing* instance while it is still
-    // registered; a new `.on(postgres_changes)` then throws if that channel is
-    // already joining or joined.
-    const legacyTopic = `realtime:room-${roomId}-activity`;
-    for (const ch of [...supabase.getChannels()]) {
-      if (ch.topic === legacyTopic) {
-        void supabase.removeChannel(ch);
-      }
+    // Clean up existing channels first
+    const existingChannels = channelsRef.current;
+    channelsRef.current = [];
+    for (const ch of existingChannels) {
+      void supabase.removeChannel(ch);
     }
 
+    // Clear any pending reconnect
+    if (reconnectTimeoutRef.current) {
+      clearTimeout(reconnectTimeoutRef.current);
+      reconnectTimeoutRef.current = null;
+    }
+
+    if (__DEV__) console.log('[Realtime] Setting up subscriptions for room:', roomId);
+
     const token = realtimeTopicToken();
-    // One channel per postgres_changes listener; never reuse a stable topic string.
+    const channels: RealtimeChannel[] = [];
+
+    // Helper to handle subscription errors with retry
+    const handleSubscriptionStatus = (channelName: string) => (status: string, err?: Error) => {
+      if (__DEV__) console.log(`[Realtime] ${channelName} status:`, status, err?.message);
+
+      if (status === 'SUBSCRIBED') {
+        isSubscribedRef.current = true;
+      } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+        isSubscribedRef.current = false;
+        // Schedule reconnect if not already pending
+        if (!reconnectTimeoutRef.current) {
+          if (__DEV__) console.log('[Realtime] Scheduling reconnect due to', status);
+          reconnectTimeoutRef.current = setTimeout(() => {
+            reconnectTimeoutRef.current = null;
+            setupSubscriptions();
+          }, 2000);
+        }
+      }
+    };
+
+    // bets channel
     const betsChannel = supabase
       .channel(`cc-feed:${roomId}:bets:${token}`)
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'bets', filter: `room_id=eq.${roomId}` },
-        () => {
-          invalidate(roomBetsKey(roomId));
-          invalidate(roomActivityKey(roomId));
+        (payload) => {
+          if (__DEV__) console.log('[Realtime] bets change:', payload.eventType, payload.new);
+          void queryClient.refetchQueries({ queryKey: roomBetsKey(roomId) });
+          void queryClient.refetchQueries({ queryKey: roomActivityKey(roomId) });
           invalidate(roomBalanceKey(roomId));
           invalidate(roomMemberBalancesKey(roomId));
-          // Also update rooms list so balance shows correctly on the list page
           invalidate(ROOMS_ACTIVE_KEY);
           invalidate(ROOMS_HISTORY_KEY);
         },
       )
-      .subscribe();
+      .subscribe(handleSubscriptionStatus('bets'));
+    channels.push(betsChannel);
 
+    // chip_requests channel
     const chipRequestsChannel = supabase
       .channel(`cc-feed:${roomId}:chips:${token}`)
       .on(
         'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'chip_requests',
-          filter: `room_id=eq.${roomId}`,
-        },
+        { event: '*', schema: 'public', table: 'chip_requests', filter: `room_id=eq.${roomId}` },
         () => {
           invalidate(roomChipRequestsKey(roomId));
           invalidate(roomBalanceKey(roomId));
           invalidate(roomMemberBalancesKey(roomId));
-          // Also update rooms list so balance shows correctly on the list page
           invalidate(ROOMS_ACTIVE_KEY);
           invalidate(ROOMS_HISTORY_KEY);
         },
       )
-      .subscribe();
+      .subscribe(handleSubscriptionStatus('chips'));
+    channels.push(chipRequestsChannel);
 
-    // outcome_submissions has no room_id column, so we can't server-filter.
-    // Traffic is low (≤2 rows per bet); client-side invalidation handles the over-fetch.
+    // outcome_submissions channel (no room_id filter - listens to all)
     const outcomeSubmissionsChannel = supabase
       .channel(`cc-feed:${roomId}:outcomes:${token}`)
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'outcome_submissions' },
-        () => {
-          invalidate(roomBetsKey(roomId));
-          invalidate(roomActivityKey(roomId));
+        (payload) => {
+          if (__DEV__)
+            console.log('[Realtime] outcome_submissions change:', payload.eventType, payload.new);
+          void queryClient.refetchQueries({ queryKey: roomBetsKey(roomId) });
+          void queryClient.refetchQueries({ queryKey: roomActivityKey(roomId) });
         },
       )
-      .subscribe();
+      .subscribe(handleSubscriptionStatus('outcomes'));
+    channels.push(outcomeSubmissionsChannel);
 
-    // bet_stakes also has no room_id column; same client-side invalidation.
-    // Drives per-side tallies, subject-rule UI, and "you joined" celebration.
+    // bet_stakes channel (no room_id filter - listens to all)
     const betStakesChannel = supabase
       .channel(`cc-feed:${roomId}:stakes:${token}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'bet_stakes' }, () => {
-        invalidate(roomBetsKey(roomId));
-        invalidate(roomActivityKey(roomId));
+        void queryClient.refetchQueries({ queryKey: roomBetsKey(roomId) });
+        void queryClient.refetchQueries({ queryKey: roomActivityKey(roomId) });
         invalidate(roomBalanceKey(roomId));
         invalidate(roomMemberBalancesKey(roomId));
-        // Also update rooms list so balance shows correctly on the list page
         invalidate(ROOMS_ACTIVE_KEY);
         invalidate(ROOMS_HISTORY_KEY);
       })
-      .subscribe();
+      .subscribe(handleSubscriptionStatus('stakes'));
+    channels.push(betStakesChannel);
 
-    // room_members: see when someone joins/leaves the room, or balance changes (chip donations).
+    // room_members channel
     const roomMembersChannel = supabase
       .channel(`cc-feed:${roomId}:members:${token}`)
       .on(
         'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'room_members',
-          filter: `room_id=eq.${roomId}`,
-        },
+        { event: '*', schema: 'public', table: 'room_members', filter: `room_id=eq.${roomId}` },
         (payload) => {
           invalidate(roomMembersKey(roomId));
           invalidate(roomDetailKey(roomId));
           invalidate(roomMemberBalancesKey(roomId));
-          // Invalidate current user's balance (for chip donations received)
           invalidate(roomBalanceKey(roomId));
-          // Update rooms list so balance shows correctly on the list page
           invalidate(ROOMS_ACTIVE_KEY);
           invalidate(ROOMS_HISTORY_KEY);
 
-          // If the current user was removed, notify via callback (immediate, not debounced)
+          // Handle current user removal
           if (
             payload.eventType === 'DELETE' &&
             payload.old &&
             (payload.old as { user_id?: string }).user_id === currentUserId
           ) {
-            options?.onCurrentUserRemoved?.();
+            optionsRef.current?.onCurrentUserRemoved?.();
+          }
+
+          // Handle member leave/removal
+          if (payload.eventType === 'UPDATE') {
+            const oldRecord = payload.old as { user_id?: string; left_at?: string | null };
+            const newRecord = payload.new as {
+              user_id?: string;
+              left_at?: string | null;
+              left_reason?: string;
+            };
+            if (
+              oldRecord?.left_at == null &&
+              newRecord?.left_at != null &&
+              newRecord?.user_id &&
+              newRecord.user_id !== currentUserId
+            ) {
+              const leftReason = newRecord.left_reason === 'REMOVED' ? 'REMOVED' : 'VOLUNTARY';
+              optionsRef.current?.onMemberLeft?.(newRecord.user_id, leftReason);
+            }
           }
         },
       )
-      .subscribe();
+      .subscribe(handleSubscriptionStatus('members'));
+    channels.push(roomMembersChannel);
 
-    // ledger_entries: balance changes from chip donations, bet settlements, etc.
-    // This is the source of truth for balances, so we must watch it.
+    // ledger_entries channel
     const ledgerEntriesChannel = supabase
       .channel(`cc-feed:${roomId}:ledger:${token}`)
       .on(
@@ -423,22 +478,105 @@ export function useRealtimeActivityFeed(roomId: string, options?: RealtimeActivi
         () => {
           invalidate(roomBalanceKey(roomId));
           invalidate(roomMemberBalancesKey(roomId));
-          // Update rooms list so balance shows correctly on the list page
           invalidate(ROOMS_ACTIVE_KEY);
           invalidate(ROOMS_HISTORY_KEY);
         },
       )
-      .subscribe();
+      .subscribe(handleSubscriptionStatus('ledger'));
+    channels.push(ledgerEntriesChannel);
+
+    // member_settlements channel
+    const memberSettlementsChannel = supabase
+      .channel(`cc-feed:${roomId}:settlements:${token}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'member_settlements',
+          filter: `room_id=eq.${roomId}`,
+        },
+        () => {
+          invalidate(roomMemberBalancesKey(roomId));
+        },
+      )
+      .subscribe(handleSubscriptionStatus('settlements'));
+    channels.push(memberSettlementsChannel);
+
+    channelsRef.current = channels;
+  }, [roomId, queryClient, currentUserId, invalidate]);
+
+  // Main effect to setup subscriptions
+  useEffect(() => {
+    if (!roomId) return;
+
+    // Drop any legacy channels
+    const legacyTopic = `realtime:room-${roomId}-activity`;
+    for (const ch of [...supabase.getChannels()]) {
+      if (ch.topic === legacyTopic) {
+        void supabase.removeChannel(ch);
+      }
+    }
+
+    setupSubscriptions();
 
     return () => {
-      void (async () => {
-        await supabase.removeChannel(betsChannel);
-        await supabase.removeChannel(chipRequestsChannel);
-        await supabase.removeChannel(outcomeSubmissionsChannel);
-        await supabase.removeChannel(betStakesChannel);
-        await supabase.removeChannel(roomMembersChannel);
-        await supabase.removeChannel(ledgerEntriesChannel);
-      })();
+      // Clear reconnect timeout
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current);
+        reconnectTimeoutRef.current = null;
+      }
+      // Clean up all channels
+      const channels = channelsRef.current;
+      channelsRef.current = [];
+      isSubscribedRef.current = false;
+      for (const ch of channels) {
+        void supabase.removeChannel(ch);
+      }
     };
-  }, [roomId, queryClient, currentUserId, options]);
+  }, [roomId, setupSubscriptions]);
+
+  // Reconnect on app foreground
+  useEffect(() => {
+    if (!roomId) return;
+
+    const handleAppStateChange = (nextAppState: AppStateStatus) => {
+      if (nextAppState === 'active') {
+        if (__DEV__)
+          console.log('[Realtime] App came to foreground, refreshing data and reconnecting');
+        // Always refetch data when coming to foreground
+        void queryClient.refetchQueries({ queryKey: roomActivityKey(roomId) });
+        // Reconnect subscriptions
+        setupSubscriptions();
+      }
+    };
+
+    const subscription = AppState.addEventListener('change', handleAppStateChange);
+    return () => subscription.remove();
+  }, [roomId, queryClient, setupSubscriptions]);
+
+  // Reconnect on network change
+  useEffect(() => {
+    if (!roomId) return;
+
+    let wasConnected = true;
+
+    const unsubscribe = NetInfo.addEventListener((state: NetInfoState) => {
+      const isConnected = state.isConnected ?? false;
+
+      if (__DEV__)
+        console.log('[Realtime] Network state:', isConnected ? 'connected' : 'disconnected');
+
+      // Reconnect when network comes back
+      if (isConnected && !wasConnected) {
+        if (__DEV__) console.log('[Realtime] Network restored, refreshing data and reconnecting');
+        void queryClient.refetchQueries({ queryKey: roomActivityKey(roomId) });
+        setupSubscriptions();
+      }
+
+      wasConnected = isConnected;
+    });
+
+    return () => unsubscribe();
+  }, [roomId, queryClient, setupSubscriptions]);
 }

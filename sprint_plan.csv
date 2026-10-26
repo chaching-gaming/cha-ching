@@ -1,0 +1,7 @@
+Day,Task,Owner,Est. Days,Notes
+1,DB issue that was posted in the group,Backend,0.25,Priority fix - address database issue first
+1,Room name label is getting merged with the actual room name when it is too long - add restriction on number of characters and come up with a different way to showcase room name,Mobile,0.5,Character restriction + redesign room name display
+1,"In past rooms, unable to see standings - makes it difficult to figure out balances once a room is closed (API support)",Backend,0.5,Return standings/balances data for closed rooms
+1,"In past rooms, unable to see standings - makes it difficult to figure out balances once a room is closed (UI implementation)",Mobile,0.75,Display standings in past rooms section
+2,Stats across rooms need visibility - add global dropdown for leaderboard and my bets to showcase aggregate when user selects all (Backend aggregation),Backend,0.5,Add aggregate stats endpoint for all rooms
+2,Stats across rooms need visibility - add global dropdown for leaderboard and my bets to showcase aggregate when user selects all (UI implementation),Mobile,0.5,"Add ""All"" option in dropdown, show aggregate data"

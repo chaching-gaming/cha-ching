@@ -9,7 +9,7 @@ import {
 } from '@gorhom/bottom-sheet';
 import { Check } from 'phosphor-react-native';
 
-import { colors } from '@/constants/colors';
+import { useTheme } from '@/providers/theme';
 
 export type ActionSheetOption = {
   key: string;
@@ -33,6 +33,7 @@ type Props = {
 export function ActionSheet({ visible, onClose, title, options, selectedKey }: Props) {
   const safeInsets = useSafeAreaInsets();
   const sheetRef = useRef<BottomSheetModal>(null);
+  const { colors } = useTheme();
 
   useEffect(() => {
     if (visible) sheetRef.current?.present();
@@ -52,16 +53,13 @@ export function ActionSheet({ visible, onClose, title, options, selectedKey }: P
     [],
   );
 
-  const handleOptionPress = useCallback(
-    (option: ActionSheetOption) => {
-      if (option.disabled) return;
-      sheetRef.current?.dismiss();
-      // Run the action after dismiss starts so the sheet animates out under any
-      // follow-up modal (e.g. a share sheet) the action might open.
-      option.onPress();
-    },
-    [],
-  );
+  const handleOptionPress = useCallback((option: ActionSheetOption) => {
+    if (option.disabled) return;
+    sheetRef.current?.dismiss();
+    // Run the action after dismiss starts so the sheet animates out under any
+    // follow-up modal (e.g. a share sheet) the action might open.
+    option.onPress();
+  }, []);
 
   const bottomInset = Math.max(safeInsets.bottom, 20);
 
@@ -75,10 +73,10 @@ export function ActionSheet({ visible, onClose, title, options, selectedKey }: P
       handleIndicatorStyle={{ backgroundColor: colors.textMuted }}
       backdropComponent={renderBackdrop}
     >
-      <BottomSheetView
-        style={{ paddingHorizontal: 20, paddingTop: 4, paddingBottom: bottomInset }}
-      >
-        {title ? <Text className="mb-3 px-1 text-xl font-bold text-white">{title}</Text> : null}
+      <BottomSheetView style={{ paddingHorizontal: 20, paddingTop: 4, paddingBottom: bottomInset }}>
+        {title ? (
+          <Text className="mb-3 px-1 text-xl font-bold text-text-primary">{title}</Text>
+        ) : null}
         <View className="overflow-hidden rounded-2xl border border-border bg-surface">
           {options.map((option, idx) => {
             const isSelected = selectedKey != null && selectedKey === option.key;
@@ -104,7 +102,7 @@ export function ActionSheet({ visible, onClose, title, options, selectedKey }: P
                         ? 'text-error'
                         : isSelected
                           ? 'text-primary'
-                          : 'text-white'
+                          : 'text-text-primary'
                     }`}
                     numberOfLines={1}
                   >
@@ -116,9 +114,7 @@ export function ActionSheet({ visible, onClose, title, options, selectedKey }: P
                     </Text>
                   ) : null}
                 </View>
-                {isSelected ? (
-                  <Check size={20} color={colors.primary} weight="bold" />
-                ) : null}
+                {isSelected ? <Check size={20} color={colors.primary} weight="bold" /> : null}
               </TouchableOpacity>
             );
           })}

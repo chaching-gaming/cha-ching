@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { ChatCircleDots, Coins } from 'phosphor-react-native';
 
-import { colors } from '@/constants/colors';
+import { useTheme } from '@/providers/theme';
 import type { BetWithProfiles } from '@/hooks/use-activity-feed';
 
 type Props = {
@@ -32,6 +32,7 @@ function LockedInContent({
   currentUserId: string | null;
   onDismiss: () => void;
 }) {
+  const { colors } = useTheme();
   const subjectName = bet.subject_profile?.display_name ?? null;
   const myStake = currentUserId
     ? ((bet.stakes ?? []).find((s) => s.user_id === currentUserId) ?? null)
@@ -44,7 +45,7 @@ function LockedInContent({
     // Update progress every 50ms for smooth bar
     const interval = setInterval(() => {
       setProgress((prev) => {
-        const next = prev + (100 / (AUTO_DISMISS_MS / 50));
+        const next = prev + 100 / (AUTO_DISMISS_MS / 50);
         return next >= 100 ? 100 : next;
       });
     }, 50);
@@ -92,7 +93,7 @@ function LockedInContent({
               elevation: 10,
             }}
           >
-            <ChatCircleDots size={44} color={colors.textPrimary} weight="fill" />
+            <ChatCircleDots size={44} color="#FFFFFF" weight="fill" />
           </View>
         </View>
 
@@ -100,7 +101,7 @@ function LockedInContent({
           You&apos;re locked in
         </Text>
         {subjectName ? (
-          <Text className="mt-2 text-base text-text-secondary" numberOfLines={1}>
+          <Text className="mt-2 text-base text-white/70" numberOfLines={1}>
             About {subjectName}
           </Text>
         ) : null}
@@ -120,16 +121,13 @@ function LockedInContent({
           </View>
         ) : null}
 
-        <Text
-          className="mt-4 max-w-[300px] text-center text-sm text-text-secondary"
-          numberOfLines={3}
-        >
+        <Text className="mt-4 max-w-[300px] text-center text-sm text-white/70" numberOfLines={3}>
           {bet.question}
         </Text>
       </View>
 
       {/* Auto-dismiss progress bar - using regular View with width percentage */}
-      <View className="absolute bottom-12 left-8 right-8 h-1 overflow-hidden rounded-full bg-surface">
+      <View className="absolute bottom-12 left-8 right-8 h-1 overflow-hidden rounded-full bg-white/20">
         <View
           style={{
             height: '100%',

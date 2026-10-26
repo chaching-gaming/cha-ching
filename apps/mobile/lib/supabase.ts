@@ -12,6 +12,16 @@ export const supabase = createClient<Database>(env.supabaseUrl, env.supabaseAnon
     detectSessionInUrl: false,
     flowType: 'pkce',
   },
+  realtime: {
+    params: {
+      eventsPerSecond: 10, // Rate limit to prevent flooding
+    },
+    heartbeatIntervalMs: 15000, // Send heartbeat every 15s (detect dead connections faster)
+    reconnectAfterMs: (retries: number) => {
+      // Exponential backoff: 1s, 2s, 4s, 8s, max 30s
+      return Math.min(1000 * Math.pow(2, retries), 30000);
+    },
+  },
 });
 
 interface DeepLinkAuthResult {

@@ -11,12 +11,12 @@ import {
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Gear, HandHeart, Plus } from 'phosphor-react-native';
+import { Gear, HandHeart, Plus, Warning } from 'phosphor-react-native';
 
-import { colors } from '@/constants/colors';
+import { useTheme } from '@/providers/theme';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { ActivityFeedItem } from '@/components/activity/activity-feed-item';
-import { WinnerCelebration } from '@/components/activity/winner-celebration';
+import { SplashCelebration } from '@/components/activity/splash-celebration';
 import {
   BetFeedStatusFilter,
   betMatchesFilter,
@@ -27,13 +27,19 @@ import { ChipRequestsSheet } from '@/components/activity/chip-requests-sheet';
 import { RoomHeaderBar } from '@/components/activity/room-header-bar';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/providers/auth';
-import { useRoomDetail, useRoomMembersWithHistory } from '@/hooks/use-rooms';
+import {
+  useRoomDetail,
+  useRoomMembersWithHistory,
+  createMembershipStatusMap,
+} from '@/hooks/use-rooms';
 import {
   useMyRoomBalance,
   useRealtimeActivityFeed,
   useRoomActivityFeedPaginated,
 } from '@/hooks/use-activity-feed';
 import { useWinnerCelebration } from '@/hooks/use-winner-celebration';
+import { useToast } from '@/providers/toast';
+import { useServerTimeTick } from '@/providers/time';
 
 /** Split room name like "Sunday golf - 2026-05-10" into { name, date } */
 function parseRoomName(fullName: string): { name: string; date: string | null } {
@@ -50,12 +56,12 @@ function parseRoomName(fullName: string): { name: string; date: string | null } 
 
 const EMPTY_STATE_COPY: Record<BetFilter, { title: string; subtitle: string }> = {
   active: { title: 'No active bets', subtitle: 'Create a bet or wait for action.' },
-  open: { title: 'No open bets', subtitle: 'Create a new bet or wait for one to open.' },
   matched: { title: 'No matched bets', subtitle: 'Bets show up here once both sides are staked.' },
   settled: { title: 'No settled bets', subtitle: 'Finished bets will appear here.' },
 };
 
 export default function RoomDetailScreen() {
+  const { colors } = useTheme();
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { session: authSession } = useAuth();
@@ -65,12 +71,20 @@ export default function RoomDetailScreen() {
   const { data: room, isLoading: roomLoading } = useRoomDetail(id);
   const { data: allMembers } = useRoomMembersWithHistory(id);
   const { data: balance } = useMyRoomBalance(id);
+  const serverNow = useServerTimeTick();
 
-  // Filter to only active members for display
+  // For active rooms, show only active members. For closed rooms, show all members.
+  const isRoomActive = room?.is_active ?? false;
   const members = useMemo(
-    () => allMembers?.filter((m) => m.membershipStatus === 'active') ?? [],
-    [allMembers],
+    () =>
+      isRoomActive
+        ? (allMembers?.filter((m) => m.membershipStatus === 'active') ?? [])
+        : (allMembers ?? []),
+    [allMembers, isRoomActive],
   );
+
+  // Create membership status lookup for showing left/removed indicators
+  const membershipStatusMap = useMemo(() => createMembershipStatusMap(allMembers), [allMembers]);
 
   // Check if current user is an active member (not left/removed)
   const currentUserMembership = useMemo(
@@ -78,6 +92,12 @@ export default function RoomDetailScreen() {
     [allMembers, authSession?.user.id],
   );
   const isCurrentUserActiveMember = currentUserMembership?.membershipStatus === 'active';
+  const isPastMember = currentUserMembership != null && !isCurrentUserActiveMember;
+  const pastMemberStatusText = isPastMember
+    ? currentUserMembership.membershipStatus === 'removed'
+      ? 'You were removed from this room'
+      : 'You left this room'
+    : null;
   const {
     data: activityItems,
     isLoading: feedLoading,
@@ -86,8 +106,15 @@ export default function RoomDetailScreen() {
     fetchNextPage,
   } = useRoomActivityFeedPaginated(id);
 
+  // Toast for member leave/remove notifications
+  const toast = useToast();
+
   // Track if we've already shown the removal alert to prevent duplicates
   const hasShownRemovalAlert = useRef(false);
+
+  // Keep a ref to members for looking up names in realtime callbacks
+  const membersRef = useRef(allMembers);
+  membersRef.current = allMembers;
 
   const handleCurrentUserRemoved = useCallback(() => {
     if (hasShownRemovalAlert.current) return;
@@ -109,7 +136,26 @@ export default function RoomDetailScreen() {
     );
   }, [queryClient, router]);
 
-  useRealtimeActivityFeed(id, { onCurrentUserRemoved: handleCurrentUserRemoved });
+  const handleMemberLeft = useCallback(
+    (userId: string, leftReason: 'VOLUNTARY' | 'REMOVED') => {
+      // Look up the member's name from cached members
+      const member = membersRef.current?.find((m) => m.user_id === userId);
+      const memberName = member?.profiles?.display_name ?? 'A member';
+
+      const message =
+        leftReason === 'REMOVED'
+          ? `${memberName} was removed from the room`
+          : `${memberName} left the room`;
+
+      toast.show({ type: 'info', message });
+    },
+    [toast],
+  );
+
+  useRealtimeActivityFeed(id, {
+    onCurrentUserRemoved: handleCurrentUserRemoved,
+    onMemberLeft: handleMemberLeft,
+  });
 
   const currentUserId = authSession?.user.id ?? null;
 
@@ -120,6 +166,12 @@ export default function RoomDetailScreen() {
     feedLoading,
     isFetchingNextPage,
   );
+
+  // Join bet celebration
+  const [showJoinSplash, setShowJoinSplash] = useState(false);
+  const handleJoinSuccess = useCallback(() => {
+    setShowJoinSplash(true);
+  }, []);
 
   const myBalance = balance ?? 0;
 
@@ -153,23 +205,25 @@ export default function RoomDetailScreen() {
   }, [id, queryClient]);
 
   const currentMember = currentUserMembership;
-  const isActive = room?.is_active ?? false;
   // Can create bets only if room is active AND user is an active member
-  const canCreateBet = isActive && isCurrentUserActiveMember;
+  const canCreateBet = isRoomActive && isCurrentUserActiveMember;
 
   const feedItems = useMemo(() => activityItems ?? [], [activityItems]);
 
   // Only show bets in the main feed (chip requests moved to dedicated sheet)
   // When myBetsOnly is enabled, only show bets where the current user has a stake.
+  // Past members can ONLY see bets they participated in (read-only view).
   const visibleItems = useMemo(
     () =>
       feedItems.filter((item) => {
         if (item.type === 'chip_request') return false; // Chip requests shown in sheet only
-        if (!betMatchesFilter(item.bet, filter)) return false;
+        // Past members can only see bets they're involved in
+        if (isPastMember && !betInvolvesUser(item.bet, currentUserId)) return false;
+        if (!betMatchesFilter(item.bet, filter, serverNow)) return false;
         if (myBetsOnly && !betInvolvesUser(item.bet, currentUserId)) return false;
         return true;
       }),
-    [feedItems, filter, myBetsOnly, currentUserId],
+    [feedItems, filter, myBetsOnly, currentUserId, isPastMember, serverNow],
   );
 
   // All chip requests for the bottom sheet (includes all statuses)
@@ -219,7 +273,7 @@ export default function RoomDetailScreen() {
         title={roomDisplayName}
         subtitle={roomDate ?? undefined}
         showBack
-        titleClassName="text-xl font-bold text-white"
+        titleClassName="text-xl font-bold text-text-primary"
         backIconSize={28}
         right={
           <View className="flex-row items-center gap-4">
@@ -236,7 +290,9 @@ export default function RoomDetailScreen() {
               <HandHeart size={26} color={colors.primary} weight="fill" />
               {openChipRequestCount > 0 && (
                 <View className="absolute -right-1.5 -top-1 min-w-[18px] items-center justify-center rounded-full bg-error px-1 py-0.5">
-                  <Text className="text-[10px] font-bold text-white">{openChipRequestCount}</Text>
+                  <Text className="text-[10px] font-bold text-text-primary">
+                    {openChipRequestCount}
+                  </Text>
                 </View>
               )}
             </TouchableOpacity>
@@ -261,10 +317,11 @@ export default function RoomDetailScreen() {
             item={item}
             currentUserId={authSession?.user.id}
             currentUserRole={currentMember?.role ?? null}
-            roomActive={isActive}
+            roomActive={isRoomActive && isCurrentUserActiveMember}
             roomId={id}
             currentUserBalance={myBalance}
-            outcomeSubmissionWindowSeconds={room?.outcome_submission_window_seconds ?? 30}
+            membershipStatusMap={membershipStatusMap}
+            onJoinSuccess={handleJoinSuccess}
           />
         )}
         contentContainerClassName="px-5 pb-24"
@@ -279,12 +336,35 @@ export default function RoomDetailScreen() {
         }
         ListHeaderComponent={
           <View>
+            {/* Closed room banner - show for all members when room is inactive */}
+            {!isRoomActive && (
+              <View className="mb-4 rounded-xl bg-surface-alt px-4 py-3">
+                <View className="flex-row items-center gap-3">
+                  <Warning size={20} color={colors.textMuted} weight="fill" />
+                  <View className="flex-1">
+                    <Text className="text-sm font-semibold text-text-primary">Session ended</Text>
+                    <Text className="mt-0.5 text-xs text-text-muted">
+                      {isPastMember
+                        ? 'You can only view bets you participated in'
+                        : 'This room is now read-only'}
+                    </Text>
+                  </View>
+                </View>
+                <TouchableOpacity
+                  onPress={() => router.push(`/(tabs)/rooms/standings?id=${id}`)}
+                  activeOpacity={0.7}
+                  className="mt-3 flex-row items-center justify-center gap-2 rounded-lg bg-primary py-2.5"
+                >
+                  <Text className="text-sm font-semibold text-white">View Final Standings</Text>
+                </TouchableOpacity>
+              </View>
+            )}
             <RoomHeaderBar
               members={members ?? []}
               balance={myBalance}
               onOpenStandings={() => router.push(`/(tabs)/rooms/standings?id=${id}`)}
               roomId={id}
-              roomActive={isActive}
+              roomActive={isRoomActive}
               myOpenChipRequest={myOpenChipRequest}
               isActiveMember={isCurrentUserActiveMember}
             />
@@ -293,6 +373,7 @@ export default function RoomDetailScreen() {
               onChange={setFilter}
               myBetsOnly={myBetsOnly}
               onMyBetsChange={setMyBetsOnly}
+              onOpenStandings={() => router.push(`/(tabs)/rooms/standings?id=${id}`)}
             />
           </View>
         }
@@ -341,10 +422,17 @@ export default function RoomDetailScreen() {
       ) : null}
 
       {/* Winner celebration on live bet settlement */}
-      <WinnerCelebration
-        bet={celebratingBet}
-        currentUserId={currentUserId}
-        onDismiss={dismissCelebration}
+      <SplashCelebration
+        visible={celebratingBet !== null}
+        action="you_won"
+        onDone={dismissCelebration}
+      />
+
+      {/* Join bet celebration */}
+      <SplashCelebration
+        visible={showJoinSplash}
+        action="bet_accepted"
+        onDone={() => setShowJoinSplash(false)}
       />
 
       {/* Chip requests bottom sheet */}
@@ -354,7 +442,7 @@ export default function RoomDetailScreen() {
         chipRequests={allChipRequests}
         currentUserId={currentUserId}
         roomId={id}
-        roomActive={isActive}
+        roomActive={isRoomActive}
         currentUserBalance={myBalance}
         isActiveMember={isCurrentUserActiveMember}
       />

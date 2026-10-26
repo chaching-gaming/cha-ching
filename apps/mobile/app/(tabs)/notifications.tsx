@@ -11,7 +11,7 @@ import { useRouter } from 'expo-router';
 import { Bell, Checks } from 'phosphor-react-native';
 import { useQueryClient } from '@tanstack/react-query';
 
-import { colors } from '@/constants/colors';
+import { useTheme } from '@/providers/theme';
 import { EmptyState, ScreenHeader, SkeletonNotificationItem } from '@/components/ui';
 import { NotificationItem } from '@/components/notifications/notification-item';
 import {
@@ -25,6 +25,7 @@ import {
   type NotificationRow,
 } from '@/hooks/use-notifications-feed';
 import { useNotifications } from '@/providers/notifications';
+import { useToast } from '@/providers/toast';
 
 type GroupedNotifications = {
   title: string;
@@ -64,17 +65,13 @@ function groupByDate(notifications: NotificationRow[]): GroupedNotifications[] {
 }
 
 export default function NotificationsScreen() {
+  const { colors } = useTheme();
   const router = useRouter();
   const queryClient = useQueryClient();
+  const { show: showToast } = useToast();
   const { markAsRead, markAllAsRead, refreshUnreadCount, unreadCount } = useNotifications();
-  const {
-    data,
-    isLoading,
-    isFetchingNextPage,
-    hasNextPage,
-    fetchNextPage,
-    refetch,
-  } = useNotificationsFeed();
+  const { data, isLoading, isFetchingNextPage, hasNextPage, fetchNextPage, refetch } =
+    useNotificationsFeed();
 
   const [refreshing, setRefreshing] = useState(false);
   const [markingAllRead, setMarkingAllRead] = useState(false);
@@ -124,9 +121,28 @@ export default function NotificationsScreen() {
       // Navigate to bet detail for bet-related notifications
       if (
         bet_id &&
-        ['bet_matched', 'bet_settled', 'bet_disputed', 'bet_expiring', 'bet_accepted'].includes(type)
+        [
+          'bet_matched',
+          'bet_settled',
+          'bet_disputed',
+          'bet_expiring',
+          'bet_accepted',
+          'bet_won',
+          'bet_lost',
+        ].includes(type)
       ) {
         router.push(`/(tabs)/rooms/bet/${bet_id}`);
+        return;
+      }
+
+      // Voided bets are auto-deleted, show info toast and navigate to room
+      if (type === 'bet_voided' && room_id) {
+        router.push(`/(tabs)/rooms/${room_id}`);
+        showToast({
+          type: 'info',
+          message:
+            'This bet was voided and has been deleted. Voided bets are removed after 5 minutes.',
+        });
         return;
       }
 
@@ -135,7 +151,7 @@ export default function NotificationsScreen() {
         router.push(`/(tabs)/rooms/${room_id}`);
       }
     },
-    [markAsRead, router, queryClient]
+    [markAsRead, router, queryClient, showToast],
   );
 
   const handleLoadMore = useCallback(() => {
@@ -144,19 +160,20 @@ export default function NotificationsScreen() {
     }
   }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
-  const markAllReadButton = unreadCount > 0 ? (
-    <TouchableOpacity
-      onPress={handleMarkAllRead}
-      disabled={markingAllRead}
-      activeOpacity={0.7}
-      className="flex-row items-center gap-1"
-    >
-      <Checks size={20} color={colors.primary} weight="bold" />
-      <Text className="text-sm font-medium text-primary">
-        {markingAllRead ? 'Marking...' : 'Mark all read'}
-      </Text>
-    </TouchableOpacity>
-  ) : null;
+  const markAllReadButton =
+    unreadCount > 0 ? (
+      <TouchableOpacity
+        onPress={handleMarkAllRead}
+        disabled={markingAllRead}
+        activeOpacity={0.7}
+        className="flex-row items-center gap-1"
+      >
+        <Checks size={20} color={colors.primary} weight="bold" />
+        <Text className="text-sm font-medium text-primary">
+          {markingAllRead ? 'Marking...' : 'Mark all read'}
+        </Text>
+      </TouchableOpacity>
+    ) : null;
 
   if (isLoading) {
     return (

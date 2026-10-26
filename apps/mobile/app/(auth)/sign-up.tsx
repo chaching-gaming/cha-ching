@@ -9,6 +9,7 @@ import { KeyboardAwareScrollView } from '@/components/form/keyboard-aware-scroll
 import { useForm } from '@/hooks/use-form';
 import { useToast } from '@/providers/toast';
 import { LoadingScreen } from '@/components/ui';
+import { useTheme } from '@/providers/theme';
 
 const signUpSchema = z.object({
   displayName: z.string().min(1, 'Display name is required'),
@@ -20,6 +21,7 @@ const signUpSchema = z.object({
 });
 
 export default function SignUpScreen() {
+  const { colors } = useTheme();
   const [oauthLoading, setOauthLoading] = useState(false);
   const toast = useToast();
 
@@ -33,7 +35,7 @@ export default function SignUpScreen() {
       onSubmit: signUpSchema,
     },
     onSubmit: async ({ value, formApi }) => {
-      const { error } = await supabase.auth.signUp({
+      const { data, error } = await supabase.auth.signUp({
         email: value.email,
         password: value.password,
         options: {
@@ -45,6 +47,14 @@ export default function SignUpScreen() {
           onSubmit: {
             fields: {},
             form: error.message,
+          },
+        });
+      } else if (data.user?.identities?.length === 0) {
+        // Email already exists (OAuth or confirmed user)
+        formApi.setErrorMap({
+          onSubmit: {
+            fields: {},
+            form: 'An account with this email already exists. Please sign in instead.',
           },
         });
       } else {
@@ -85,7 +95,7 @@ export default function SignUpScreen() {
           className="mb-4 h-24 w-24"
           resizeMode="contain"
         />
-        <Text className="text-3xl font-bold text-white">Create Account</Text>
+        <Text className="text-3xl font-bold text-text-primary">Create Account</Text>
         <Text className="mt-2 text-base text-text-secondary">Join your friends on Cha-Ching</Text>
       </View>
 
@@ -149,8 +159,8 @@ export default function SignUpScreen() {
           disabled={oauthLoading}
           activeOpacity={0.7}
         >
-          <FontAwesome name="apple" size={18} color="#fff" />
-          <Text className="text-base font-medium text-white">Apple</Text>
+          <FontAwesome name="apple" size={18} color={colors.textPrimary} />
+          <Text className="text-base font-medium text-text-primary">Apple</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -159,8 +169,8 @@ export default function SignUpScreen() {
           disabled={oauthLoading}
           activeOpacity={0.7}
         >
-          <FontAwesome name="google" size={18} color="#fff" />
-          <Text className="text-base font-medium text-white">Google</Text>
+          <FontAwesome name="google" size={18} color={colors.textPrimary} />
+          <Text className="text-base font-medium text-text-primary">Google</Text>
         </TouchableOpacity>
       </View>
 

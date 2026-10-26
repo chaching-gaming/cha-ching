@@ -14,7 +14,7 @@ export function ListItem({ title, subtitle, right, onPress, className = '' }: Li
       className={`min-h-[48px] flex-row items-center justify-between border-b border-border px-5 py-3.5 ${className}`}
     >
       <View className="flex-1 pr-2">
-        <Text className="text-base font-medium text-white">{title}</Text>
+        <Text className="text-base font-medium text-text-primary">{title}</Text>
         {subtitle && <Text className="mt-0.5 text-sm text-text-secondary">{subtitle}</Text>}
       </View>
       {right && <View className="ml-2 shrink-0">{right}</View>}

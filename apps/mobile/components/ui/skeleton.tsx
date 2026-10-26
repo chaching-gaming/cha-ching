@@ -16,12 +16,9 @@ export function Skeleton({ className = '' }: { className?: string }) {
 
   useEffect(() => {
     opacity.value = withRepeat(
-      withSequence(
-        withTiming(1, { duration: 800 }),
-        withTiming(0.5, { duration: 800 })
-      ),
+      withSequence(withTiming(1, { duration: 800 }), withTiming(0.5, { duration: 800 })),
       -1,
-      false
+      false,
     );
   }, [opacity]);
 
@@ -30,21 +27,14 @@ export function Skeleton({ className = '' }: { className?: string }) {
   }));
 
   return (
-    <Animated.View
-      style={animatedStyle}
-      className={`rounded-lg bg-surface-light ${className}`}
-    />
+    <Animated.View style={animatedStyle} className={`rounded-lg bg-surface-light ${className}`} />
   );
 }
 
 /**
  * Circular skeleton for avatars
  */
-export function SkeletonAvatar({
-  size = 'md',
-}: {
-  size?: 'sm' | 'md' | 'lg' | 'xl';
-}) {
+export function SkeletonAvatar({ size = 'md' }: { size?: 'sm' | 'md' | 'lg' | 'xl' }) {
   const sizeClasses = {
     sm: 'h-8 w-8',
     md: 'h-12 w-12',

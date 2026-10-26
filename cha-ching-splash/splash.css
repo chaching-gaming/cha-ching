@@ -1,0 +1,71 @@
+/* Cha Ching splash (calm) — one 2.8s cycle: 2.0s of action, 0.8s hold.
+   Percent = seconds / 2.8 * 100. Delay / play-state / iteration come from inline styles. */
+.cc-a{animation-duration:2.8s;animation-fill-mode:both;animation-timing-function:linear}
+.cc-dim{animation-name:cc-dim}
+.cc-word{animation-name:cc-word}
+.cc-ball{animation-name:cc-ball}
+.cc-shadow{animation-name:cc-shadow}
+.cc-ring{animation-name:cc-ring}
+.cc-head{animation-name:cc-head}
+.cc-sub{animation-name:cc-sub}
+
+/* 0–0.15s dark app screen, then an easy fade to bright green */
+@keyframes cc-dim{
+0%{opacity:1}
+5.36%{opacity:1;animation-timing-function:cubic-bezier(.3,0,.2,1)}
+12.5%{opacity:0}
+100%{opacity:0}
+}
+/* tone-on-tone wordmark fades in with the green */
+@keyframes cc-word{
+0%{opacity:0}
+5.36%{opacity:0}
+14.29%{opacity:1}
+100%{opacity:1}
+}
+/* ball: rises from the background (0.15s), a small overshoot (0.55s), one soft bounce, settled by 0.95s */
+@keyframes cc-ball{
+0%{opacity:0;transform:translateY(30px) scale(.3,.3)}
+5.36%{opacity:0;transform:translateY(30px) scale(.3,.3);animation-timing-function:cubic-bezier(.3,0,.3,1)}
+10.71%{opacity:1}
+19.64%{transform:translateY(-4px) scale(1.08,1.08);animation-timing-function:cubic-bezier(.3,0,.3,1)}
+25%{transform:translateY(3px) scale(1.04,.96)}
+29.46%{transform:translateY(-1px) scale(.99,1.01)}
+33.93%{transform:translateY(0px) scale(1,1)}
+100%{opacity:1;transform:translateY(0px) scale(1,1)}
+}
+@keyframes cc-shadow{
+0%{opacity:0;transform:scale(.3)}
+5.36%{opacity:0;transform:scale(.3);animation-timing-function:cubic-bezier(.3,0,.3,1)}
+19.64%{opacity:.45;transform:scale(1.08)}
+25%{opacity:.5;transform:scale(1.05)}
+33.93%{opacity:.4;transform:scale(1)}
+100%{opacity:.4;transform:scale(1)}
+}
+/* one soft ring as the ball lands */
+@keyframes cc-ring{
+0%{opacity:0;transform:scale(.9)}
+19.64%{opacity:0;transform:scale(.9)}
+21.43%{opacity:.5;transform:scale(.95);animation-timing-function:cubic-bezier(.2,.7,.3,1)}
+42.86%{opacity:0;transform:scale(1.6)}
+100%{opacity:0;transform:scale(1.6)}
+}
+/* action text is already on the background, with a light nudge on landing */
+@keyframes cc-head{
+0%{opacity:0;transform:translateY(10px) scale(1)}
+5.36%{opacity:0;transform:translateY(10px) scale(1);animation-timing-function:cubic-bezier(.2,.7,.3,1)}
+14.29%{opacity:1;transform:translateY(0px) scale(1)}
+21.43%{transform:translateY(0px) scale(1)}
+25%{transform:translateY(0px) scale(1.04)}
+30.36%{transform:translateY(0px) scale(1)}
+100%{opacity:1;transform:translateY(0px) scale(1)}
+}
+@keyframes cc-sub{
+0%{opacity:0;transform:translateY(8px)}
+30.36%{opacity:0;transform:translateY(8px);animation-timing-function:cubic-bezier(.2,.7,.3,1)}
+39.29%{opacity:1;transform:translateY(0px)}
+100%{opacity:1;transform:translateY(0px)}
+}
+@media (prefers-reduced-motion: reduce){
+.cc-a{animation-duration:.01s}
+}

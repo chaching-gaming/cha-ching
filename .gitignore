@@ -37,3 +37,10 @@ yarn-error.log*
 
 # Testing
 coverage/
+
+docs
+
+# Local agent skills (installed per developer)
+.agents/
+.claude/skills/
+skills-lock.json

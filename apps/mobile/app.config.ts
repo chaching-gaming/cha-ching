@@ -4,7 +4,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
   name: 'Cha-Ching',
   slug: 'mobile',
-  version: '1.0.0',
+  version: '1.0.1',
   orientation: 'portrait',
   icon: './assets/images/icon.png',
   scheme: 'chaching',
@@ -14,7 +14,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   splash: {
     image: './assets/images/splash-icon.png',
     resizeMode: 'contain',
-    backgroundColor: '#011E22',
+    backgroundColor: '#F3F4F6',
   },
   ios: {
     supportsTablet: false,
@@ -23,15 +23,17 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     infoPlist: {
       ITSAppUsesNonExemptEncryption: false,
       UIBackgroundModes: ['remote-notification'],
+      NSUserNotificationsUsageDescription:
+        'Cha-Ching sends notifications to alert you when bets are matched, settled, or disputed, and when friends request chips in your rooms.',
     },
   },
   android: {
     adaptiveIcon: {
       foregroundImage: './assets/images/adaptive-icon.png',
-      backgroundColor: '#011E22',
+      backgroundColor: '#F3F4F6',
     },
     edgeToEdgeEnabled: true,
-    package: 'com.visualglobe.chaching',
+    package: 'com.chaching.golf',
     googleServicesFile: './google-services.json',
   },
   web: {
@@ -46,26 +48,33 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     policy: 'appVersion',
   },
   plugins: [
+    './plugins/withModularHeaders',
     'expo-router',
     [
       'expo-notifications',
       {
         icon: './assets/images/notification-icon.png',
-        color: '#2EAF7D',
+        color: '#4D8A8A',
         defaultChannel: 'default',
       },
     ],
     [
       'expo-image-picker',
       {
-        photosPermission:
-          'Allow Cha-Ching to access your photos to set a profile picture.',
+        photosPermission: 'Allow Cha-Ching to access your photos to set a profile picture.',
+      },
+    ],
+    [
+      'expo-camera',
+      {
+        cameraPermission:
+          'Allow Cha-Ching to use your camera to scan QR codes for quickly joining betting rooms.',
       },
     ],
     [
       '@sentry/react-native/expo',
       {
-        organization: 'cha-ching',
+        organization: 'cha-ching-gaming-llc',
         project: 'cha-ching',
       },
     ],
@@ -74,7 +83,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       {
         iosUrlScheme:
           process.env.GOOGLE_IOS_URL_SCHEME ||
-          'com.googleusercontent.apps.1070930457721-pnuevds8ka750f5h8m1h7mtsrbr8e2s9',
+          'com.googleusercontent.apps.692754456856-5g4te7hf8do0k0an5c502evi2qshv8fh',
       },
     ],
     'expo-apple-authentication',
@@ -89,5 +98,5 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       projectId: 'dc228f01-efda-4fc0-a714-6d455f6461e6',
     },
   },
-  owner: 'navatejatechnologies',
+  owner: 'cha-ching-gaming-llc',
 });
