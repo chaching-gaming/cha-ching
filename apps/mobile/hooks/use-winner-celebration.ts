@@ -38,9 +38,7 @@ function didUserWin(
 ): boolean {
   if (!userId || !outcome || !stakes) return false;
   const outcomeKey = outcome.trim().toLowerCase();
-  return stakes.some(
-    (s) => s.user_id === userId && s.pick.trim().toLowerCase() === outcomeKey,
-  );
+  return stakes.some((s) => s.user_id === userId && s.pick.trim().toLowerCase() === outcomeKey);
 }
 
 /** Check if user participated in the bet */
@@ -93,7 +91,7 @@ export function useWinnerCelebration(
 
       // Find the bet in current items (for showing overlay with bet details)
       const betItem = itemsRef.current.find(
-        (it) => it.type === 'bet' && it.bet?.id === event.betId
+        (it) => it.type === 'bet' && it.bet?.id === event.betId,
       );
       const bet = betItem?.bet;
 
@@ -104,7 +102,8 @@ export function useWinnerCelebration(
       if (event.type === 'pending_result') {
         // For pending_result, check user's stake against outcome
         if (!bet) {
-          if (__DEV__) console.log('[WinCelebration] Bet not found for pending_result:', event.betId);
+          if (__DEV__)
+            console.log('[WinCelebration] Bet not found for pending_result:', event.betId);
           return;
         }
         isWin = didUserWin(bet.stakes, userIdRef.current, effectiveOutcome);
@@ -126,7 +125,8 @@ export function useWinnerCelebration(
       markBetCelebrated(event.betId, effectiveOutcome);
 
       if (isWin) {
-        if (__DEV__) console.log('[WinCelebration] 🎉 Showing WIN celebration for bet:', event.betId);
+        if (__DEV__)
+          console.log('[WinCelebration] 🎉 Showing WIN celebration for bet:', event.betId);
         if (bet) setCelebratingBet(bet);
         trigger('bet_won');
       } else {
@@ -176,7 +176,13 @@ export function useBetCelebration(
       // Check if this event is for the current bet
       const currentBet = betRef.current;
       if (!currentBet || currentBet.id !== event.betId) {
-        if (__DEV__) console.log('[BetCelebration] Event not for current bet:', event.betId, 'current:', currentBet?.id);
+        if (__DEV__)
+          console.log(
+            '[BetCelebration] Event not for current bet:',
+            event.betId,
+            'current:',
+            currentBet?.id,
+          );
         return;
       }
 

@@ -1,12 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
-import {
-  ActivityIndicator,
-  Alert,
-  ScrollView,
-  Text,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { ActivityIndicator, Alert, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as Clipboard from 'expo-clipboard';
 import {
@@ -330,7 +323,12 @@ export default function RoomSettingsScreen() {
 
   return (
     <View className="flex-1 bg-background">
-      <ScreenHeader title="Room Settings" showBack showHome titleClassName="text-xl font-bold text-text-primary" />
+      <ScreenHeader
+        title="Room Settings"
+        showBack
+        showHome
+        titleClassName="text-xl font-bold text-text-primary"
+      />
 
       <ScrollView contentContainerClassName="pb-12">
         {/* Closed room retention notice */}

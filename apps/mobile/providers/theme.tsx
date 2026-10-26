@@ -93,9 +93,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       <StatusBar style={themePreference === 'dark' ? 'light' : 'dark'} />
       {children}
       {/* Theme transition overlay - hides staggered UI updates */}
-      {isTransitioning && (
-        <View style={[styles.overlay, { backgroundColor: colors.background }]} />
-      )}
+      {isTransitioning && <View style={[styles.overlay, { backgroundColor: colors.background }]} />}
     </ThemeContext.Provider>
   );
 }

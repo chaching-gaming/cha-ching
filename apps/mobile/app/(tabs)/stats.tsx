@@ -39,7 +39,7 @@ export default function StatsScreen() {
   const [activeTab, setActiveTab] = useState<StatsTab>('leaderboard');
 
   const selectedRoom = useMemo(
-    () => (selectedRoomId ? rooms?.find((r) => r.room.id === selectedRoomId) ?? null : null),
+    () => (selectedRoomId ? (rooms?.find((r) => r.room.id === selectedRoomId) ?? null) : null),
     [rooms, selectedRoomId],
   );
 
@@ -56,7 +56,8 @@ export default function StatsScreen() {
   }, []);
 
   // Display name for dropdown
-  const dropdownLabel = selectedRoomId === null ? 'All Rooms' : (selectedRoom?.room.name ?? 'Select a room');
+  const dropdownLabel =
+    selectedRoomId === null ? 'All Rooms' : (selectedRoom?.room.name ?? 'Select a room');
 
   if (roomsLoading) {
     return (
@@ -365,7 +366,12 @@ function AllRoomsStats() {
         {players && players.length > 0 ? (
           <View className="overflow-hidden rounded-2xl border border-border bg-surface">
             {players.map((p, idx) => (
-              <AggregatePlayerRow key={p.user_id} player={p} rank={idx + 1} isLast={idx === players.length - 1} />
+              <AggregatePlayerRow
+                key={p.user_id}
+                player={p}
+                rank={idx + 1}
+                isLast={idx === players.length - 1}
+              />
             ))}
           </View>
         ) : (
@@ -398,7 +404,9 @@ function AggregatePlayerRow({
   }, [player.total_wins, player.total_losses]);
 
   return (
-    <View className={`flex-row items-center px-4 py-3 ${isLast ? '' : 'border-b border-border/40'}`}>
+    <View
+      className={`flex-row items-center px-4 py-3 ${isLast ? '' : 'border-b border-border/40'}`}
+    >
       <Text className="w-8 text-base font-bold text-text-muted">{rank}</Text>
       <Avatar uri={player.avatar_url} fallback={player.display_name ?? '?'} size="sm" />
       <View className="ml-3 min-w-0 flex-1">
@@ -406,7 +414,8 @@ function AggregatePlayerRow({
           {player.display_name ?? 'Unknown'}
         </Text>
         <Text className="mt-0.5 text-xs font-medium text-text-muted">
-          {player.total_wins}W · {player.total_losses}L{winRate != null ? ` · ${winRate}%` : ''} · {player.rooms_count} {player.rooms_count === 1 ? 'room' : 'rooms'}
+          {player.total_wins}W · {player.total_losses}L{winRate != null ? ` · ${winRate}%` : ''} ·{' '}
+          {player.rooms_count} {player.rooms_count === 1 ? 'room' : 'rooms'}
         </Text>
       </View>
       <Text className={`text-base font-bold ${netBalanceColorClass(player.total_net_balance)}`}>

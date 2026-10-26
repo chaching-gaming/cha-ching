@@ -244,9 +244,7 @@ function ChipRequestRow({
           <View className="flex-row items-center">
             <Text className="text-base font-semibold text-text-primary" numberOfLines={1}>
               {requesterName}
-              {isRequester ? (
-                <Text className="text-text-secondary"> (you)</Text>
-              ) : null}
+              {isRequester ? <Text className="text-text-secondary"> (you)</Text> : null}
             </Text>
             {statusBadge}
           </View>

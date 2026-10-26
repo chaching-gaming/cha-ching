@@ -466,7 +466,9 @@ export default function CreateBetScreen() {
                       let showSelfBetWarning = false;
                       if (memberId === currentUserId && tpl?.subject_positive_option) {
                         const allowedPick =
-                          tpl.subject_positive_option === 'Yes' ? tpl.positive_label : tpl.negative_label;
+                          tpl.subject_positive_option === 'Yes'
+                            ? tpl.positive_label
+                            : tpl.negative_label;
                         showSelfBetWarning = offeredPick !== allowedPick;
                       }
                       return (
@@ -533,7 +535,7 @@ export default function CreateBetScreen() {
                           {showSelfBetWarning && (
                             <View className="mt-2 rounded-xl bg-warning/15 px-3 py-2">
                               <Text className="text-sm text-warning">
-                                You can't bet against yourself on this question
+                                You can&apos;t bet against yourself on this question
                               </Text>
                             </View>
                           )}
@@ -616,7 +618,7 @@ export default function CreateBetScreen() {
                                   inputClassName="min-h-[60px]"
                                   onFocus={() => {
                                     setTimeout(() => {
-                                      scrollViewRef.current?.scrollToEnd({ animated: true });
+                                      scrollViewRef.current?.scrollToEnd(true);
                                     }, 300);
                                   }}
                                   autoFocus
@@ -709,7 +711,9 @@ export default function CreateBetScreen() {
                       let showSelfBetWarning = false;
                       if (memberId === currentUserId && tpl?.subject_positive_option) {
                         const allowedPick =
-                          tpl.subject_positive_option === 'Yes' ? tpl.positive_label : tpl.negative_label;
+                          tpl.subject_positive_option === 'Yes'
+                            ? tpl.positive_label
+                            : tpl.negative_label;
                         showSelfBetWarning = offeredPick !== allowedPick;
                       }
                       return (
@@ -776,7 +780,7 @@ export default function CreateBetScreen() {
                           {showSelfBetWarning && (
                             <View className="mt-2 rounded-xl bg-warning/15 px-3 py-2">
                               <Text className="text-sm text-warning">
-                                You can't bet against yourself on this question
+                                You can&apos;t bet against yourself on this question
                               </Text>
                             </View>
                           )}
@@ -859,7 +863,7 @@ export default function CreateBetScreen() {
                                   inputClassName="min-h-[60px]"
                                   onFocus={() => {
                                     setTimeout(() => {
-                                      scrollViewRef.current?.scrollToEnd({ animated: true });
+                                      scrollViewRef.current?.scrollToEnd(true);
                                     }, 300);
                                   }}
                                   autoFocus
@@ -1239,11 +1243,7 @@ export default function CreateBetScreen() {
           </GestureHandlerRootView>
         </Modal>
       </form.AppForm>
-      <SplashCelebration
-        visible={showSplash}
-        action="wager_placed"
-        onDone={handleSplashDismiss}
-      />
+      <SplashCelebration visible={showSplash} action="wager_placed" onDone={handleSplashDismiss} />
     </View>
   );
 }

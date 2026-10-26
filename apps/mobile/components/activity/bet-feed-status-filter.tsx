@@ -72,7 +72,9 @@ export function BetFeedStatusFilter({
                 active ? 'bg-primary' : 'border border-border bg-surface-light'
               }`}
             >
-              <Text className={`text-sm font-bold ${active ? 'text-white' : 'text-text-secondary'}`}>
+              <Text
+                className={`text-sm font-bold ${active ? 'text-white' : 'text-text-secondary'}`}
+              >
                 {o.label}
               </Text>
             </TouchableOpacity>
@@ -106,7 +108,11 @@ export function BetFeedStatusFilter({
   );
 }
 
-export function betMatchesFilter(bet: BetWithProfiles, filter: BetFilter, serverNow?: Date): boolean {
+export function betMatchesFilter(
+  bet: BetWithProfiles,
+  filter: BetFilter,
+  serverNow?: Date,
+): boolean {
   const effectiveStatus = getEffectiveBetStatus(bet, serverNow);
 
   if (filter === 'active') {

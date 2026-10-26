@@ -247,7 +247,8 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
             router.push(`/(tabs)/rooms/${room_id}`);
             showToast({
               type: 'info',
-              message: 'This bet was voided and has been deleted. Voided bets are removed after 5 minutes.',
+              message:
+                'This bet was voided and has been deleted. Voided bets are removed after 5 minutes.',
             });
           }
           break;
@@ -286,9 +287,19 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       if (data?.bet_id) {
         if (data.type === 'bet_won') {
           // Include outcome from notification for correct duplicate checking after dispute resolution
-          emitCelebration({ type: 'win', betId: data.bet_id, roomId: data.room_id, outcome: data.outcome });
+          emitCelebration({
+            type: 'win',
+            betId: data.bet_id,
+            roomId: data.room_id,
+            outcome: data.outcome,
+          });
         } else if (data.type === 'bet_lost') {
-          emitCelebration({ type: 'loss', betId: data.bet_id, roomId: data.room_id, outcome: data.outcome });
+          emitCelebration({
+            type: 'loss',
+            betId: data.bet_id,
+            roomId: data.room_id,
+            outcome: data.outcome,
+          });
         } else if (data.type === 'bet_pending_dispute' && data.preliminary_outcome) {
           // Outcome submitted - page will check if user won based on preliminary_outcome
           emitCelebration({

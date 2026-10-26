@@ -46,13 +46,15 @@ export function RoomHeaderBar({
   // Only active members can request chips
   const lowBalance = balance <= 100;
   const hasOpenRequest = !!myOpenChipRequest;
-  const showRequestButton = !!roomActive && isActiveMember && lowBalance && !hasOpenRequest && !!roomId;
+  const showRequestButton =
+    !!roomActive && isActiveMember && lowBalance && !hasOpenRequest && !!roomId;
   const showPendingStatus = !!roomActive && isActiveMember && hasOpenRequest && !!roomId;
 
   // Progress calculation for open request
   const requested = myOpenChipRequest?.requested_amount ?? 0;
   const fulfilled = myOpenChipRequest?.fulfilled_amount ?? 0;
-  const progressPercent = requested > 0 ? Math.min(100, Math.round((fulfilled / requested) * 100)) : 0;
+  const progressPercent =
+    requested > 0 ? Math.min(100, Math.round((fulfilled / requested) * 100)) : 0;
 
   const handleCancel = useCallback(() => {
     if (!roomId || !myOpenChipRequest) return;

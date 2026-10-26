@@ -164,20 +164,20 @@ export function SplashCelebration({ visible, action, onDone }: SplashCelebration
       // === Dark overlay fade out (0.15s → 0.35s) ===
       dimOpacity.value = withDelay(
         T.DARK_HOLD,
-        withTiming(0, { duration: T.DARK_FADE_END - T.DARK_HOLD, easing: EASE_OUT_SMOOTH })
+        withTiming(0, { duration: T.DARK_FADE_END - T.DARK_HOLD, easing: EASE_OUT_SMOOTH }),
       );
 
       // === Wordmark fade in (0.15s → 0.4s) ===
       wordOpacity.value = withDelay(
         T.DARK_HOLD,
-        withTiming(1, { duration: T.WORD_FADE_END - T.DARK_HOLD, easing: Easing.linear })
+        withTiming(1, { duration: T.WORD_FADE_END - T.DARK_HOLD, easing: Easing.linear }),
       );
 
       // === Ball animation ===
       // Opacity: 0 until 0.15s, then fade in by 0.3s
       ballOpacity.value = withDelay(
         T.DARK_HOLD,
-        withTiming(1, { duration: T.BALL_VISIBLE - T.DARK_HOLD, easing: Easing.linear })
+        withTiming(1, { duration: T.BALL_VISIBLE - T.DARK_HOLD, easing: Easing.linear }),
       );
 
       // Position & scale: complex sequence with more pronounced bounce
@@ -193,8 +193,8 @@ export function SplashCelebration({ visible, action, onDone }: SplashCelebration
           // Second smaller bounce down
           withTiming(4, { duration: 80, easing: EASE_BOUNCE }),
           // Final settle (0.825s → 0.95s)
-          withTiming(0, { duration: T.BALL_SETTLED - T.BALL_BOUNCE - 80, easing: EASE_BOUNCE })
-        )
+          withTiming(0, { duration: T.BALL_SETTLED - T.BALL_BOUNCE - 80, easing: EASE_BOUNCE }),
+        ),
       );
 
       ballScale.value = withDelay(
@@ -203,8 +203,8 @@ export function SplashCelebration({ visible, action, onDone }: SplashCelebration
           // Grow to overshoot
           withTiming(1.08, { duration: T.BALL_OVERSHOOT - T.DARK_HOLD, easing: EASE_BOUNCE }),
           // Squash
-          withTiming(1, { duration: T.BALL_SETTLED - T.BALL_OVERSHOOT, easing: EASE_BOUNCE })
-        )
+          withTiming(1, { duration: T.BALL_SETTLED - T.BALL_OVERSHOOT, easing: EASE_BOUNCE }),
+        ),
       );
 
       // Squash/stretch effect - more pronounced for visible bounce
@@ -218,8 +218,8 @@ export function SplashCelebration({ visible, action, onDone }: SplashCelebration
           // Small squash on second landing
           withTiming(1.03, { duration: 80 }),
           // Settle
-          withTiming(1, { duration: T.BALL_SETTLED - T.BALL_BOUNCE - 80 })
-        )
+          withTiming(1, { duration: T.BALL_SETTLED - T.BALL_BOUNCE - 80 }),
+        ),
       );
 
       ballScaleY.value = withDelay(
@@ -232,8 +232,8 @@ export function SplashCelebration({ visible, action, onDone }: SplashCelebration
           // Small squash on second landing
           withTiming(0.97, { duration: 80 }),
           // Settle
-          withTiming(1, { duration: T.BALL_SETTLED - T.BALL_BOUNCE - 80 })
-        )
+          withTiming(1, { duration: T.BALL_SETTLED - T.BALL_BOUNCE - 80 }),
+        ),
       );
 
       // === Shadow animation - synced with ball bounce ===
@@ -250,8 +250,8 @@ export function SplashCelebration({ visible, action, onDone }: SplashCelebration
           // Second landing - shadow darkens slightly
           withTiming(0.5, { duration: 80 }),
           // Settle to final
-          withTiming(0.4, { duration: T.BALL_SETTLED - T.BALL_BOUNCE - 80 })
-        )
+          withTiming(0.4, { duration: T.BALL_SETTLED - T.BALL_BOUNCE - 80 }),
+        ),
       );
 
       shadowScale.value = withDelay(
@@ -266,8 +266,8 @@ export function SplashCelebration({ visible, action, onDone }: SplashCelebration
           // Second landing - shadow expands slightly
           withTiming(1.05, { duration: 80 }),
           // Settle
-          withTiming(1, { duration: T.BALL_SETTLED - T.BALL_BOUNCE - 80 })
-        )
+          withTiming(1, { duration: T.BALL_SETTLED - T.BALL_BOUNCE - 80 }),
+        ),
       );
 
       // === Ring animation (0.55s → 1.2s) ===
@@ -275,54 +275,79 @@ export function SplashCelebration({ visible, action, onDone }: SplashCelebration
         T.BALL_OVERSHOOT,
         withSequence(
           withTiming(0.5, { duration: T.RING_START - T.BALL_OVERSHOOT }),
-          withTiming(0, { duration: T.RING_END - T.RING_START, easing: EASE_SOFT })
-        )
+          withTiming(0, { duration: T.RING_END - T.RING_START, easing: EASE_SOFT }),
+        ),
       );
 
       ringScale.value = withDelay(
         T.BALL_OVERSHOOT,
         withSequence(
           withTiming(0.95, { duration: T.RING_START - T.BALL_OVERSHOOT }),
-          withTiming(1.6, { duration: T.RING_END - T.RING_START, easing: EASE_SOFT })
-        )
+          withTiming(1.6, { duration: T.RING_END - T.RING_START, easing: EASE_SOFT }),
+        ),
       );
 
       // === Headline animation ===
       headOpacity.value = withDelay(
         T.DARK_HOLD,
-        withTiming(1, { duration: T.WORD_FADE_END - T.DARK_HOLD, easing: EASE_SOFT })
+        withTiming(1, { duration: T.WORD_FADE_END - T.DARK_HOLD, easing: EASE_SOFT }),
       );
 
       headY.value = withDelay(
         T.DARK_HOLD,
-        withTiming(0, { duration: T.WORD_FADE_END - T.DARK_HOLD, easing: EASE_SOFT })
+        withTiming(0, { duration: T.WORD_FADE_END - T.DARK_HOLD, easing: EASE_SOFT }),
       );
 
       // Nudge effect (0.6s → 0.85s)
       headScale.value = withDelay(
         T.HEAD_NUDGE_START,
         withSequence(
-          withTiming(1.04, { duration: T.HEAD_NUDGE_PEAK - T.HEAD_NUDGE_START, easing: Easing.out(Easing.ease) }),
-          withTiming(1, { duration: T.HEAD_NUDGE_END - T.HEAD_NUDGE_PEAK, easing: Easing.inOut(Easing.ease) })
-        )
+          withTiming(1.04, {
+            duration: T.HEAD_NUDGE_PEAK - T.HEAD_NUDGE_START,
+            easing: Easing.out(Easing.ease),
+          }),
+          withTiming(1, {
+            duration: T.HEAD_NUDGE_END - T.HEAD_NUDGE_PEAK,
+            easing: Easing.inOut(Easing.ease),
+          }),
+        ),
       );
 
       // === Subline animation (0.85s → 1.1s) ===
       subOpacity.value = withDelay(
         T.SUB_START,
-        withTiming(1, { duration: T.SUB_END - T.SUB_START, easing: EASE_SOFT })
+        withTiming(1, { duration: T.SUB_END - T.SUB_START, easing: EASE_SOFT }),
       );
 
       subY.value = withDelay(
         T.SUB_START,
-        withTiming(0, { duration: T.SUB_END - T.SUB_START, easing: EASE_SOFT })
+        withTiming(0, { duration: T.SUB_END - T.SUB_START, easing: EASE_SOFT }),
       );
 
       // Hand off at 2.5s
       const timer = setTimeout(() => onDoneRef.current(), T.HOLD_END);
       return () => clearTimeout(timer);
     }
-  }, [visible, reduceMotion, dimOpacity, wordOpacity, ballOpacity, ballY, ballScale, ballScaleX, ballScaleY, shadowOpacity, shadowScale, ringOpacity, ringScale, headOpacity, headY, headScale, subOpacity, subY]);
+  }, [
+    visible,
+    reduceMotion,
+    dimOpacity,
+    wordOpacity,
+    ballOpacity,
+    ballY,
+    ballScale,
+    ballScaleX,
+    ballScaleY,
+    shadowOpacity,
+    shadowScale,
+    ringOpacity,
+    ringScale,
+    headOpacity,
+    headY,
+    headScale,
+    subOpacity,
+    subY,
+  ]);
 
   // Animated styles
   const dimStyle = useAnimatedStyle(() => ({ opacity: dimOpacity.value }));
@@ -376,10 +401,7 @@ export function SplashCelebration({ visible, action, onDone }: SplashCelebration
         ]}
       >
         <Animated.Text
-          style={[
-            styles.wordmarkText,
-            { fontSize: 150 * s, lineHeight: 150 * 0.86 * s },
-          ]}
+          style={[styles.wordmarkText, { fontSize: 150 * s, lineHeight: 150 * 0.86 * s }]}
         >
           {'CHA\nCHING'}
         </Animated.Text>
@@ -398,7 +420,7 @@ export function SplashCelebration({ visible, action, onDone }: SplashCelebration
             top: SHADOW_TOP * s + (screenHeight - REF_HEIGHT * s) / 2,
             width: SHADOW_WIDTH * s,
             height: SHADOW_HEIGHT * s,
-            borderRadius: "60%",
+            borderRadius: '60%',
           },
         ]}
       />

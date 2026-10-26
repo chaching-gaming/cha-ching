@@ -30,7 +30,8 @@ export type MyBetsStats = {
 export const MY_BETS_PAGE_SIZE = 20;
 
 export const myBetsKey = (roomId: string | null) => ['my-bets', roomId ?? 'all'] as const;
-export const myBetsStatsKey = (roomId: string | null) => ['my-bets-stats', roomId ?? 'all'] as const;
+export const myBetsStatsKey = (roomId: string | null) =>
+  ['my-bets-stats', roomId ?? 'all'] as const;
 
 // Aggregate stats from backend RPC (accurate across all bets, not just loaded pages)
 export type MyBetsAggregateStats = {
@@ -66,9 +67,7 @@ export function useMyBets(roomId?: string | null) {
       return (data as unknown as MyBet[] | null) ?? [];
     },
     getNextPageParam: (lastPage, allPages) =>
-      lastPage.length === MY_BETS_PAGE_SIZE
-        ? allPages.length * MY_BETS_PAGE_SIZE
-        : undefined,
+      lastPage.length === MY_BETS_PAGE_SIZE ? allPages.length * MY_BETS_PAGE_SIZE : undefined,
     enabled: !!session?.user.id,
   });
 }
@@ -93,7 +92,9 @@ export function useMyBetsAggregateStats(roomId?: string | null) {
         params as unknown as { p_room_id: string },
       );
       if (error) throw error;
-      const row = Array.isArray(data) ? (data[0] as MyBetsAggregateStats | undefined) : null;
+      const row = Array.isArray(data)
+        ? (data[0] as unknown as MyBetsAggregateStats | undefined)
+        : null;
       return row ?? null;
     },
     enabled: !!session?.user.id,

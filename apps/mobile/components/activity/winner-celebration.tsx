@@ -96,10 +96,7 @@ function WinnerContent({
           </View>
         ) : null}
 
-        <Text
-          className="mt-1 max-w-[280px] text-center text-sm text-white/70"
-          numberOfLines={3}
-        >
+        <Text className="mt-1 max-w-[280px] text-center text-sm text-white/70" numberOfLines={3}>
           {bet.question}
         </Text>
 

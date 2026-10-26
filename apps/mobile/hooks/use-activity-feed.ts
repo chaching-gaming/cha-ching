@@ -395,7 +395,8 @@ export function useRealtimeActivityFeed(roomId: string, options?: RealtimeActivi
         'postgres_changes',
         { event: '*', schema: 'public', table: 'outcome_submissions' },
         (payload) => {
-          if (__DEV__) console.log('[Realtime] outcome_submissions change:', payload.eventType, payload.new);
+          if (__DEV__)
+            console.log('[Realtime] outcome_submissions change:', payload.eventType, payload.new);
           void queryClient.refetchQueries({ queryKey: roomBetsKey(roomId) });
           void queryClient.refetchQueries({ queryKey: roomActivityKey(roomId) });
         },
@@ -443,7 +444,11 @@ export function useRealtimeActivityFeed(roomId: string, options?: RealtimeActivi
           // Handle member leave/removal
           if (payload.eventType === 'UPDATE') {
             const oldRecord = payload.old as { user_id?: string; left_at?: string | null };
-            const newRecord = payload.new as { user_id?: string; left_at?: string | null; left_reason?: string };
+            const newRecord = payload.new as {
+              user_id?: string;
+              left_at?: string | null;
+              left_reason?: string;
+            };
             if (
               oldRecord?.left_at == null &&
               newRecord?.left_at != null &&
@@ -464,7 +469,12 @@ export function useRealtimeActivityFeed(roomId: string, options?: RealtimeActivi
       .channel(`cc-feed:${roomId}:ledger:${token}`)
       .on(
         'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'ledger_entries', filter: `room_id=eq.${roomId}` },
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'ledger_entries',
+          filter: `room_id=eq.${roomId}`,
+        },
         () => {
           invalidate(roomBalanceKey(roomId));
           invalidate(roomMemberBalancesKey(roomId));
@@ -480,7 +490,12 @@ export function useRealtimeActivityFeed(roomId: string, options?: RealtimeActivi
       .channel(`cc-feed:${roomId}:settlements:${token}`)
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'member_settlements', filter: `room_id=eq.${roomId}` },
+        {
+          event: '*',
+          schema: 'public',
+          table: 'member_settlements',
+          filter: `room_id=eq.${roomId}`,
+        },
         () => {
           invalidate(roomMemberBalancesKey(roomId));
         },
@@ -527,7 +542,8 @@ export function useRealtimeActivityFeed(roomId: string, options?: RealtimeActivi
 
     const handleAppStateChange = (nextAppState: AppStateStatus) => {
       if (nextAppState === 'active') {
-        if (__DEV__) console.log('[Realtime] App came to foreground, refreshing data and reconnecting');
+        if (__DEV__)
+          console.log('[Realtime] App came to foreground, refreshing data and reconnecting');
         // Always refetch data when coming to foreground
         void queryClient.refetchQueries({ queryKey: roomActivityKey(roomId) });
         // Reconnect subscriptions
@@ -548,7 +564,8 @@ export function useRealtimeActivityFeed(roomId: string, options?: RealtimeActivi
     const unsubscribe = NetInfo.addEventListener((state: NetInfoState) => {
       const isConnected = state.isConnected ?? false;
 
-      if (__DEV__) console.log('[Realtime] Network state:', isConnected ? 'connected' : 'disconnected');
+      if (__DEV__)
+        console.log('[Realtime] Network state:', isConnected ? 'connected' : 'disconnected');
 
       // Reconnect when network comes back
       if (isConnected && !wasConnected) {

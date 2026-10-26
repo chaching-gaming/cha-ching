@@ -20,6 +20,7 @@ Show rooms the user left, was removed from, or that were closed by admin in Past
 **File**: `supabase/migrations/20260530000000_soft_delete_room_members_v2.sql`
 
 Add columns to `room_members`:
+
 ```sql
 ALTER TABLE public.room_members
   ADD COLUMN left_at timestamptz DEFAULT NULL,
@@ -72,38 +73,43 @@ $$ LANGUAGE sql SECURITY DEFINER STABLE;
 **File**: `supabase/migrations/20260530000001_update_membership_rpcs.sql`
 
 #### Update `leave_room`:
+
 - Check `has_active_bets_in_room()` → raise error P0009 if active bets exist
 - Soft delete: `UPDATE SET left_at = now(), left_reason = 'VOLUNTARY'`
 
 #### Update `remove_member`:
+
 - Admin CAN remove members with active bets (authority)
 - Soft delete: `UPDATE SET left_at = now(), left_reason = 'REMOVED'`
 
 #### Update `join_room_via_invite`:
+
 - Check for existing membership (including soft-deleted)
 - If `left_at IS NOT NULL`: reactivate by setting `left_at = NULL, left_reason = NULL, role = 'PLAYER'`
 - No new chips granted (existing GRANT ledger entry preserved)
 
 #### Update `update_member_role` and `reassign_admin`:
+
 - Add `AND left_at IS NULL` checks for active membership
 
 ### 4. Database Migration: RLS Policy Updates
 
 **File**: `supabase/migrations/20260530000002_update_rls_policies.sql`
 
-| Table | Policy | Change |
-|-------|--------|--------|
-| `rooms` | Members can view | Use `is_room_member_ever()` for read access |
-| `room_members` | View members | Active members see all; inactive see only themselves |
-| `bets` | View bets | Active members see all; inactive see only bets they participated in |
-| `bet_stakes` | View stakes | Match bets visibility logic |
-| `chip_requests` | View requests | Active see all; inactive see only their own |
+| Table           | Policy           | Change                                                              |
+| --------------- | ---------------- | ------------------------------------------------------------------- |
+| `rooms`         | Members can view | Use `is_room_member_ever()` for read access                         |
+| `room_members`  | View members     | Active members see all; inactive see only themselves                |
+| `bets`          | View bets        | Active members see all; inactive see only bets they participated in |
+| `bet_stakes`    | View stakes      | Match bets visibility logic                                         |
+| `chip_requests` | View requests    | Active see all; inactive see only their own                         |
 
 ### 5. Frontend: Update Types
 
 **File**: `packages/types/src/database.ts`
 
 Regenerate types after migration. New fields on `room_members`:
+
 - `left_at: string | null`
 - `left_reason: 'VOLUNTARY' | 'REMOVED' | 'ROOM_CLOSED' | null`
 
@@ -146,26 +152,26 @@ Regenerate types after migration. New fields on `room_members`:
 
 ## Key Files to Modify
 
-| File | Changes |
-|------|---------|
-| `supabase/migrations/20260530000000_soft_delete_room_members_v2.sql` | New - schema + helpers |
-| `supabase/migrations/20260530000001_update_membership_rpcs.sql` | New - RPC updates |
-| `supabase/migrations/20260530000002_update_rls_policies.sql` | New - policy updates |
-| `apps/mobile/hooks/use-rooms.ts` | Update queries and types |
-| `apps/mobile/app/(tabs)/profile.tsx` | Update UI for past rooms |
-| `packages/types/src/database.ts` | Regenerate after migration |
+| File                                                                 | Changes                    |
+| -------------------------------------------------------------------- | -------------------------- |
+| `supabase/migrations/20260530000000_soft_delete_room_members_v2.sql` | New - schema + helpers     |
+| `supabase/migrations/20260530000001_update_membership_rpcs.sql`      | New - RPC updates          |
+| `supabase/migrations/20260530000002_update_rls_policies.sql`         | New - policy updates       |
+| `apps/mobile/hooks/use-rooms.ts`                                     | Update queries and types   |
+| `apps/mobile/app/(tabs)/profile.tsx`                                 | Update UI for past rooms   |
+| `packages/types/src/database.ts`                                     | Regenerate after migration |
 
 ---
 
 ## Edge Cases Handled
 
-| Case | Solution |
-|------|----------|
-| Rejoin preserves balance | Ledger entries intact; `GRANT` has `ON CONFLICT DO NOTHING` |
-| Active bets block leaving | `has_active_bets_in_room()` check in `leave_room` |
-| Admin removes member with bets | Allowed (admin authority) |
-| Room deleted (auto-prune) | Cascade delete removes membership history (acceptable) |
-| Privacy for removed users | RLS allows viewing only their own bets |
+| Case                           | Solution                                                    |
+| ------------------------------ | ----------------------------------------------------------- |
+| Rejoin preserves balance       | Ledger entries intact; `GRANT` has `ON CONFLICT DO NOTHING` |
+| Active bets block leaving      | `has_active_bets_in_room()` check in `leave_room`           |
+| Admin removes member with bets | Allowed (admin authority)                                   |
+| Room deleted (auto-prune)      | Cascade delete removes membership history (acceptable)      |
+| Privacy for removed users      | RLS allows viewing only their own bets                      |
 
 ---
 

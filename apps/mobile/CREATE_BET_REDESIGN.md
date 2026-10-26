@@ -1,7 +1,9 @@
 # Create Bet Screen Redesign Plan
 
 ## Goal
+
 Redesign the bet creation form to be compact (no scrolling) with:
+
 1. Balance chips highlighted at top
 2. Template cards with diagonal Yes/No split selection
 3. Stake (1/3 width) + Expiry (30s, 1m, 2m) on same line
@@ -11,11 +13,11 @@ Redesign the bet creation form to be compact (no scrolling) with:
 
 ## Key Files to Modify
 
-| File | Changes |
-|------|---------|
-| `apps/mobile/app/(tabs)/rooms/create-bet.tsx` | Main screen restructure |
-| `apps/mobile/lib/bet-create-ui.ts` | Update EXPIRY_PRESETS + add TEMPLATE_LABELS for contextual Hit/Miss vs Yes/No |
-| `apps/mobile/components/form/diagonal-option-card.tsx` | **NEW** - Diagonal split selection component |
+| File                                                   | Changes                                                                       |
+| ------------------------------------------------------ | ----------------------------------------------------------------------------- |
+| `apps/mobile/app/(tabs)/rooms/create-bet.tsx`          | Main screen restructure                                                       |
+| `apps/mobile/lib/bet-create-ui.ts`                     | Update EXPIRY_PRESETS + add TEMPLATE_LABELS for contextual Hit/Miss vs Yes/No |
+| `apps/mobile/components/form/diagonal-option-card.tsx` | **NEW** - Diagonal split selection component                                  |
 
 ---
 
@@ -35,24 +37,26 @@ A reusable card with diagonal split for binary Yes/No selection:
 ```
 
 **Technical approach:**
+
 - Use `react-native-svg` (already installed) for the diagonal line
 - Two `Pressable` areas positioned with `position: absolute`
 - Touch detection via coordinate math (check if touch.x/touch.y is above/below the diagonal)
 - Selected state highlights the chosen half with `bg-primary/15`
 
 **Props:**
+
 ```typescript
 type DiagonalOptionCardProps = {
   icon: ReactNode;
   label: string;
   sublabel?: string;
-  value: string;           // The template ID or 'custom'
-  positiveLabel: string;   // e.g., 'Yes', 'Hit', 'Make'
-  negativeLabel: string;   // e.g., 'No', 'Miss'
+  value: string; // The template ID or 'custom'
+  positiveLabel: string; // e.g., 'Yes', 'Hit', 'Make'
+  negativeLabel: string; // e.g., 'No', 'Miss'
   selectedPick: string | null;
   onSelect: (value: string, pick: string) => void;
   disabled?: boolean;
-  isActive: boolean;       // Whether this template is the active one
+  isActive: boolean; // Whether this template is the active one
 };
 ```
 
@@ -93,6 +97,7 @@ Move balance from stake section to top of screen, styled prominently:
 ### 3. Update EXPIRY_PRESETS
 
 In `bet-create-ui.ts`:
+
 ```typescript
 export const EXPIRY_PRESETS = [
   { label: '30s', offsetMs: 30_000 },
@@ -152,6 +157,7 @@ export const EXPIRY_PRESETS = [
 ### 6. Form State Changes
 
 Merge `templateId` and `offeredPick` selection into single interaction:
+
 - When user taps Yes/No on a template, both values are set
 - Form schema validates that both template (or custom) AND pick are selected
 

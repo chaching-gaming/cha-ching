@@ -74,7 +74,11 @@ async function shareCsv(csv: string, fileName: string): Promise<void> {
 }
 
 const LEDGER_COLUMNS: CsvColumn<LedgerEntryRow>[] = [
-  { key: 'created_at', header: 'Timestamp', format: (v) => (v ? new Date(v as string).toISOString() : '') },
+  {
+    key: 'created_at',
+    header: 'Timestamp',
+    format: (v) => (v ? new Date(v as string).toISOString() : ''),
+  },
   { key: 'user_id', header: 'User ID' },
   { key: 'display_name', header: 'Display Name' },
   { key: 'type', header: 'Type', format: (v) => LEDGER_TYPE_LABELS[v as LedgerType] ?? String(v) },
@@ -87,8 +91,16 @@ const LEDGER_COLUMNS: CsvColumn<LedgerEntryRow>[] = [
 
 const BET_COLUMNS: CsvColumn<BetExportRow>[] = [
   { key: 'id', header: 'Bet ID' },
-  { key: 'created_at', header: 'Created', format: (v) => (v ? new Date(v as string).toISOString() : '') },
-  { key: 'settled_at', header: 'Settled', format: (v) => (v ? new Date(v as string).toISOString() : '') },
+  {
+    key: 'created_at',
+    header: 'Created',
+    format: (v) => (v ? new Date(v as string).toISOString() : ''),
+  },
+  {
+    key: 'settled_at',
+    header: 'Settled',
+    format: (v) => (v ? new Date(v as string).toISOString() : ''),
+  },
   { key: 'status', header: 'Status' },
   { key: 'question', header: 'Question' },
   { key: 'stake', header: 'Stake' },
@@ -101,7 +113,11 @@ const BET_COLUMNS: CsvColumn<BetExportRow>[] = [
   { key: 'outcome', header: 'Outcome' },
   { key: 'winner_name', header: 'Winner' },
   { key: 'settlement_method', header: 'Settlement Method' },
-  { key: 'voided_at', header: 'Voided At', format: (v) => (v ? new Date(v as string).toISOString() : '') },
+  {
+    key: 'voided_at',
+    header: 'Voided At',
+    format: (v) => (v ? new Date(v as string).toISOString() : ''),
+  },
   { key: 'voided_by_name', header: 'Voided By' },
   { key: 'void_reason', header: 'Void Reason' },
   {

@@ -2,16 +2,16 @@
 
 ## Overview
 
-| Component | Technology |
-|-----------|-----------|
-| Framework | Expo (React Native) - Managed Workflow |
-| Build Service | EAS Build |
-| Backend | Supabase |
-| Authentication | Google OAuth, Apple OAuth |
-| Transactional Email | Resend (free tier: 3,000/month) |
-| Error Monitoring | Sentry |
-| Push Notifications | Expo Notifications |
-| CI/CD | GitHub Actions |
+| Component           | Technology                             |
+| ------------------- | -------------------------------------- |
+| Framework           | Expo (React Native) - Managed Workflow |
+| Build Service       | EAS Build                              |
+| Backend             | Supabase                               |
+| Authentication      | Google OAuth, Apple OAuth              |
+| Transactional Email | Resend (free tier: 3,000/month)        |
+| Error Monitoring    | Sentry                                 |
+| Push Notifications  | Expo Notifications                     |
+| CI/CD               | GitHub Actions                         |
 
 ---
 
@@ -62,6 +62,7 @@ Note your **Team ID** (10 characters) from the membership section.
 3. Create **production** project: `cha-ching`
 
 For each project, note from **Project Settings → API**:
+
 - **Project URL**: `https://xxxx.supabase.co`
 - **Anon Key**: `eyJhbGc...`
 - **Project Ref**: `xxxxxxxxxxxx` (from Project Settings → General)
@@ -87,6 +88,7 @@ For each project, note from **Project Settings → API**:
 ## 2.1 Google OAuth
 
 > **Important:** Google Sign-In for mobile apps requires **3 separate OAuth clients**:
+>
 > - **Web Application** - Used by Supabase + your app code
 > - **Android** - Used by Google Play Services to verify your app
 > - **iOS** - Used by Google SDK to verify your app
@@ -124,11 +126,11 @@ For each project, note from **Project Settings → API**:
 
 ### Which Client ID Goes Where?
 
-| Client Type | Where It Goes | Purpose |
-|-------------|---------------|---------|
-| **Web Application** | `.env` file + Supabase Dashboard | Token signing & validation |
-| **Android** | Google Cloud Console only (NOT in code) | Google verifies app identity via package name + SHA-1 |
-| **iOS** | Google Cloud Console + `app.json` (URL scheme) | Google verifies app identity via bundle ID |
+| Client Type         | Where It Goes                                  | Purpose                                               |
+| ------------------- | ---------------------------------------------- | ----------------------------------------------------- |
+| **Web Application** | `.env` file + Supabase Dashboard               | Token signing & validation                            |
+| **Android**         | Google Cloud Console only (NOT in code)        | Google verifies app identity via package name + SHA-1 |
+| **iOS**             | Google Cloud Console + `app.json` (URL scheme) | Google verifies app identity via bundle ID            |
 
 ### Step 1: Configure OAuth Consent Screen
 
@@ -172,6 +174,7 @@ For each project, note from **Project Settings → API**:
 7. Click **Create**
 
 > **Note:** You may need multiple Android clients for different environments:
+>
 > - EAS development build (from `eas credentials`)
 > - EAS production build (different keystore)
 > - Local debug build (debug.keystore)
@@ -204,20 +207,21 @@ EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID=xxxx-web.apps.googleusercontent.com
 ```
 
 The app code uses this in `lib/oauth.ts`:
+
 ```typescript
 GoogleSignin.configure({
-  webClientId: env.googleWebClientId,  // Web Client ID
+  webClientId: env.googleWebClientId, // Web Client ID
 });
 ```
 
 ### Troubleshooting
 
-| Error | Cause | Fix |
-|-------|-------|-----|
+| Error                       | Cause                                    | Fix                                                 |
+| --------------------------- | ---------------------------------------- | --------------------------------------------------- |
 | `DEVELOPER_ERROR` (code 10) | SHA-1 mismatch or missing Android client | Add correct SHA-1 to Android client in Google Cloud |
-| `SIGN_IN_CANCELLED` | User cancelled | Normal behavior |
-| `NETWORK_ERROR` | No internet | Check connection |
-| `invalid_grant` | Supabase config wrong | Verify Web Client ID + Secret in Supabase |
+| `SIGN_IN_CANCELLED`         | User cancelled                           | Normal behavior                                     |
+| `NETWORK_ERROR`             | No internet                              | Check connection                                    |
+| `invalid_grant`             | Supabase config wrong                    | Verify Web Client ID + Secret in Supabase           |
 
 ### Getting SHA-1 for Different Build Types
 
@@ -250,6 +254,7 @@ keytool -list -v -keystore your-release-key.keystore -alias your-alias
 > This is simpler than the web OAuth flow and does NOT require a Services ID, .p8 key, or client secret.
 >
 > The complex setup (Services ID, signing key, JWT secret) is only needed for:
+>
 > - Web apps using OAuth redirect flow
 > - Android apps with Apple Sign-In
 > - Flutter web apps
@@ -282,9 +287,7 @@ Ensure your `app.json` has Apple Sign-In enabled:
     "ios": {
       "usesAppleSignIn": true
     },
-    "plugins": [
-      "expo-apple-authentication"
-    ]
+    "plugins": ["expo-apple-authentication"]
   }
 }
 ```
@@ -333,6 +336,7 @@ Ensure your `app.json` has Apple Sign-In enabled:
 ### If You Need Web/Android Apple Sign-In Later
 
 If you want to support Apple Sign-In on Android or web, you'll need the full OAuth setup:
+
 1. Create a Services ID
 2. Create a Signing Key (.p8 file)
 3. Generate a JWT client secret (expires every 6 months!)
@@ -351,11 +355,11 @@ See: https://supabase.com/docs/guides/auth/social-login/auth-apple
 3. Enter your domain (e.g., `chaching.app`)
 4. Add DNS records Resend provides:
 
-| Type | Name | Value |
-|------|------|-------|
-| TXT | `@` | Resend verification code |
-| TXT | `resend._domainkey` | DKIM record |
-| TXT | `@` | SPF record (if not exists) |
+| Type | Name                | Value                      |
+| ---- | ------------------- | -------------------------- |
+| TXT  | `@`                 | Resend verification code   |
+| TXT  | `resend._domainkey` | DKIM record                |
+| TXT  | `@`                 | SPF record (if not exists) |
 
 5. Click **Verify** (usually takes a few minutes)
 
@@ -393,12 +397,14 @@ See: https://supabase.com/docs/guides/auth/social-login/auth-apple
 ### Step 1: Get Credentials
 
 From your Sentry project:
+
 - **DSN**: Project Settings → Client Keys (DSN)
 - **Auth Token**: Settings → Developer Settings → Organization Tokens → Create Token
 
 ### Step 2: Already Configured in Code
 
 The app is already configured with:
+
 - `lib/sentry.ts` - Initialization
 - `app/_layout.tsx` - Calls `initSentry()`
 - `providers/auth.tsx` - Sets user context
@@ -433,6 +439,7 @@ EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID=xxx.apps.googleusercontent.com
 ## 3.2 EAS Secrets (for Builds)
 
 EAS looks for environment variables in this order:
+
 1. **EAS Secrets** (highest priority)
 2. **`eas.json` env block**
 3. **`.env` file** in your project
@@ -516,19 +523,20 @@ eas env:list
 
 ### EAS Environment Variables Summary
 
-| Name | Visibility | Environments | Notes |
-|------|------------|--------------|-------|
-| `EXPO_PUBLIC_SUPABASE_URL` | plaintext | development, preview, production | Use staging URL for dev/preview |
-| `EXPO_PUBLIC_SUPABASE_ANON_KEY` | plaintext | development, preview, production | Anon key is safe to expose (RLS handles security) |
-| `EXPO_PUBLIC_ENV` | plaintext | development, preview, production | `staging` for dev/preview, `production` for prod |
-| `EXPO_PUBLIC_SENTRY_DSN` | plaintext | development, preview, production | DSN is safe to expose |
-| `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` | plaintext | development, preview, production | **Web** Client ID (not Android/iOS) |
-| `EXPO_PUBLIC_PROJECT_ID` | plaintext | development, preview, production | Expo project ID |
-| `SENTRY_AUTH_TOKEN` | sensitive | development, preview, production | For source maps upload (build-time only) |
+| Name                               | Visibility | Environments                     | Notes                                             |
+| ---------------------------------- | ---------- | -------------------------------- | ------------------------------------------------- |
+| `EXPO_PUBLIC_SUPABASE_URL`         | plaintext  | development, preview, production | Use staging URL for dev/preview                   |
+| `EXPO_PUBLIC_SUPABASE_ANON_KEY`    | plaintext  | development, preview, production | Anon key is safe to expose (RLS handles security) |
+| `EXPO_PUBLIC_ENV`                  | plaintext  | development, preview, production | `staging` for dev/preview, `production` for prod  |
+| `EXPO_PUBLIC_SENTRY_DSN`           | plaintext  | development, preview, production | DSN is safe to expose                             |
+| `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` | plaintext  | development, preview, production | **Web** Client ID (not Android/iOS)               |
+| `EXPO_PUBLIC_PROJECT_ID`           | plaintext  | development, preview, production | Expo project ID                                   |
+| `SENTRY_AUTH_TOKEN`                | sensitive  | development, preview, production | For source maps upload (build-time only)          |
 
 > **Important:** All `EXPO_PUBLIC_*` variables must use `plaintext` visibility because they are embedded in the compiled app and visible to users. This is by design - use Row Level Security (RLS) for data protection, not key secrecy.
 >
 > **Visibility types:**
+>
 > - `plaintext` - Visible in logs, dashboard, and compiled app
 > - `sensitive` - Hidden everywhere, only used during build (for non-EXPO_PUBLIC vars)
 
@@ -553,13 +561,13 @@ The Android/iOS client IDs are **not** added to your code or secrets. Google use
 
 Go to: **GitHub Repo → Settings → Secrets and variables → Actions**
 
-| Secret | Description | Where to Get |
-|--------|-------------|--------------|
-| `EXPO_TOKEN` | EAS authentication | https://expo.dev/accounts/[account]/settings/access-tokens |
-| `SUPABASE_ACCESS_TOKEN` | Supabase CLI auth | https://supabase.com/dashboard/account/tokens |
-| `SUPABASE_PROJECT_REF_STAGING` | Staging project ID | Supabase Dashboard → Project Settings → General |
-| `SUPABASE_PROJECT_REF_PRODUCTION` | Production project ID | Supabase Dashboard → Project Settings → General |
-| `SENTRY_AUTH_TOKEN` | Sentry source maps | Sentry → Developer Settings → Organization Tokens |
+| Secret                            | Description           | Where to Get                                               |
+| --------------------------------- | --------------------- | ---------------------------------------------------------- |
+| `EXPO_TOKEN`                      | EAS authentication    | https://expo.dev/accounts/[account]/settings/access-tokens |
+| `SUPABASE_ACCESS_TOKEN`           | Supabase CLI auth     | https://supabase.com/dashboard/account/tokens              |
+| `SUPABASE_PROJECT_REF_STAGING`    | Staging project ID    | Supabase Dashboard → Project Settings → General            |
+| `SUPABASE_PROJECT_REF_PRODUCTION` | Production project ID | Supabase Dashboard → Project Settings → General            |
+| `SENTRY_AUTH_TOKEN`               | Sentry source maps    | Sentry → Developer Settings → Organization Tokens          |
 
 ---
 
@@ -710,10 +718,10 @@ Monitor builds: https://expo.dev/accounts/[account]/projects/[project]/builds
 
 ## 7.1 Existing Workflows
 
-| Workflow | File | Trigger |
-|----------|------|---------|
-| CI | `ci.yml` | Push/PR to main |
-| Deploy Staging | `deploy-staging.yml` | Push to main |
+| Workflow       | File                 | Trigger         |
+| -------------- | -------------------- | --------------- |
+| CI             | `ci.yml`             | Push/PR to main |
+| Deploy Staging | `deploy-staging.yml` | Push to main    |
 
 ## 7.2 Create Production Workflow
 
@@ -830,26 +838,26 @@ supabase functions deploy
 
 ## Important URLs
 
-| Service | URL |
-|---------|-----|
-| Expo Dashboard | https://expo.dev |
-| Supabase Dashboard | https://supabase.com/dashboard |
-| App Store Connect | https://appstoreconnect.apple.com |
-| Google Play Console | https://play.google.com/console |
-| Sentry | https://sentry.io |
-| Google Cloud Console | https://console.cloud.google.com |
-| Apple Developer | https://developer.apple.com |
+| Service              | URL                               |
+| -------------------- | --------------------------------- |
+| Expo Dashboard       | https://expo.dev                  |
+| Supabase Dashboard   | https://supabase.com/dashboard    |
+| App Store Connect    | https://appstoreconnect.apple.com |
+| Google Play Console  | https://play.google.com/console   |
+| Sentry               | https://sentry.io                 |
+| Google Cloud Console | https://console.cloud.google.com  |
+| Apple Developer      | https://developer.apple.com       |
 
 ---
 
 ## Estimated Timeline
 
-| Day | Tasks |
-|-----|-------|
-| 1-2 | Create all accounts (Apple, Google, Expo, Sentry, Resend) |
-| 3-5 | Wait for account approvals + DNS verification |
-| 6 | Configure OAuth, email, secrets |
-| 7 | First staging build and testing |
-| 8-10 | Fix issues, prepare store assets |
-| 11 | Submit to app stores |
-| 12-14 | App review (iOS: 1-3 days, Android: hours to 3 days) |
+| Day   | Tasks                                                     |
+| ----- | --------------------------------------------------------- |
+| 1-2   | Create all accounts (Apple, Google, Expo, Sentry, Resend) |
+| 3-5   | Wait for account approvals + DNS verification             |
+| 6     | Configure OAuth, email, secrets                           |
+| 7     | First staging build and testing                           |
+| 8-10  | Fix issues, prepare store assets                          |
+| 11    | Submit to app stores                                      |
+| 12-14 | App review (iOS: 1-3 days, Android: hours to 3 days)      |

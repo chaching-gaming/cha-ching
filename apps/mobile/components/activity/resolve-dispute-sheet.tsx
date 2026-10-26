@@ -144,7 +144,7 @@ export function ResolveDisputeSheet({
           </Text>
           {!isDispute && totalSubmissions === 0 ? (
             <Text className="mb-3 text-xs text-text-muted">
-              No outcomes submitted yet — you're force-settling this bet.
+              No outcomes submitted yet — you&apos;re force-settling this bet.
             </Text>
           ) : null}
           <View className="mb-5 gap-2">

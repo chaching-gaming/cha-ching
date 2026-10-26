@@ -38,10 +38,7 @@ import {
   formatRelativeActivityTime,
   parseApiTimestamp,
 } from '@/lib/date-format';
-import {
-  isMemberInactive,
-  type RoomMemberStatus,
-} from '@/hooks/use-rooms';
+import { isMemberInactive, type RoomMemberStatus } from '@/hooks/use-rooms';
 import {
   getEffectiveBetStatus,
   getDisputeWindowRemaining,
@@ -749,7 +746,9 @@ function PoolSide({
         {count === 0 ? 'no backers' : count === 1 ? '1 backer' : `${count} backers`}
         {youLost ? ' · you lost' : youOnThisSide ? ' · you' : ''}
       </Text>
-      {count > 0 ? <StakeAvatars stakes={stakes} membershipStatusMap={membershipStatusMap} /> : null}
+      {count > 0 ? (
+        <StakeAvatars stakes={stakes} membershipStatusMap={membershipStatusMap} />
+      ) : null}
       {canJoin && !isDisabled && !isSelected ? (
         <Text className={`mt-2 text-center text-[10px] font-bold uppercase ${labelClass}`}>
           Tap to select

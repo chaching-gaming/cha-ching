@@ -8,10 +8,7 @@ import { useTheme, type ThemeColors } from '@/providers/theme';
 import { Avatar, Badge, EmptyState, ScreenHeader, SkeletonListItem } from '@/components/ui';
 import { useAuth } from '@/providers/auth';
 import { useRoomDetail } from '@/hooks/use-rooms';
-import {
-  useRoomMemberBalances,
-  type RoomMemberBalance,
-} from '@/hooks/use-activity-feed';
+import { useRoomMemberBalances, type RoomMemberBalance } from '@/hooks/use-activity-feed';
 import { formatBalance, netBalanceColorClass } from '@/lib/format-balance';
 
 // Podium medal colors from design tokens
@@ -63,7 +60,13 @@ export default function StandingsScreen() {
   if (roomLoading) {
     return (
       <View className="flex-1 bg-background">
-        <ScreenHeader title="Standings" showBack showHome titleClassName="text-xl font-bold text-text-primary" backIconSize={28} />
+        <ScreenHeader
+          title="Standings"
+          showBack
+          showHome
+          titleClassName="text-xl font-bold text-text-primary"
+          backIconSize={28}
+        />
         <View>
           {Array.from({ length: 8 }).map((_, i) => (
             <SkeletonListItem key={i} />
@@ -238,10 +241,18 @@ function PodiumColumn({
   const isInactive = member.left_at != null;
 
   return (
-    <Pressable onPress={onPress} className={`items-center active:opacity-70 ${isInactive ? 'opacity-60' : ''}`}>
+    <Pressable
+      onPress={onPress}
+      className={`items-center active:opacity-70 ${isInactive ? 'opacity-60' : ''}`}
+    >
       {/* Avatar with rank badge */}
       <View className="relative">
-        <Avatar uri={member.avatar_url} fallback={member.display_name ?? '?'} size={avatarSize} inactive={isInactive} />
+        <Avatar
+          uri={member.avatar_url}
+          fallback={member.display_name ?? '?'}
+          size={avatarSize}
+          inactive={isInactive}
+        />
         <View
           className="absolute -right-1 -top-1 h-6 w-6 items-center justify-center rounded-full border-2 border-background"
           style={{ backgroundColor: badge.bg }}
@@ -278,7 +289,9 @@ function PodiumColumn({
             {member.balance.toLocaleString()}
           </Text>
         </View>
-        <Text className={`mt-0.5 text-[10px] font-semibold ${netBalanceColorClass(member.net_balance)}`}>
+        <Text
+          className={`mt-0.5 text-[10px] font-semibold ${netBalanceColorClass(member.net_balance)}`}
+        >
           ({formatBalance(member.net_balance)})
         </Text>
       </View>
@@ -343,7 +356,12 @@ function StandingsRow({
       className={`flex-row items-center border-b border-border/40 px-5 py-4 active:bg-surface/50 ${isInactive ? 'opacity-60' : ''}`}
     >
       <Text className="w-8 text-base font-bold text-text-muted">{rank}</Text>
-      <Avatar uri={member.avatar_url} fallback={member.display_name ?? '?'} size="md" inactive={isInactive} />
+      <Avatar
+        uri={member.avatar_url}
+        fallback={member.display_name ?? '?'}
+        size="md"
+        inactive={isInactive}
+      />
       <View className="ml-3 min-w-0 flex-1">
         <View className="flex-row items-center gap-2">
           <Text className="min-w-0 shrink text-base text-text-primary" numberOfLines={1}>

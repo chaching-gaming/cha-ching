@@ -54,7 +54,11 @@ interface NotificationItemProps {
   isLast?: boolean;
 }
 
-export function NotificationItem({ notification, onPress, isLast: _isLast }: NotificationItemProps) {
+export function NotificationItem({
+  notification,
+  onPress,
+  isLast: _isLast,
+}: NotificationItemProps) {
   const { colors } = useTheme();
   const iconColors = useMemo(() => getIconColors(colors), [colors]);
   const Icon = NOTIFICATION_ICONS[notification.type];
@@ -70,9 +74,7 @@ export function NotificationItem({ notification, onPress, isLast: _isLast }: Not
       }`}
     >
       {/* Unread indicator dot */}
-      {isUnread && (
-        <View className="absolute right-3 top-3 h-2.5 w-2.5 rounded-full bg-primary" />
-      )}
+      {isUnread && <View className="absolute right-3 top-3 h-2.5 w-2.5 rounded-full bg-primary" />}
 
       {/* Icon */}
       <View className="h-12 w-12 items-center justify-center rounded-full bg-surface-light">
@@ -97,4 +99,3 @@ export function NotificationItem({ notification, onPress, isLast: _isLast }: Not
     </TouchableOpacity>
   );
 }
-

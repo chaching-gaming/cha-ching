@@ -1,18 +1,18 @@
 import { useCallback, useMemo } from 'react';
 import { FlatList, RefreshControl, Text, View } from 'react-native';
 import { useQueryClient } from '@tanstack/react-query';
-import {
-  Trophy,
-  TrendDown,
-  Clock,
-  Prohibit,
-  ListDashes,
-} from 'phosphor-react-native';
+import { Trophy, TrendDown, Clock, Prohibit, ListDashes } from 'phosphor-react-native';
 
 import { useTheme } from '@/providers/theme';
 import { EmptyState } from '@/components/ui';
 import { StatCard } from './stat-card';
-import { useMyBets, useMyBetsAggregateStats, myBetsKey, myBetsStatsKey, type MyBet } from '@/hooks/use-my-bets';
+import {
+  useMyBets,
+  useMyBetsAggregateStats,
+  myBetsKey,
+  myBetsStatsKey,
+  type MyBet,
+} from '@/hooks/use-my-bets';
 // Note: calculateMyBetsStats is no longer used - we now use backend aggregate stats
 import { balanceColorClass, formatBalance } from '@/lib/format-balance';
 
@@ -23,15 +23,8 @@ interface MyBetsSectionProps {
 export function MyBetsSection({ roomId }: MyBetsSectionProps) {
   const { colors } = useTheme();
   const queryClient = useQueryClient();
-  const {
-    data,
-    isLoading,
-    isFetching,
-    fetchNextPage,
-    hasNextPage,
-    isFetchingNextPage,
-    refetch,
-  } = useMyBets(roomId);
+  const { data, isLoading, isFetching, fetchNextPage, hasNextPage, isFetchingNextPage, refetch } =
+    useMyBets(roomId);
 
   // Use backend aggregate stats for accurate totals across all bets
   const { data: aggregateStats, isLoading: statsLoading } = useMyBetsAggregateStats(roomId);
@@ -42,7 +35,8 @@ export function MyBetsSection({ roomId }: MyBetsSectionProps) {
   const stats = useMemo(() => {
     if (!aggregateStats) return null;
     const totalSettled = aggregateStats.wins + aggregateStats.losses;
-    const winRate = totalSettled > 0 ? Math.round((aggregateStats.wins / totalSettled) * 100) : null;
+    const winRate =
+      totalSettled > 0 ? Math.round((aggregateStats.wins / totalSettled) * 100) : null;
     return {
       totalBets: aggregateStats.total_bets,
       wins: aggregateStats.wins,
@@ -88,9 +82,7 @@ export function MyBetsSection({ roomId }: MyBetsSectionProps) {
     <FlatList
       data={allBets}
       keyExtractor={(item) => item.bet_id}
-      renderItem={({ item, index }) => (
-        <BetRow bet={item} isLast={index === allBets.length - 1} />
-      )}
+      renderItem={({ item, index }) => <BetRow bet={item} isLast={index === allBets.length - 1} />}
       contentContainerClassName="pb-12"
       ListHeaderComponent={<StatsHeader stats={stats} />}
       refreshControl={
@@ -129,7 +121,11 @@ function StatsHeader({ stats }: { stats: StatsData }) {
       </Text>
       <View className="flex-row gap-3">
         <StatCard label="Total bets" value={String(stats?.totalBets ?? 0)} />
-        <StatCard label="Win rate" value={stats?.winRate != null ? `${stats.winRate}%` : '—'} tone="primary" />
+        <StatCard
+          label="Win rate"
+          value={stats?.winRate != null ? `${stats.winRate}%` : '—'}
+          tone="primary"
+        />
       </View>
       <View className="mt-3 flex-row gap-3">
         <StatCard label="Wins" value={String(stats?.wins ?? 0)} tone="primary" />

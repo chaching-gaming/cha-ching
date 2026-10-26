@@ -110,7 +110,8 @@ export function useAllRoomsPlayerStats() {
     queryKey: allRoomsPlayerStatsKey(),
     queryFn: async (): Promise<AggregatePlayerStat[]> => {
       // Type assertion needed until migration is applied and types are regenerated
-      const { data, error } = await (supabase.rpc as Function)('get_all_rooms_player_stats');
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data, error } = await (supabase.rpc as any)('get_all_rooms_player_stats');
       if (error) throw error;
       return (data as AggregatePlayerStat[] | null) ?? [];
     },
@@ -125,7 +126,8 @@ export function useAllRoomsEventStats() {
     queryKey: allRoomsEventStatsKey(),
     queryFn: async (): Promise<AggregateEventStats | null> => {
       // Type assertion needed until migration is applied and types are regenerated
-      const { data, error } = await (supabase.rpc as Function)('get_all_rooms_event_stats');
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data, error } = await (supabase.rpc as any)('get_all_rooms_event_stats');
       if (error) throw error;
       const row = Array.isArray(data) ? (data[0] as AggregateEventStats | undefined) : null;
       return row ?? null;

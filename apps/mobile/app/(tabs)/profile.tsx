@@ -158,9 +158,7 @@ function RoomRow({
         <Text className="text-base font-semibold text-text-primary" numberOfLines={1}>
           {item.room.name}
         </Text>
-        {statusText ? (
-          <Text className="mt-0.5 text-xs text-text-muted">{statusText}</Text>
-        ) : null}
+        {statusText ? <Text className="mt-0.5 text-xs text-text-muted">{statusText}</Text> : null}
       </View>
       {canRejoin && onRejoin ? (
         <TouchableOpacity
@@ -222,7 +220,7 @@ export default function ProfileScreen() {
         setRejoiningRoomId(null);
       }
     },
-    [joinRoom, router]
+    [joinRoom, router],
   );
 
   const handleRefresh = useCallback(async () => {
@@ -300,7 +298,7 @@ export default function ProfileScreen() {
           style: 'destructive',
           onPress: confirmDeleteAccount,
         },
-      ]
+      ],
     );
   }
 
@@ -320,7 +318,7 @@ export default function ProfileScreen() {
             Authorization: `Bearer ${session.access_token}`,
             'Content-Type': 'application/json',
           },
-        }
+        },
       );
 
       const data = await response.json();

@@ -191,7 +191,9 @@ export function DonateChipsSheet({ visible, onClose, chipRequest, roomId, donorB
         <View className="mb-5 flex-row items-center justify-between">
           <Text className="text-sm text-text-secondary">
             Your balance after:{' '}
-            <Text className={`font-semibold ${balanceAfter < 0 ? 'text-error' : 'text-text-primary'}`}>
+            <Text
+              className={`font-semibold ${balanceAfter < 0 ? 'text-error' : 'text-text-primary'}`}
+            >
               {balanceAfter.toLocaleString('en-US')}
             </Text>
           </Text>

@@ -3,7 +3,12 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import type { Database } from '@cha-ching/types';
 
-import { betDetailKey, roomActivityKey, roomBalanceKey, roomBetsKey } from '@/hooks/use-activity-feed';
+import {
+  betDetailKey,
+  roomActivityKey,
+  roomBalanceKey,
+  roomBetsKey,
+} from '@/hooks/use-activity-feed';
 import { useFeedback } from '@/providers/feedback';
 
 type Bet = Database['public']['Tables']['bets']['Row'];

@@ -67,7 +67,11 @@ import {
 } from '@/lib/effective-bet-status';
 import { useRaiseDispute } from '@/hooks/use-raise-dispute';
 import { useProcessDisputeWindow } from '@/hooks/use-process-settlement-windows';
-import { useBetCelebration, markBetCelebrated, hasBetBeenCelebrated } from '@/hooks/use-winner-celebration';
+import {
+  useBetCelebration,
+  markBetCelebrated,
+  hasBetBeenCelebrated,
+} from '@/hooks/use-winner-celebration';
 import { supabase } from '@/lib/supabase';
 
 function getBetStatusPill(status: string | null | undefined): {
@@ -115,10 +119,7 @@ export default function BetDetailScreen() {
   const { data: templates } = useQuestionTemplates('golf');
 
   // Create membership status lookup for showing left/removed indicators
-  const membershipStatusMap = useMemo(
-    () => createMembershipStatusMap(members),
-    [members],
-  );
+  const membershipStatusMap = useMemo(() => createMembershipStatusMap(members), [members]);
   const joinBet = useJoinBet();
   const processExpiredBet = useProcessExpiredBet();
   const raiseDispute = useRaiseDispute();
@@ -364,9 +365,7 @@ export default function BetDetailScreen() {
   const offererName = bet?.offered_by_profile?.display_name ?? 'Someone';
 
   // Membership status for offerer and subject
-  const offererStatus = bet?.offered_by
-    ? membershipStatusMap.get(bet.offered_by)
-    : undefined;
+  const offererStatus = bet?.offered_by ? membershipStatusMap.get(bet.offered_by) : undefined;
   const subjectStatus = bet?.subject_user_id
     ? membershipStatusMap.get(bet.subject_user_id)
     : undefined;
@@ -431,7 +430,7 @@ export default function BetDetailScreen() {
 
   // Current user's role (only if still active member)
   const currentMember = members?.find(
-    (m) => m.user_id === currentUserId && m.membershipStatus === 'active'
+    (m) => m.user_id === currentUserId && m.membershipStatus === 'active',
   );
   const currentUserRole = currentMember?.role ?? null;
   const isAttestorOrAdmin = currentUserRole === 'ATTESTOR' || currentUserRole === 'ADMIN';
@@ -601,7 +600,7 @@ export default function BetDetailScreen() {
                 )}
               </>
             ) : (
-              <Text className="text-sm text-text-secondary">'s offer</Text>
+              <Text className="text-sm text-text-secondary">&apos;s offer</Text>
             )}
           </View>
 
@@ -834,8 +833,7 @@ export default function BetDetailScreen() {
                   !!bet.outcome &&
                   stake.pick.trim().toLowerCase() === bet.outcome.trim().toLowerCase();
                 const isLoserPick = dbStatus === 'SETTLED' && !!bet.outcome && !isWinnerPick;
-                const isLeft =
-                  options[0]?.trim().toLowerCase() === stake.pick.trim().toLowerCase();
+                const isLeft = options[0]?.trim().toLowerCase() === stake.pick.trim().toLowerCase();
                 const stakeMemberStatus = membershipStatusMap.get(stake.user_id);
                 const isInactiveMember = isMemberInactive(stakeMemberStatus);
 

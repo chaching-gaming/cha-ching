@@ -437,11 +437,7 @@ export default function JoinRoomScreen() {
           </>
         )}
       </KeyboardAwareScrollView>
-      <SplashCelebration
-        visible={showSplash}
-        action="round_started"
-        onDone={handleSplashDismiss}
-      />
+      <SplashCelebration visible={showSplash} action="round_started" onDone={handleSplashDismiss} />
     </View>
   );
 }

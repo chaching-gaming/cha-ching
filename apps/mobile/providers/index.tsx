@@ -27,7 +27,7 @@ function NavigationTheme({ children }: { children: React.ReactNode }) {
         primary: colors.primary,
       },
     }),
-    [colors, themePreference]
+    [colors, themePreference],
   );
 
   return <NavigationThemeProvider value={navigationTheme}>{children}</NavigationThemeProvider>;

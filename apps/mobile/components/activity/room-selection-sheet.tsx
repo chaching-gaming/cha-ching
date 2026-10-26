@@ -156,9 +156,7 @@ export function RoomSelectionSheet({
                 Aggregate stats across all your rooms
               </Text>
             </View>
-            {selectedRoomId === null && (
-              <View className="h-2.5 w-2.5 rounded-full bg-primary" />
-            )}
+            {selectedRoomId === null && <View className="h-2.5 w-2.5 rounded-full bg-primary" />}
             <CaretRight size={18} color={colors.textMuted} />
           </TouchableOpacity>
         )}

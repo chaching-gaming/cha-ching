@@ -42,7 +42,9 @@ export default function TabLayout() {
 
   const handleNotificationsTabFocus = useCallback(async () => {
     // Get all unread notification IDs from cache and mark them as read
-    const cachedData = queryClient.getQueryData<{ pages: Array<Array<{ id: string; read_at: string | null }>> }>(notificationsKey());
+    const cachedData = queryClient.getQueryData<{
+      pages: Array<Array<{ id: string; read_at: string | null }>>;
+    }>(notificationsKey());
     if (cachedData?.pages) {
       const unreadIds = cachedData.pages
         .flat()

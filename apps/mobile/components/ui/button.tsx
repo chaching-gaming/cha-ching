@@ -50,7 +50,9 @@ export function Button({
       activeOpacity={0.7}
     >
       {loading ? (
-        <ActivityIndicator color={variant === 'primary' || variant === 'danger' ? '#FFFFFF' : colors.textSecondary} />
+        <ActivityIndicator
+          color={variant === 'primary' || variant === 'danger' ? '#FFFFFF' : colors.textSecondary}
+        />
       ) : (
         <Text className={`${s.label} ${textVariants[variant]}`}>{children}</Text>
       )}

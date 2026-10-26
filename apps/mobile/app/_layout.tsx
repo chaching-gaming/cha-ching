@@ -73,7 +73,7 @@ function AuthGate({ children }: { children: React.ReactNode }) {
     if (isLoading) return;
 
     const inAuthGroup = segments[0] === '(auth)';
-    const currentScreen = segments[1] as string | undefined;
+    const currentScreen = (segments as readonly string[])[1] as string | undefined;
     const onResetPassword =
       currentScreen === 'reset-password' || currentScreen === 'forgot-password';
 

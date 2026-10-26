@@ -1,12 +1,5 @@
 import { useCallback, useMemo, useRef, useState } from 'react';
-import {
-  Alert,
-  Animated,
-  PanResponder,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { Alert, Animated, PanResponder, StyleSheet, Text, View } from 'react-native';
 import { ArrowRight, Check, Coins } from 'phosphor-react-native';
 
 import { useTheme, type ThemeColors } from '@/providers/theme';
@@ -137,7 +130,7 @@ export function SwipeToConfirmButton({
           animateToStart();
         }
       },
-    })
+    }),
   ).current;
 
   const handleLayout = useCallback((e: { nativeEvent: { layout: { width: number } } }) => {

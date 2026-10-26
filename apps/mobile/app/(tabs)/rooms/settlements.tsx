@@ -257,7 +257,8 @@ function SettlementRow({
 }) {
   const { colors } = useTheme();
   const hasNonZeroNet = member.net_balance !== 0;
-  const settlementStatus = member.settlement_status ?? (hasNonZeroNet ? ('PENDING' as SettlementStatus) : null);
+  const settlementStatus =
+    member.settlement_status ?? (hasNonZeroNet ? ('PENDING' as SettlementStatus) : null);
   const isEditable = editMode && hasNonZeroNet;
 
   return (
@@ -293,9 +294,7 @@ function SettlementRow({
         <Text className={`text-base font-bold ${netBalanceColorClass(member.net_balance)}`}>
           {formatBalance(member.net_balance)}
         </Text>
-        {isEditable ? (
-          <CaretRight size={16} color={colors.textMuted} weight="bold" />
-        ) : null}
+        {isEditable ? <CaretRight size={16} color={colors.textMuted} weight="bold" /> : null}
       </View>
     </Pressable>
   );

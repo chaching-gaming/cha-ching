@@ -45,9 +45,7 @@ export function LoadingScreen({ message }: LoadingScreenProps) {
         />
         <Text className="mb-6 text-3xl font-bold text-text-primary">Cha-Ching</Text>
         <ActivityIndicator size="large" color={colors.primary} />
-        {message && (
-          <Text className="mt-4 text-sm text-text-secondary">{message}</Text>
-        )}
+        {message && <Text className="mt-4 text-sm text-text-secondary">{message}</Text>}
       </Animated.View>
     </View>
   );

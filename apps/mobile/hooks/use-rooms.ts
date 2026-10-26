@@ -64,7 +64,7 @@ export type RoomWithMembership = {
 function getMembershipStatus(
   leftAt: string | null,
   leftReason: string | null,
-  roomIsActive: boolean
+  roomIsActive: boolean,
 ): MembershipStatus {
   if (!leftAt) {
     // Still a member but room is closed
@@ -119,7 +119,10 @@ export function useRooms(filter: 'active' | 'history' = 'active') {
       // Fetch rooms, member previews, and balances in parallel
       // For active filter, only show active rooms
       // For history filter, show any room (could be active or closed)
-      const roomsQuery = supabase.from('rooms').select('*, room_members!inner(count)').in('id', roomIds);
+      const roomsQuery = supabase
+        .from('rooms')
+        .select('*, room_members!inner(count)')
+        .in('id', roomIds);
 
       if (filter === 'active') {
         roomsQuery.eq('is_active', true);
@@ -295,7 +298,7 @@ export function useRealtimeRoomsList() {
             invalidate(roomsKey('history'));
           },
         )
-        .subscribe()
+        .subscribe(),
     );
 
     return () => {
@@ -347,9 +350,9 @@ export function useRealtimeHistoryRooms() {
           },
           () => {
             invalidate(roomsKey('history'));
-          }
+          },
         )
-        .subscribe()
+        .subscribe(),
     );
 
     return () => {
@@ -405,7 +408,7 @@ export type RoomMemberWithStatus = RoomMemberWithProfile & {
 
 /** Helper to create a lookup map of user_id -> membership status from room members */
 export function createMembershipStatusMap(
-  members: RoomMemberWithStatus[] | undefined
+  members: RoomMemberWithStatus[] | undefined,
 ): Map<string, RoomMemberStatus> {
   const map = new Map<string, RoomMemberStatus>();
   if (!members) return map;
@@ -451,11 +454,7 @@ export function useRoomMembersWithHistory(roomId: string) {
 
       return (data as unknown as RoomMemberWithProfile[]).map((m) => ({
         ...m,
-        membershipStatus: !m.left_at
-          ? 'active'
-          : m.left_reason === 'REMOVED'
-            ? 'removed'
-            : 'left',
+        membershipStatus: !m.left_at ? 'active' : m.left_reason === 'REMOVED' ? 'removed' : 'left',
       }));
     },
     enabled: !!session?.user.id && !!roomId,
@@ -477,7 +476,7 @@ export function useCreateRoom() {
         p_session_date: params.p_session_date,
         p_starting_chips: params.p_starting_chips ?? 1000,
         p_outcome_submission_window_seconds: params.p_outcome_submission_window_seconds ?? 30,
-      } as Parameters<typeof supabase.rpc<'create_room'>>[1]);
+      });
       if (error) throw error;
       return data as unknown as Room;
     },

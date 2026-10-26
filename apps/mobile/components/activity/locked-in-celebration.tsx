@@ -45,7 +45,7 @@ function LockedInContent({
     // Update progress every 50ms for smooth bar
     const interval = setInterval(() => {
       setProgress((prev) => {
-        const next = prev + (100 / (AUTO_DISMISS_MS / 50));
+        const next = prev + 100 / (AUTO_DISMISS_MS / 50);
         return next >= 100 ? 100 : next;
       });
     }, 50);
@@ -121,10 +121,7 @@ function LockedInContent({
           </View>
         ) : null}
 
-        <Text
-          className="mt-4 max-w-[300px] text-center text-sm text-white/70"
-          numberOfLines={3}
-        >
+        <Text className="mt-4 max-w-[300px] text-center text-sm text-white/70" numberOfLines={3}>
           {bet.question}
         </Text>
       </View>

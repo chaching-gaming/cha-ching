@@ -96,9 +96,7 @@ export function SettlementStatusSheet({
       handleIndicatorStyle={{ backgroundColor: colors.textMuted }}
       backdropComponent={renderBackdrop}
     >
-      <BottomSheetView
-        style={{ paddingHorizontal: 20, paddingTop: 4, paddingBottom: bottomInset }}
-      >
+      <BottomSheetView style={{ paddingHorizontal: 20, paddingTop: 4, paddingBottom: bottomInset }}>
         <Text className="mb-1 px-1 text-xl font-bold text-text-primary">Settlement Status</Text>
         <Text className="mb-3 px-1 text-sm text-text-secondary">{memberName}</Text>
         <View className="overflow-hidden rounded-2xl border border-border bg-surface">

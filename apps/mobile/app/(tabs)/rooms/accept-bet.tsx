@@ -254,11 +254,7 @@ export default function AcceptBetScreen() {
         </Button>
       </View>
 
-      <SplashCelebration
-        visible={showSplash}
-        action="bet_accepted"
-        onDone={handleSplashDismiss}
-      />
+      <SplashCelebration visible={showSplash} action="bet_accepted" onDone={handleSplashDismiss} />
     </View>
   );
 }

@@ -78,16 +78,13 @@ export default function RoomDetailScreen() {
   const members = useMemo(
     () =>
       isRoomActive
-        ? allMembers?.filter((m) => m.membershipStatus === 'active') ?? []
-        : allMembers ?? [],
+        ? (allMembers?.filter((m) => m.membershipStatus === 'active') ?? [])
+        : (allMembers ?? []),
     [allMembers, isRoomActive],
   );
 
   // Create membership status lookup for showing left/removed indicators
-  const membershipStatusMap = useMemo(
-    () => createMembershipStatusMap(allMembers),
-    [allMembers],
-  );
+  const membershipStatusMap = useMemo(() => createMembershipStatusMap(allMembers), [allMembers]);
 
   // Check if current user is an active member (not left/removed)
   const currentUserMembership = useMemo(
@@ -293,7 +290,9 @@ export default function RoomDetailScreen() {
               <HandHeart size={26} color={colors.primary} weight="fill" />
               {openChipRequestCount > 0 && (
                 <View className="absolute -right-1.5 -top-1 min-w-[18px] items-center justify-center rounded-full bg-error px-1 py-0.5">
-                  <Text className="text-[10px] font-bold text-text-primary">{openChipRequestCount}</Text>
+                  <Text className="text-[10px] font-bold text-text-primary">
+                    {openChipRequestCount}
+                  </Text>
                 </View>
               )}
             </TouchableOpacity>
@@ -343,9 +342,7 @@ export default function RoomDetailScreen() {
                 <View className="flex-row items-center gap-3">
                   <Warning size={20} color={colors.textMuted} weight="fill" />
                   <View className="flex-1">
-                    <Text className="text-sm font-semibold text-text-primary">
-                      Session ended
-                    </Text>
+                    <Text className="text-sm font-semibold text-text-primary">Session ended</Text>
                     <Text className="mt-0.5 text-xs text-text-muted">
                       {isPastMember
                         ? 'You can only view bets you participated in'
