@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Image, Text, TouchableOpacity, View } from 'react-native';
+import { Image, Platform, Text, TouchableOpacity, View } from 'react-native';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { Link } from 'expo-router';
 import { z } from 'zod';
@@ -153,15 +153,18 @@ export default function SignUpScreen() {
       </View>
 
       <View className="flex-row gap-3">
-        <TouchableOpacity
-          className="min-h-[44px] flex-1 flex-row items-center justify-center gap-2 rounded-xl border border-border bg-surface-light px-4 py-3"
-          onPress={() => handleOAuth('apple')}
-          disabled={oauthLoading}
-          activeOpacity={0.7}
-        >
-          <FontAwesome name="apple" size={18} color={colors.textPrimary} />
-          <Text className="text-base font-medium text-text-primary">Apple</Text>
-        </TouchableOpacity>
+        {/* Apple Sign-In is iOS-only (see lib/oauth.ts) */}
+        {Platform.OS === 'ios' && (
+          <TouchableOpacity
+            className="min-h-[44px] flex-1 flex-row items-center justify-center gap-2 rounded-xl border border-border bg-surface-light px-4 py-3"
+            onPress={() => handleOAuth('apple')}
+            disabled={oauthLoading}
+            activeOpacity={0.7}
+          >
+            <FontAwesome name="apple" size={18} color={colors.textPrimary} />
+            <Text className="text-base font-medium text-text-primary">Apple</Text>
+          </TouchableOpacity>
+        )}
 
         <TouchableOpacity
           className="min-h-[44px] flex-1 flex-row items-center justify-center gap-2 rounded-xl border border-border bg-surface-light px-4 py-3"
