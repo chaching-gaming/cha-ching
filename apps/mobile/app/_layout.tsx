@@ -50,6 +50,13 @@ void SplashScreen.preventAutoHideAsync().catch(() => {
   /* Dev / fast refresh: splash may already be hidden or not registered */
 });
 
+// Failsafe: never leave the native splash up if startup stalls on a device
+setTimeout(() => {
+  void SplashScreen.hideAsync().catch(() => {
+    /* Already hidden */
+  });
+}, 5000);
+
 function SplashScreenController({ fontsReady }: { fontsReady: boolean }) {
   const { isHydrated } = useTheme();
 
